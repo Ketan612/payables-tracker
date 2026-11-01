@@ -178,33 +178,71 @@ $("#add").onclick = () => edit();
 
 $("#cancel").onclick = () => $("#dlg").close();
 
-$("#form").onsubmit = e => {
+$("#form").onsubmit = async e => {
   e.preventDefault();
 
-  let id = $("#id").value;
-
-  let x = {
-    id: id || crypto.randomUUID(),
-    desc: $("#desc").value,
-    amt: Number($("#amt").value),
-    transactionDate: $("#transactionDate").value,
-    typ: $("#typ").value,
-    cat: $("#cat").value,
-    due: $("#due").value,
-    st: $("#st").value,
-    note: $("#note").value
-  };
-
-  let i = rows.findIndex(r => r.id === id);
-
-  if (i < 0) {
-    rows.unshift(x);
-  } else {
-    rows[i] = x;
+  if (!currentUserId) {
+    alert("Please log in before adding a payable.");
+    return;
   }
 
-  save();
+  const id = $("#id").value;
+
+  const statusMap = {
+    "Pending": "pending",
+    "Partially Paid": "partially_paid",
+    "Paid": "paid",
+    "Received": "received",
+    "Settled": "settled",
+    "Cancelled": "cancelled"
+  };
+
+  const payload = {
+    user_id: currentUserId,
+    title: $("#desc").value.trim(),
+    amount: Number($("#amt").value),
+    transaction_date: $("#transactionDate").value,
+    due_date: $("#due").value || null,
+    transaction_kind: $("#typ").value === "Common"
+      ? "shared_expense"
+      : "payable",
+    expense_scope: $("#typ").value === "Common"
+      ? "common"
+      : "personal",
+    category: $("#cat").value,
+    status: statusMap[$("#st").value],
+    notes: $("#note").value || null
+  };
+
+  if (!payload.status) {
+    alert("Invalid transaction status.");
+    return;
+  }
+
+  let query;
+
+  if (id) {
+    query = supabaseClient
+      .from("transactions")
+      .update(payload)
+      .eq("id", id)
+      .eq("user_id", currentUserId);
+  } else {
+    query = supabaseClient
+      .from("transactions")
+      .insert(payload);
+  }
+
+  const { error } = await query;
+
+  if (error) {
+    console.error("Transaction save failed:", error);
+    alert("Could not save transaction: " + error.message);
+    return;
+  }
+
   $("#dlg").close();
+  await loadTransactions();
 };
 
 $("#list").onclick = e => {
