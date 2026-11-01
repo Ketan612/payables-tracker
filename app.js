@@ -24,3 +24,56 @@ $("#emiForm").onsubmit=e=>{e.preventDefault();emis.push({name:$("#emiName").valu
 document.addEventListener("click",e=>{if(e.target.dataset.card!==undefined){cards.splice(+e.target.dataset.card,1);saveCards()}if(e.target.dataset.emi!==undefined){emis.splice(+e.target.dataset.emi,1);saveEmis()}});
 $("#saveReminder").onclick=()=>{prefs={email:$("#reminderEmail").value,days:+$("#reminderDays").value};localStorage.setItem(PREFKEY,JSON.stringify(prefs));$("#reminderState").textContent="Preferences saved on this device. Email reminders will start only after cloud email delivery is configured."};
 renderSchedules();
+// Supabase authentication
+const authPanel = document.getElementById("authPanel");
+const loginForm = document.getElementById("loginForm");
+const authMessage = document.getElementById("authMessage");
+
+function updateAuthUI(session) {
+  const isLoggedIn = !!session;
+
+  authPanel.style.display = isLoggedIn ? "none" : "block";
+  document.querySelector("main").style.display =
+    isLoggedIn ? "block" : "none";
+}
+
+loginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  authMessage.textContent = "Signing in...";
+
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
+
+  const { data, error } = await supabaseClient.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) {
+    authMessage.textContent = error.message;
+    return;
+  }
+
+  updateAuthUI(data.session);
+  loginForm.reset();
+  authMessage.textContent = "";
+});
+
+async function initializeAuth() {
+  const { data, error } = await supabaseClient.auth.getSession();
+
+  if (error) {
+    authMessage.textContent = error.message;
+    updateAuthUI(null);
+    return;
+  }
+
+  updateAuthUI(data.session);
+
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    updateAuthUI(session);
+  });
+}
+
+initializeAuth();
