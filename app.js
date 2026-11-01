@@ -71,6 +71,42 @@ function safe(s) {
     "'": "&#39;"
   }[c]));
 }
+async function loadTransactions() {
+  if (!currentUserId) return;
+
+  const { data, error } = await supabaseClient
+    .from("transactions")
+    .select("*")
+    .eq("user_id", currentUserId)
+    .order("transaction_date", { ascending: false });
+
+  if (error) {
+    console.error("Failed to load transactions:", error);
+    alert("Could not load cloud transactions: " + error.message);
+    return;
+  }
+
+  rows = data.map(x => ({
+    id: x.id,
+    desc: x.title,
+    amt: Number(x.amount),
+    transactionDate: x.transaction_date,
+    due: x.due_date || "",
+    typ: x.expense_scope === "common" ? "Common" : "Personal",
+    cat: x.category,
+    st: {
+      pending: "Pending",
+      partially_paid: "Partially Paid",
+      paid: "Paid",
+      received: "Received",
+      settled: "Settled",
+      cancelled: "Cancelled"
+    }[x.status] || x.status,
+    note: x.notes || ""
+  }));
+
+  render();
+}
 
 function render() {
   let m = $("#monthF").value;
@@ -260,8 +296,19 @@ async function initializeAuth() {
 
   updateAuthUI(data.session);
 
+  if (data.session) {
+    await loadTransactions();
+  }
+
   supabaseClient.auth.onAuthStateChange((_event, session) => {
     updateAuthUI(session);
+
+    if (session) {
+      setTimeout(() => loadTransactions(), 0);
+    } else {
+      rows = [];
+      render();
+    }
   });
 }
 
