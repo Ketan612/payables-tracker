@@ -213,10 +213,15 @@ const authPanel = document.getElementById("authPanel");
 const loginForm = document.getElementById("loginForm");
 const authMessage = document.getElementById("authMessage");
 
+let currentUserId = null;
+
 function updateAuthUI(session) {
   const isLoggedIn = !!session;
 
+  currentUserId = session?.user?.id || null;
+
   authPanel.style.display = isLoggedIn ? "none" : "block";
+
   document.querySelector("main").style.display =
     isLoggedIn ? "block" : "none";
 }
