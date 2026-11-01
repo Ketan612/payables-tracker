@@ -245,17 +245,35 @@ $("#form").onsubmit = async e => {
   await loadTransactions();
 };
 
-$("#list").onclick = e => {
-  let id = e.target.dataset.edit || e.target.dataset.paid;
-  let x = rows.find(r => r.id === id);
+$("#list").onclick = async e => {
+  const editId = e.target.dataset.edit;
+  const paidId = e.target.dataset.paid;
 
-  if (!x) return;
+  if (editId) {
+    const x = rows.find(r => r.id === editId);
+    if (x) edit(x);
+    return;
+  }
 
-  if (e.target.dataset.edit) {
-    edit(x);
-  } else if (confirm("Mark this payable as paid?")) {
-    x.st = "Paid";
-    save();
+  if (paidId && confirm("Mark this payable as paid?")) {
+    if (!currentUserId) {
+      alert("Please log in first.");
+      return;
+    }
+
+    const { error } = await supabaseClient
+      .from("transactions")
+      .update({ status: "paid" })
+      .eq("id", paidId)
+      .eq("user_id", currentUserId);
+
+    if (error) {
+      console.error("Payment update failed:", error);
+      alert("Could not update payment: " + error.message);
+      return;
+    }
+
+    await loadTransactions();
   }
 };
 
