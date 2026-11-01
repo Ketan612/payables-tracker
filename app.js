@@ -316,6 +316,9 @@ function updateAuthUI(session) {
 
   document.querySelector("main").style.display =
     isLoggedIn ? "block" : "none";
+
+  $("#logoutBtn").style.display =
+    isLoggedIn ? "inline-block" : "none";
 }
 
 loginForm.addEventListener("submit", async (event) => {
@@ -367,5 +370,11 @@ async function initializeAuth() {
     }
   });
 }
+$("#logoutBtn").onclick = async () => {
+  const { error } = await supabaseClient.auth.signOut();
 
+  if (error) {
+    alert("Logout failed: " + error.message);
+  }
+};
 initializeAuth();
