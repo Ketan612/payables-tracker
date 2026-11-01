@@ -131,13 +131,11 @@
       <input id="id" type="hidden">
       <label>Description<input id="desc" required></label>
       <div class="grid">
-        <label>Amount<input id="amt" type="number" step=".01" min=".01" required></label>
-        <label>Month
-          <select id="mon">
-            <option>October 2026</option>
-            <option>November 2026</option>
-            <option>December 2026</option>
-          </select>
+        <label>Amount (₹)
+          <input id="amt" type="number" step=".01" min=".01" required>
+        </label>     
+        <label>Transaction date
+          <input id="transactionDate" type="date" required>
         </label>
       </div>
       <div class="grid">
