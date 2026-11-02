@@ -34,7 +34,8 @@ const fmt = n =>
     maximumFractionDigits: 2
   });
 
-const pending = x => !["Paid", "Settled"].includes(x.st);
+const pending = x =>
+  !["Paid", "Settled", "Cancelled", "Received"].includes(x.st);
 
 function todayDate() {
   const now = new Date();
@@ -72,40 +73,65 @@ function safe(s) {
   }[c]));
 }
 async function loadTransactions() {
-  if (!currentUserId) return;
+  const userId = currentUserId;
 
-  const { data, error } = await supabaseClient
-    .from("transactions")
-    .select("*")
-    .eq("user_id", currentUserId)
-    .order("transaction_date", { ascending: false });
-
-  if (error) {
-    console.error("Failed to load transactions:", error);
-    alert("Could not load cloud transactions: " + error.message);
+  if (!userId) {
+    rows = [];
+    render();
     return;
   }
 
-  rows = data.map(x => ({
-    id: x.id,
-    desc: x.title,
-    amt: Number(x.amount),
-    transactionDate: x.transaction_date,
-    due: x.due_date || "",
-    typ: x.expense_scope === "common" ? "Common" : "Personal",
-    cat: x.category,
-    st: {
-      pending: "Pending",
-      partially_paid: "Partially Paid",
-      paid: "Paid",
-      received: "Received",
-      settled: "Settled",
-      cancelled: "Cancelled"
-    }[x.status] || x.status,
-    note: x.notes || ""
-  }));
+  try {
+    const { data, error } = await supabaseClient
+      .from("transactions")
+      .select("*")
+      .eq("user_id", userId)
+      .order("transaction_date", { ascending: false });
 
-  render();
+    // Ignore results if the user changed during the request.
+    if (currentUserId !== userId) return;
+
+    if (error) {
+      console.error("Failed to load transactions:", error);
+
+      rows = [];
+      render();
+
+      alert("Could not load cloud transactions: " + error.message);
+      return;
+    }
+
+    rows = (data || []).map(x => ({
+      id: x.id,
+      desc: x.title,
+      amt: Number(x.amount),
+      transactionDate: x.transaction_date,
+      due: x.due_date || "",
+      typ: x.expense_scope === "common" ? "Common" : "Personal",
+      cat: x.category,
+      st: {
+        pending: "Pending",
+        partially_paid: "Partially Paid",
+        paid: "Paid",
+        received: "Received",
+        settled: "Settled",
+        cancelled: "Cancelled"
+      }[x.status] || x.status,
+      note: x.notes || ""
+    }));
+
+    render();
+
+  } catch (error) {
+    if (currentUserId !== userId) return;
+
+    console.error("Unexpected transaction loading error:", error);
+
+    rows = [];
+    render();
+
+    alert("Unable to load transactions. Please check your connection and try again.");
+  }
 }
 
 function render() {
@@ -307,32 +333,57 @@ $("#reminderDays").value = String(prefs.days || 3);
 // ==========================================
 
 async function loadEmis() {
-  if (!currentUserId) return;
+  const userId = currentUserId;
 
-  const { data, error } = await supabaseClient
-    .from("emi_schedules")
-    .select("*")
-    .eq("user_id", currentUserId)
-    .eq("is_active", true)
-    .order("first_due_date", { ascending: true });
-
-  if (error) {
-    console.error("Failed to load EMI schedules:", error);
-    alert("Could not load cloud EMI schedules: " + error.message);
+  if (!userId) {
+    emis = [];
+    renderSchedules();
     return;
   }
 
-  emis = data.map(x => ({
-    id: x.id,
-    name: x.loan_name,
-    amount: Number(x.installment_amount),
-    due: x.first_due_date || "",
-    start: x.start_date || "",
-    end: x.end_date || "",
-    reminder: Number(x.reminder_days || 3)
-  }));
+  try {
+    const { data, error } = await supabaseClient
+      .from("emi_schedules")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .order("first_due_date", { ascending: true });
 
-  renderSchedules();
+    // Ignore results if the logged-in user changed.
+    if (currentUserId !== userId) return;
+
+    if (error) {
+      console.error("Failed to load EMI schedules:", error);
+
+      emis = [];
+      renderSchedules();
+
+      alert("Could not load cloud EMI schedules: " + error.message);
+      return;
+    }
+
+    emis = (data || []).map(x => ({
+      id: x.id,
+      name: x.loan_name,
+      amount: Number(x.installment_amount),
+      due: x.first_due_date || "",
+      start: x.start_date || "",
+      end: x.end_date || "",
+      reminder: Number(x.reminder_days || 3)
+    }));
+
+    renderSchedules();
+
+  } catch (error) {
+    if (currentUserId !== userId) return;
+
+    console.error("Unexpected EMI loading error:", error);
+
+    emis = [];
+    renderSchedules();
+
+    alert("Unable to load EMI schedules. Please check your connection and try again.");
+  }
 }
 
 
@@ -656,58 +707,130 @@ showSignupBtn.addEventListener("click", () => {
   loginSection.style.display = "none";
   signupSection.style.display = "block";
   authMessage.textContent = "";
+  authMessage.className = "auth-message";
 });
 
 showLoginBtn.addEventListener("click", () => {
   signupSection.style.display = "none";
   loginSection.style.display = "block";
   authMessage.textContent = "";
+  authMessage.className = "auth-message";
 });
 
+function setAuthMessage(message, type = "info") {
+  authMessage.textContent = message;
+  authMessage.className = `auth-message ${type}`;
+}
+
+function getSignupErrorMessage(error) {
+  const message = (error.message || "").toLowerCase();
+  const code = error.code || "";
+
+  if (
+    code === "23505" ||
+    message.includes("duplicate key") ||
+    message.includes("unique constraint")
+  ) {
+    return "A record already exists. If you already registered, please try signing in.";
+  }
+
+  if (
+    message.includes("already registered") ||
+    message.includes("already exists")
+  ) {
+    return "This email may already be registered. Please try signing in.";
+  }
+
+  if (message.includes("invalid email")) {
+    return "Please enter a valid email address.";
+  }
+
+  if (
+    message.includes("password") &&
+    (message.includes("weak") || message.includes("length"))
+  ) {
+    return "Your password does not meet the security requirements.";
+  }
+
+  if (message.includes("rate limit")) {
+    return "Too many registration attempts. Please wait and try again.";
+  }
+
+  if (message.includes("database error saving new user")) {
+    return "We couldn't create your account because of a database error. Please try again later.";
+  }
+
+  return "We couldn't create your account. Please try again. If the problem continues, contact us.";
+}
 const signupForm = document.getElementById("signupForm");
-signupForm.addEventListener("submit", async (event) => {
+
+signupForm.addEventListener("submit", async event => {
   event.preventDefault();
 
   const fullName = document.getElementById("signupName").value.trim();
   const email = document.getElementById("signupEmail").value.trim();
   const password = document.getElementById("signupPassword").value;
-  const confirmPassword = document.getElementById("signupConfirmPassword").value;
+  const confirmPassword =
+    document.getElementById("signupConfirmPassword").value;
 
   if (!fullName) {
-    authMessage.textContent = "Please enter your full name.";
+    setAuthMessage("Please enter your full name.", "error");
     return;
   }
 
   if (password !== confirmPassword) {
-    authMessage.textContent = "Passwords do not match.";
+    setAuthMessage("Passwords do not match.", "error");
     return;
   }
 
-  authMessage.textContent = "Creating your account...";
+  setAuthMessage("Creating your account...", "info");
 
-  const { data, error } = await supabaseClient.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        full_name: fullName
+  try {
+    const { data, error } = await supabaseClient.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName
+        }
       }
+    });
+
+    if (error) {
+      console.error("Signup failed:", {
+        message: error.message,
+        code: error.code,
+        status: error.status
+      });
+
+      setAuthMessage(getSignupErrorMessage(error), "error");
+
+      // Keep all form values when signup fails.
+      return;
     }
-  });
 
-  if (error) {
-    authMessage.textContent = error.message;
-    return;
-  }
+    // Reset the form only after successful signup.
+    signupForm.reset();
 
-  signupForm.reset();
+    if (data.session) {
+      setAuthMessage("Account created successfully!", "success");
+      updateAuthUI(data.session);
+    } else {
+      setAuthMessage(
+        "Registration successful! Please check your email to verify your account before signing in.",
+        "success"
+      );
+    }
 
-  if (data.session) {
-    updateAuthUI(data.session);
-    authMessage.textContent = "";
-  } else {
-    authMessage.textContent =
-      "Registration successful! Please check your email to verify your account before signing in.";
+  } catch (error) {
+    console.error("Unexpected signup error:", error);
+
+    setAuthMessage(
+      "Unable to connect right now. Please check your internet connection and try again.",
+      "error"
+    );
+
+    // Form values remain unchanged.
   }
 });
 function initializeAuth() {
@@ -723,7 +846,18 @@ function initializeAuth() {
       authMessage.textContent = "";
       return;
     }
+    const previousUserId = currentUserId;
+    
     updateAuthUI(session);
+    
+    // Clear previous account data when the logged-in user changes.
+    if (previousUserId !== currentUserId) {
+      rows = [];
+      emis = [];
+    
+      render();
+      renderSchedules();
+    }
     
     if (session) {
       setTimeout(() => {
