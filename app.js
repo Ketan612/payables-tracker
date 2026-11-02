@@ -363,13 +363,18 @@ showLoginBtn.addEventListener("click", () => {
 });
 
 const signupForm = document.getElementById("signupForm");
-
 signupForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
+  const fullName = document.getElementById("signupName").value.trim();
   const email = document.getElementById("signupEmail").value.trim();
   const password = document.getElementById("signupPassword").value;
   const confirmPassword = document.getElementById("signupConfirmPassword").value;
+
+  if (!fullName) {
+    authMessage.textContent = "Please enter your full name.";
+    return;
+  }
 
   if (password !== confirmPassword) {
     authMessage.textContent = "Passwords do not match.";
@@ -380,7 +385,12 @@ signupForm.addEventListener("submit", async (event) => {
 
   const { data, error } = await supabaseClient.auth.signUp({
     email,
-    password
+    password,
+    options: {
+      data: {
+        full_name: fullName
+      }
+    }
   });
 
   if (error) {
