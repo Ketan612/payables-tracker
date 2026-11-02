@@ -444,21 +444,7 @@ signupForm.addEventListener("submit", async (event) => {
       "Registration successful! Please check your email to verify your account before signing in.";
   }
 });
-async function initializeAuth() {
-  const { data, error } = await supabaseClient.auth.getSession();
-
-  if (error) {
-    authMessage.textContent = error.message;
-    updateAuthUI(null);
-    return;
-  }
-
-  updateAuthUI(data.session);
-
-  if (data.session) {
-    await loadTransactions();
-  }
-
+function initializeAuth() {
   supabaseClient.auth.onAuthStateChange((event, session) => {
 
     if (event === "PASSWORD_RECOVERY") {
