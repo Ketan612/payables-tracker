@@ -656,14 +656,19 @@ function initializeAuth() {
       authMessage.textContent = "";
       return;
     }
-
     updateAuthUI(session);
-
+    
     if (session) {
-      setTimeout(() => loadTransactions(), 0);
+      setTimeout(() => {
+        loadTransactions();
+        loadEmis();
+      }, 0);
     } else {
       rows = [];
+      emis = [];
+    
       render();
+      renderSchedules();
     }
   });
 }
