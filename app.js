@@ -335,6 +335,8 @@ function updateAuthUI(session) {
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
+  const authMessage = document.getElementById("authMessage");
+
   authMessage.textContent = "Signing in...";
 
   const email = document.getElementById("loginEmail").value.trim();
