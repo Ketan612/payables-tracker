@@ -319,6 +319,17 @@ function updateAuthUI(session) {
 
   $("#logoutBtn").style.display =
     isLoggedIn ? "inline-block" : "none";
+
+  const welcomeMessage = document.getElementById("welcomeMessage");
+
+  if (isLoggedIn) {
+    const fullName = session.user.user_metadata?.full_name;
+    const displayName = fullName || session.user.email;
+
+    welcomeMessage.textContent = `Welcome, ${displayName}!`;
+  } else {
+    welcomeMessage.textContent = "";
+  }
 }
 
 loginForm.addEventListener("submit", async (event) => {
