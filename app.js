@@ -430,50 +430,117 @@ $("#cardForm").onsubmit = e => {
 
 
 // ==========================================
-// EMI dialog handlers
+// EMI dialog handlers (Supabase)
 // ==========================================
 
 $("#addEmi").onclick = () => $("#emiDlg").showModal();
 
 $("#cancelEmi").onclick = () => $("#emiDlg").close();
 
-$("#emiForm").onsubmit = e => {
+$("#emiForm").onsubmit = async e => {
   e.preventDefault();
 
-  emis.push({
-    name: $("#emiName").value,
-    amount: +$("#emiAmount").value,
-    due: $("#emiDue").value,
-    start: $("#emiStart").value,
-    end: $("#emiEnd").value,
-    reminder: +$("#emiReminder").value
-  });
+  if (!currentUserId) {
+    alert("Please log in before adding an EMI schedule.");
+    return;
+  }
 
-  saveEmis();
+  const name = $("#emiName").value.trim();
+  const amount = Number($("#emiAmount").value);
+  const due = $("#emiDue").value;
+  const start = $("#emiStart").value || null;
+  const end = $("#emiEnd").value || null;
+  const reminder = Number($("#emiReminder").value);
+  
+  if (!name || !due || !Number.isFinite(amount) || amount <= 0) {
+    alert("Please enter a valid EMI name, amount and due date.");
+    return;
+  }
+
+  if (end && start && end < start) {
+    alert("End date cannot be earlier than start date.");
+    return;
+  }
+
+  const dueDay = new Date(due + "T00:00:00").getDate();
+
+  const { error } = await supabaseClient
+    .from("emi_schedules")
+    .insert({
+      user_id: currentUserId,
+      lender_name: "Not specified",
+      loan_name: name,
+      installment_amount: amount,
+      first_due_date: due,
+      due_day: dueDay,
+      start_date: start,
+      end_date: end,
+      reminder_days: reminder,
+      is_active: true
+    });
+
+  if (error) {
+    console.error("Failed to save EMI schedule:", error);
+    alert("Could not save EMI schedule: " + error.message);
+    return;
+  }
+
+  await loadEmis();
 
   $("#emiDlg").close();
   e.target.reset();
 };
-
-
 // ==========================================
 // Remove credit-card or EMI schedule
 // ==========================================
 
-document.addEventListener("click", e => {
+document.addEventListener("click", async e => {
 
+  // Remove credit card (local storage)
   if (e.target.dataset.card !== undefined) {
-    cards.splice(+e.target.dataset.card, 1);
+    cards.splice(Number(e.target.dataset.card), 1);
     saveCards();
+    return;
   }
 
+  // Remove EMI (Supabase)
   if (e.target.dataset.emi !== undefined) {
-    emis.splice(+e.target.dataset.emi, 1);
-    saveEmis();
+
+    if (!currentUserId) {
+      alert("Please log in before removing an EMI schedule.");
+      return;
+    }
+
+    const index = Number(e.target.dataset.emi);
+    const selectedEmi = emis[index];
+
+    if (!selectedEmi || !selectedEmi.id) {
+      alert("Could not identify this cloud EMI schedule.");
+      return;
+    }
+
+    const confirmed = confirm(
+      "Are you sure you want to remove this EMI schedule?"
+    );
+
+    if (!confirmed) return;
+
+    const { error } = await supabaseClient
+      .from("emi_schedules")
+      .delete()
+      .eq("id", selectedEmi.id)
+      .eq("user_id", currentUserId);
+
+    if (error) {
+      console.error("Failed to remove EMI schedule:", error);
+      alert("Could not remove EMI schedule: " + error.message);
+      return;
+    }
+
+    await loadEmis();
   }
 
 });
-
 
 // ==========================================
 // Save reminder preferences (local)
