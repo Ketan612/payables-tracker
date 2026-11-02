@@ -362,6 +362,42 @@ showLoginBtn.addEventListener("click", () => {
   authMessage.textContent = "";
 });
 
+const signupForm = document.getElementById("signupForm");
+
+signupForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const email = document.getElementById("signupEmail").value.trim();
+  const password = document.getElementById("signupPassword").value;
+  const confirmPassword = document.getElementById("signupConfirmPassword").value;
+
+  if (password !== confirmPassword) {
+    authMessage.textContent = "Passwords do not match.";
+    return;
+  }
+
+  authMessage.textContent = "Creating your account...";
+
+  const { data, error } = await supabaseClient.auth.signUp({
+    email,
+    password
+  });
+
+  if (error) {
+    authMessage.textContent = error.message;
+    return;
+  }
+
+  signupForm.reset();
+
+  if (data.session) {
+    updateAuthUI(data.session);
+    authMessage.textContent = "";
+  } else {
+    authMessage.textContent =
+      "Registration successful! Please check your email to verify your account before signing in.";
+  }
+});
 async function initializeAuth() {
   const { data, error } = await supabaseClient.auth.getSession();
 
