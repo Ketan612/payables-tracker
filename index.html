@@ -18,23 +18,45 @@
 
   <!-- Login section -->
   <section id="authPanel" class="panel">
-    <h2>Sign in to Payables Tracker</h2>
-    <p class="hint">Sign in to access your personal dashboard.</p>
-
-    <form id="loginForm">
-      <label>Email
-        <input id="loginEmail" type="email" required>
-      </label>
-
-      <label>Password
-        <input id="loginPassword" type="password" required>
-      </label>
-
-      <button type="submit">Sign in</button>
-      <p id="authMessage" class="hint"></p>
-    </form>
+    <div id="loginSection">
+      <h2>Sign in to Payables Tracker</h2>
+      <p class="hint">Sign in to access your personal dashboard.</p>  
+      <form id="loginForm">
+        <label>Email
+          <input id="loginEmail" type="email" required>
+        </label>
+        <label>Password
+          <input id="loginPassword" type="password" required>
+        </label>
+        <button type="submit">Sign in</button>
+      </form>
+      <p class="hint">
+        New to Payables Tracker?
+        <button id="showSignupBtn" type="button">Create an account</button>
+      </p>
+    </div>
+    <div id="signupSection" style="display: none;">
+      <h2>Create your account</h2>
+      <p class="hint">Register to start tracking your payables.</p>
+      <form id="signupForm">
+        <label>Email
+          <input id="signupEmail" type="email" required>
+        </label>
+        <label>Password
+          <input id="signupPassword" type="password" minlength="8" required>
+        </label>
+        <label>Confirm Password
+          <input id="signupConfirmPassword" type="password" minlength="8" required>
+        </label>
+        <button type="submit">Create account</button>
+      </form>
+      <p class="hint">
+        Already have an account?
+        <button id="showLoginBtn" type="button">Sign in</button>
+      </p>
+    </div>
+    <p id="authMessage" class="hint"></p>
   </section>
-
   <!-- Existing dashboard -->
   <main>
     <section class="stats">
