@@ -459,7 +459,19 @@ async function initializeAuth() {
     await loadTransactions();
   }
 
-  supabaseClient.auth.onAuthStateChange((_event, session) => {
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+
+    if (event === "PASSWORD_RECOVERY") {
+      updateAuthUI(null);
+
+      document.getElementById("loginSection").style.display = "none";
+      document.getElementById("signupSection").style.display = "none";
+      document.getElementById("resetPasswordSection").style.display = "block";
+
+      authMessage.textContent = "";
+      return;
+    }
+
     updateAuthUI(session);
 
     if (session) {
