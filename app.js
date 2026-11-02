@@ -282,24 +282,223 @@ $("#list").onclick = async e => {
 });
 
 render();
+
+// ==========================================
 // Card-cycle and recurring EMI schedules
-const CARDKEY="payables-cards-v1", EMIKEY="payables-emis-v1", PREFKEY="payables-reminders-v1";
-let cards=JSON.parse(localStorage.getItem(CARDKEY)||"[]"), emis=JSON.parse(localStorage.getItem(EMIKEY)||"[]");
-let prefs=JSON.parse(localStorage.getItem(PREFKEY)||'{"email":"","days":3}');
-$("#reminderEmail").value=prefs.email||"";$("#reminderDays").value=String(prefs.days||3);
-function saveCards(){localStorage.setItem(CARDKEY,JSON.stringify(cards));renderSchedules()}
-function saveEmis(){localStorage.setItem(EMIKEY,JSON.stringify(emis));renderSchedules()}
-function renderSchedules(){
- $("#cards").innerHTML=cards.length?cards.map((c,i)=>`<div class="item"><div><b>${safe(c.name)}</b><small>Cycle ${c.start}–${c.end} · Statement day ${c.statement}</small><small>Payment due: ${safe(c.dueDate)}</small></div><div class="right"><button class="edit" data-card="${i}">Remove</button></div></div>`).join(""):'<p class="hint">No cards added yet.</p>';
- $("#emis").innerHTML=emis.length?emis.map((x,i)=>`<div class="item"><div><b>${safe(x.name)}</b><small>${fmt(x.amount)} monthly · Next due ${safe(x.due)}</small><small>Reminder ${x.reminder} day(s) before${x.end?" · Ends "+safe(x.end):""}</small></div><div class="right"><button class="edit" data-emi="${i}">Remove</button></div></div>`).join(""):'<p class="hint">No recurring EMIs added yet.</p>';
+// ==========================================
+
+const CARDKEY = "payables-cards-v1";
+const EMIKEY = "payables-emis-v1";
+const PREFKEY = "payables-reminders-v1";
+
+let cards = JSON.parse(localStorage.getItem(CARDKEY) || "[]");
+let emis = JSON.parse(localStorage.getItem(EMIKEY) || "[]");
+
+let prefs = JSON.parse(
+  localStorage.getItem(PREFKEY) || '{"email":"","days":3}'
+);
+
+$("#reminderEmail").value = prefs.email || "";
+$("#reminderDays").value = String(prefs.days || 3);
+
+
+// ==========================================
+// Load EMI schedules from Supabase
+// ==========================================
+
+async function loadEmis() {
+  if (!currentUserId) return;
+
+  const { data, error } = await supabaseClient
+    .from("emi_schedules")
+    .select("*")
+    .eq("user_id", currentUserId)
+    .eq("is_active", true)
+    .order("first_due_date", { ascending: true });
+
+  if (error) {
+    console.error("Failed to load EMI schedules:", error);
+    alert("Could not load cloud EMI schedules: " + error.message);
+    return;
+  }
+
+  emis = data.map(x => ({
+    id: x.id,
+    name: x.loan_name,
+    amount: Number(x.installment_amount),
+    due: x.first_due_date || "",
+    start: x.start_date || "",
+    end: x.end_date || "",
+    reminder: Number(x.reminder_days || 3)
+  }));
+
+  renderSchedules();
 }
-$("#addCard").onclick=()=>$("#cardDlg").showModal();$("#cancelCard").onclick=()=>$("#cardDlg").close();
-$("#cardForm").onsubmit=e=>{e.preventDefault();cards.push({name:$("#cardName").value,start:+$("#cycleStart").value,statement:+$("#statementDay").value,end:+$("#cycleEnd").value,dueDay:+$("#cardDueDay").value,dueDate:$("#cardDueDate").value});saveCards();$("#cardDlg").close();e.target.reset()};
-$("#addEmi").onclick=()=>$("#emiDlg").showModal();$("#cancelEmi").onclick=()=>$("#emiDlg").close();
-$("#emiForm").onsubmit=e=>{e.preventDefault();emis.push({name:$("#emiName").value,amount:+$("#emiAmount").value,due:$("#emiDue").value,start:$("#emiStart").value,end:$("#emiEnd").value,reminder:+$("#emiReminder").value});saveEmis();$("#emiDlg").close();e.target.reset()};
-document.addEventListener("click",e=>{if(e.target.dataset.card!==undefined){cards.splice(+e.target.dataset.card,1);saveCards()}if(e.target.dataset.emi!==undefined){emis.splice(+e.target.dataset.emi,1);saveEmis()}});
-$("#saveReminder").onclick=()=>{prefs={email:$("#reminderEmail").value,days:+$("#reminderDays").value};localStorage.setItem(PREFKEY,JSON.stringify(prefs));$("#reminderState").textContent="Preferences saved on this device. Email reminders will start only after cloud email delivery is configured."};
+
+
+// ==========================================
+// Save credit-card schedules (local)
+// ==========================================
+
+function saveCards() {
+  localStorage.setItem(CARDKEY, JSON.stringify(cards));
+  renderSchedules();
+}
+
+
+// ==========================================
+// Save EMI schedules (temporary local)
+// ==========================================
+
+function saveEmis() {
+  localStorage.setItem(EMIKEY, JSON.stringify(emis));
+  renderSchedules();
+}
+
+
+// ==========================================
+// Render credit cards and EMI schedules
+// ==========================================
+
+function renderSchedules() {
+
+  $("#cards").innerHTML = cards.length
+    ? cards.map((c, i) => `
+        <div class="item">
+          <div>
+            <b>${safe(c.name)}</b>
+            <small>
+              Cycle ${c.start}–${c.end} · Statement day ${c.statement}
+            </small>
+            <small>Payment due: ${safe(c.dueDate)}</small>
+          </div>
+
+          <div class="right">
+            <button class="edit" data-card="${i}">Remove</button>
+          </div>
+        </div>
+      `).join("")
+    : '<p class="hint">No cards added yet.</p>';
+
+
+  $("#emis").innerHTML = emis.length
+    ? emis.map((x, i) => `
+        <div class="item">
+          <div>
+            <b>${safe(x.name)}</b>
+            <small>${fmt(x.amount)} monthly · Next due ${safe(x.due)}</small>
+            <small>
+              Reminder ${x.reminder} day(s) before
+              ${x.end ? " · Ends " + safe(x.end) : ""}
+            </small>
+          </div>
+
+          <div class="right">
+            <button class="edit" data-emi="${i}">Remove</button>
+          </div>
+        </div>
+      `).join("")
+    : '<p class="hint">No recurring EMIs added yet.</p>';
+}
+
+
+// ==========================================
+// Credit-card dialog handlers
+// ==========================================
+
+$("#addCard").onclick = () => $("#cardDlg").showModal();
+
+$("#cancelCard").onclick = () => $("#cardDlg").close();
+
+$("#cardForm").onsubmit = e => {
+  e.preventDefault();
+
+  cards.push({
+    name: $("#cardName").value,
+    start: +$("#cycleStart").value,
+    statement: +$("#statementDay").value,
+    end: +$("#cycleEnd").value,
+    dueDay: +$("#cardDueDay").value,
+    dueDate: $("#cardDueDate").value
+  });
+
+  saveCards();
+
+  $("#cardDlg").close();
+  e.target.reset();
+};
+
+
+// ==========================================
+// EMI dialog handlers
+// ==========================================
+
+$("#addEmi").onclick = () => $("#emiDlg").showModal();
+
+$("#cancelEmi").onclick = () => $("#emiDlg").close();
+
+$("#emiForm").onsubmit = e => {
+  e.preventDefault();
+
+  emis.push({
+    name: $("#emiName").value,
+    amount: +$("#emiAmount").value,
+    due: $("#emiDue").value,
+    start: $("#emiStart").value,
+    end: $("#emiEnd").value,
+    reminder: +$("#emiReminder").value
+  });
+
+  saveEmis();
+
+  $("#emiDlg").close();
+  e.target.reset();
+};
+
+
+// ==========================================
+// Remove credit-card or EMI schedule
+// ==========================================
+
+document.addEventListener("click", e => {
+
+  if (e.target.dataset.card !== undefined) {
+    cards.splice(+e.target.dataset.card, 1);
+    saveCards();
+  }
+
+  if (e.target.dataset.emi !== undefined) {
+    emis.splice(+e.target.dataset.emi, 1);
+    saveEmis();
+  }
+
+});
+
+
+// ==========================================
+// Save reminder preferences (local)
+// ==========================================
+
+$("#saveReminder").onclick = () => {
+
+  prefs = {
+    email: $("#reminderEmail").value,
+    days: +$("#reminderDays").value
+  };
+
+  localStorage.setItem(PREFKEY, JSON.stringify(prefs));
+
+  $("#reminderState").textContent =
+    "Preferences saved on this device. Email reminders will start only after cloud email delivery is configured.";
+};
+
+
+// ==========================================
+// Initial rendering
+// ==========================================
+
 renderSchedules();
+
 // Supabase authentication
 const authPanel = document.getElementById("authPanel");
 const loginForm = document.getElementById("loginForm");
