@@ -357,6 +357,29 @@ loginForm.addEventListener("submit", async (event) => {
   authMessage.textContent = "";
 });
 
+document.getElementById("forgotPasswordBtn").addEventListener("click", async () => {
+  const authMessage = document.getElementById("authMessage");
+  const email = document.getElementById("loginEmail").value.trim();
+
+  if (!email) {
+    authMessage.textContent = "Please enter your registered email address first.";
+    return;
+  }
+
+  authMessage.textContent = "Sending password reset email...";
+
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin
+  });
+
+  if (error) {
+    authMessage.textContent = error.message;
+    return;
+  }
+
+  authMessage.textContent = "Password reset link sent! Please check your email.";
+});
+
 // Switch between Login and Sign Up
 const loginSection = document.getElementById("loginSection");
 const signupSection = document.getElementById("signupSection");
