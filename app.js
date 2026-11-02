@@ -489,4 +489,41 @@ $("#logoutBtn").onclick = async () => {
     alert("Logout failed: " + error.message);
   }
 };
+document.getElementById("resetPasswordForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const authMessage = document.getElementById("authMessage");
+
+  const newPassword = document.getElementById("newPassword").value;
+  const confirmPassword = document.getElementById("confirmNewPassword").value;
+
+  if (newPassword !== confirmPassword) {
+    authMessage.textContent = "Passwords do not match.";
+    return;
+  }
+
+  authMessage.textContent = "Updating password...";
+
+  const { error } = await supabaseClient.auth.updateUser({
+    password: newPassword
+  });
+
+  if (error) {
+    authMessage.textContent = error.message;
+    return;
+  }
+  await supabaseClient.auth.signOut();
+
+  document.getElementById("resetPasswordForm").reset();
+
+  document.getElementById("resetPasswordSection").style.display = "none";
+  document.getElementById("signupSection").style.display = "none";
+  document.getElementById("loginSection").style.display = "block";
+
+  authPanel.style.display = "block";
+  document.querySelector("main").style.display = "none";
+
+  authMessage.textContent =
+    "Password updated successfully. Please sign in with your new password.";
+});
 initializeAuth();
