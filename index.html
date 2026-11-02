@@ -62,6 +62,32 @@
         <button id="showLoginBtn" type="button">Sign in</button>
       </p>
     </div>
+    <div id="resetPasswordSection" style="display: none;">
+      <h2>Set New Password</h2>
+      <p class="hint">Enter your new password below.</p>
+    
+      <form id="resetPasswordForm">
+        <label>New Password
+          <input
+            id="newPassword"
+            type="password"
+            minlength="8"
+            required
+          >
+        </label>
+    
+        <label>Confirm New Password
+          <input
+            id="confirmNewPassword"
+            type="password"
+            minlength="8"
+            required
+          >
+        </label>
+    
+        <button type="submit">Update Password</button>
+      </form>
+    </div>
     <p id="authMessage" class="hint"></p>
   </section>
   <!-- Existing dashboard -->
