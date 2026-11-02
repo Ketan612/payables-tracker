@@ -786,8 +786,9 @@ signupForm.addEventListener("submit", async event => {
   setAuthMessage("Creating your account...", "info");
 
   try {
+    const normalizedEmail = email.trim().toLowerCase();
     const { data, error } = await supabaseClient.auth.signUp({
-      email,
+      email: normalizedEmail,
       password,
       options: {
         data: {
@@ -806,6 +807,26 @@ signupForm.addEventListener("submit", async event => {
       setAuthMessage(getSignupErrorMessage(error), "error");
 
       // Keep all form values when signup fails.
+      return;
+    }
+    // Check whether Supabase identified this as an existing email.
+    if (
+      data.user &&
+      Array.isArray(data.user.identities) &&
+      data.user.identities.length === 0
+    ) {
+      setAuthMessage(
+        "This email is already registered. Please sign in instead.",
+        "error"
+      );
+      return;
+    }
+    
+    if (!data.user) {
+      setAuthMessage(
+        "Account creation could not be confirmed. Please try again.",
+        "error"
+      );
       return;
     }
 
