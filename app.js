@@ -344,6 +344,24 @@ loginForm.addEventListener("submit", async (event) => {
   authMessage.textContent = "";
 });
 
+// Switch between Login and Sign Up
+const loginSection = document.getElementById("loginSection");
+const signupSection = document.getElementById("signupSection");
+const showSignupBtn = document.getElementById("showSignupBtn");
+const showLoginBtn = document.getElementById("showLoginBtn");
+
+showSignupBtn.addEventListener("click", () => {
+  loginSection.style.display = "none";
+  signupSection.style.display = "block";
+  authMessage.textContent = "";
+});
+
+showLoginBtn.addEventListener("click", () => {
+  signupSection.style.display = "none";
+  loginSection.style.display = "block";
+  authMessage.textContent = "";
+});
+
 async function initializeAuth() {
   const { data, error } = await supabaseClient.auth.getSession();
 
