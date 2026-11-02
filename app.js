@@ -652,26 +652,29 @@ function updateAuthUI(session) {
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
-  const authMessage = document.getElementById("authMessage");
-
-  authMessage.textContent = "Signing in...";
-
   const email = document.getElementById("loginEmail").value.trim();
   const password = document.getElementById("loginPassword").value;
 
-  const { data, error } = await supabaseClient.auth.signInWithPassword({
-    email,
-    password
-  });
+  setAuthMessage("Signing in...", "info");
 
-  if (error) {
-    authMessage.textContent = error.message;
-    return;
+  try {
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) {
+      setAuthMessage("Invalid email or password. Please try again.", "error");
+      return;
+    }
+
+    updateAuthUI(data.session);
+    loginForm.reset();
+    setAuthMessage("", "");
+  } catch (error) {
+    console.error("Login error:", error);
+    setAuthMessage("Unable to sign in. Please check your connection and try again.", "error");
   }
-
-  updateAuthUI(data.session);
-  loginForm.reset();
-  authMessage.textContent = "";
 });
 
 document.getElementById("forgotPasswordBtn").addEventListener("click", async () => {
