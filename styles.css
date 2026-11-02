@@ -108,7 +108,19 @@ button {
   background: #edf0f5;
   color: #334155;
 }
-
+/* Forgot password link */
+#forgotPasswordBtn {
+  display: block;
+  background: transparent;
+  color: #2459d3;
+  border: none;
+  padding: 4px 0;
+  margin-top: 8px;
+  border-radius: 0;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
 /* Filters */
 .filters {
   display: flex;
