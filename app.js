@@ -138,25 +138,32 @@ function updateDefaultPayableAmount() {
   }
 }
 
-
 function updatePaymentFields() {
   const method = $("#paymentMethod").value;
+  const payableCheckbox = $("#createPayable");
 
   // Credit-card purchases automatically require a payable.
   if (method === "credit_card") {
-    $("#createPayable").checked = true;
-    $("#createPayable").disabled = true;
+    payableCheckbox.checked = true;
+    payableCheckbox.disabled = true;
+    payableCheckbox.dataset.autoChecked = "true";
 
     // Credit-card payable must equal the full purchase amount.
     $("#payableAmount").dataset.manuallyEdited = "";
     $("#payableAmount").value =
       (Number($("#amt").value) || 0).toFixed(2);
   } else {
-    $("#createPayable").disabled = false;
+    payableCheckbox.disabled = false;
+
+    // Remove the payable that was automatically enabled by Credit Card.
+    if (payableCheckbox.dataset.autoChecked === "true") {
+      payableCheckbox.checked = false;
+      payableCheckbox.dataset.autoChecked = "";
+    }
   }
 
   const createPayable =
-    $("#createPayable").checked || method === "credit_card";
+    payableCheckbox.checked || method === "credit_card";
 
   const payableType = $("#payableType").value;
 
