@@ -678,26 +678,39 @@ loginForm.addEventListener("submit", async (event) => {
 });
 
 document.getElementById("forgotPasswordBtn").addEventListener("click", async () => {
-  const authMessage = document.getElementById("authMessage");
   const email = document.getElementById("loginEmail").value.trim();
 
   if (!email) {
-    authMessage.textContent = "Please enter your registered email address first.";
+    setAuthMessage("Please enter your registered email address first.", "error");
     return;
   }
 
-  authMessage.textContent = "Sending password reset email...";
+  setAuthMessage("Sending password reset email...", "info");
 
-  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin
-  });
+  try {
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin
+    });
 
-  if (error) {
-    authMessage.textContent = error.message;
-    return;
+    if (error) {
+      console.error("Password reset request failed:", error);
+      setAuthMessage(error.message, "error");
+      return;
+    }
+
+    setAuthMessage(
+      "Password reset link sent! Please check your email.",
+      "success"
+    );
+
+  } catch (error) {
+    console.error("Unexpected password reset error:", error);
+
+    setAuthMessage(
+      "Unable to send the reset email. Please check your connection and try again.",
+      "error"
+    );
   }
-
-  authMessage.textContent = "Password reset link sent! Please check your email.";
 });
 
 // Switch between Login and Sign Up
@@ -907,38 +920,50 @@ $("#logoutBtn").onclick = async () => {
 document.getElementById("resetPasswordForm").addEventListener("submit", async (event) => {
   event.preventDefault();
 
-  const authMessage = document.getElementById("authMessage");
-
   const newPassword = document.getElementById("newPassword").value;
   const confirmPassword = document.getElementById("confirmNewPassword").value;
 
   if (newPassword !== confirmPassword) {
-    authMessage.textContent = "Passwords do not match.";
+    setAuthMessage("Passwords do not match.", "error");
     return;
   }
 
-  authMessage.textContent = "Updating password...";
+  setAuthMessage("Updating password...", "info");
 
-  const { error } = await supabaseClient.auth.updateUser({
-    password: newPassword
-  });
+  try {
+    const { error } = await supabaseClient.auth.updateUser({
+      password: newPassword
+    });
 
-  if (error) {
-    authMessage.textContent = error.message;
-    return;
+    if (error) {
+      console.error("Password update failed:", error);
+      setAuthMessage(error.message, "error");
+      return;
+    }
+
+    const { error: signOutError } = await supabaseClient.auth.signOut();
+
+    if (signOutError) {
+      console.error("Sign out after password update failed:", signOutError);
+    }
+
+    document.getElementById("resetPasswordForm").reset();
+
+    document.getElementById("resetPasswordSection").style.display = "none";
+    document.getElementById("signupSection").style.display = "none";
+    document.getElementById("loginSection").style.display = "block";
+
+    authPanel.style.display = "block";
+    document.querySelector("main").style.display = "none";
+
+    setAuthMessage(
+      "Password updated successfully. Please sign in with your new password.",
+      "success"
+    );
+
+  } catch (error) {
+    console.error("Unexpected password update error:", error);
+    setAuthMessage("Unable to update your password. Please try again.", "error");
   }
-  await supabaseClient.auth.signOut();
-
-  document.getElementById("resetPasswordForm").reset();
-
-  document.getElementById("resetPasswordSection").style.display = "none";
-  document.getElementById("signupSection").style.display = "none";
-  document.getElementById("loginSection").style.display = "block";
-
-  authPanel.style.display = "block";
-  document.querySelector("main").style.display = "none";
-
-  authMessage.textContent =
-    "Password updated successfully. Please sign in with your new password.";
 });
 initializeAuth();
