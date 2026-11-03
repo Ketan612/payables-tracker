@@ -199,6 +199,7 @@
           <select id="typ">
             <option>Personal</option>
             <option>Common</option>
+            <option>Shared</option>
           </select>
         </label>
         <label>Category
@@ -212,6 +213,23 @@
             <option>Fuel</option>
           </select>
         </label>
+      </div>
+      <div id="sharedFields" hidden>
+        <h3>Expense split</h3>
+      
+        <label>Your share (₹)
+          <input id="yourShare" type="number" min="0.01" step=".01">
+        </label>
+      
+        <div id="participantSplits"></div>
+      
+        <button type="button" class="secondary" id="addSplitPerson">
+          + Add participant
+        </button>
+      
+        <p id="splitTotal" class="hint">
+          Split total must equal the expense amount.
+        </p>
       </div>
       <label>Due date<input id="due" type="date"></label>
       <label>Status
