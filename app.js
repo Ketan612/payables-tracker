@@ -115,8 +115,43 @@ function populatePaymentDropdowns() {
     '<option value="">Select person</option>' +
     accountOptions(people, "name");
 }
+function updatePaymentFields() {
+  const method = $("#paymentMethod").value;
+  const createPayable = $("#createPayable").checked;
+  const payableType = $("#payableType").value;
+
+  // Payment source fields
+  $("#paymentAccountField").hidden =
+    !["bank", "cash", "wallet"].includes(method);
+
+  $("#paymentCardField").hidden =
+    method !== "credit_card";
+
+  // Payable details
+  $("#payableFields").hidden = !createPayable;
+
+  // Payable destination fields
+  $("#payablePersonField").hidden =
+    !createPayable || payableType !== "person";
+
+  $("#payableAccountField").hidden =
+    !createPayable || payableType !== "account";
+
+  $("#payableCardField").hidden =
+    !createPayable || payableType !== "credit_card";
+}
 
 const $ = s => document.querySelector(s);
+
+$("#paymentMethod").addEventListener("change", () => {
+  populatePaymentDropdowns();
+  updatePaymentFields();
+});
+
+$("#createPayable").addEventListener("change", updatePaymentFields);
+
+$("#payableType").addEventListener("change", updatePaymentFields);
+
 
 const fmt = n =>
   "₹" + Number(n).toLocaleString("en-IN", {
@@ -298,7 +333,10 @@ function edit(x) {
   }
 
   $("#transactionDate").value = x?.transactionDate || (x ? "" : todayDate());
-
+  
+  populatePaymentDropdowns();
+  updatePaymentFields();
+  
   $("#dlg").showModal();
 }
 // ==========================================
