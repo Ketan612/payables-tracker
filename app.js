@@ -1305,24 +1305,26 @@ function showTransactionDetails(transaction, extra = {}) {
       }).join("")
     : "<p>No settlement history yet.</p>";
 
-  const fields = [
-    ["Amount", fmt(transaction.amt)],
-    ["Transaction date", transaction.transactionDate || "Not specified"],
-    ["Due date", transaction.due || "Not specified"],
-    ["Type", transaction.typ || "Not specified"],
-    ["Category", transaction.cat || "Not specified"],
-    ["Status", transaction.st || "Not specified"],
-    ["Payment source", paymentSource],
-    ["Payable destination", payableDestination],
-    ["Description / Notes", transaction.note || "None"]
-  ];
-
   $("#balanceDetailTitle").textContent = transaction.desc;
 
-  $("#balanceDetailSummary").innerHTML = extra.hideBackButton
-    ? ""
-    : `<button type="button" class="secondary" id="backToBalanceList">← Back to list</button>`;
+  $("#balanceDetailSummary").innerHTML = `
+  <div class="actions">
+    ${extra.hideBackButton
+      ? ""
+      : `<button type="button" class="secondary" id="backToBalanceList">
+           ← Back to list
+         </button>`
+    }
 
+    <button
+      type="button"
+      class="secondary"
+      id="showTransactionInfo"
+    >
+      Transaction Details
+    </button>
+  </div>
+`;
   $("#balanceDetailTransactions").innerHTML = `
     <div class="item">
       <div>
@@ -1344,15 +1346,6 @@ function showTransactionDetails(transaction, extra = {}) {
     <h3>Settlement History</h3>
     ${historyHtml}
 
-    <h3>Transaction Information</h3>
-    ${fields.map(([label, value]) => `
-      <div class="item">
-        <div>
-          <small>${safe(label)}</small>
-          <b>${safe(String(value))}</b>
-        </div>
-      </div>
-    `).join("")}
   `;
 
   if (!$("#balanceDetailDlg").open) {
@@ -1401,6 +1394,81 @@ $("#balanceDetailTransactions").addEventListener("click", event => {
 
 // Return to the original balance transaction list.
 $("#balanceDetailSummary").addEventListener("click", event => {
+  if (event.target.closest("#showTransactionInfo")) {
+    const transaction = rows.find(
+      x => x.id === activeDetailsTransactionId
+    );
+
+    if (!transaction) {
+      alert("Transaction information could not be found.");
+      return;
+    }
+
+    const paymentAccount = accounts.find(
+      x => x.id === transaction.paymentAccountId
+    );
+
+    const paymentCard = cards.find(
+      x => x.id === transaction.paymentCardId
+    );
+
+    const payablePerson = people.find(
+      x => x.id === transaction.payableToPersonId
+    );
+
+    const payableAccount = accounts.find(
+      x => x.id === transaction.payableToAccountId
+    );
+
+    const payableCard = cards.find(
+      x => x.id === transaction.payableToCardId
+    );
+
+    const paymentSource = {
+      bank: paymentAccount?.account_name || "Bank account",
+      cash: "Cash",
+      wallet: paymentAccount?.account_name || "Wallet",
+      credit_card: paymentCard?.name || "Credit card",
+      friend_card: "Friend's card",
+      unpaid: "Unpaid",
+      other: "Other"
+    }[transaction.paymentMethod] || "Not specified";
+
+    let payableDestination = "Not specified";
+
+    if (transaction.payableToType === "person") {
+      payableDestination = payablePerson?.name || "Person";
+    } else if (transaction.payableToType === "account") {
+      payableDestination = payableAccount?.account_name || "Account";
+    } else if (transaction.payableToType === "credit_card") {
+      payableDestination = payableCard?.name || "Credit card";
+    }
+
+    const fields = [
+      ["Amount", fmt(transaction.amt)],
+      ["Transaction date", transaction.transactionDate || "Not specified"],
+      ["Due date", transaction.due || "Not specified"],
+      ["Type", transaction.typ || "Not specified"],
+      ["Category", transaction.cat || "Not specified"],
+      ["Status", transaction.st || "Not specified"],
+      ["Payment source", paymentSource],
+      ["Payable destination", payableDestination],
+      ["Description / Notes", transaction.note || "None"]
+    ];
+
+    $("#transactionInfoContent").innerHTML = fields.map(([label, value]) => `
+      <div class="item">
+        <div>
+          <small>${safe(label)}</small>
+          <b>${safe(String(value))}</b>
+        </div>
+      </div>
+    `).join("");
+
+    $("#transactionInfoDlg").showModal();
+    return;
+  }
+
   if (event.target.id !== "backToBalanceList") return;
   if (!balanceDetailView) return;
 
@@ -1416,7 +1484,10 @@ $("#balanceDetailSummary").addEventListener("click", event => {
 $("#closeBalanceDetail").onclick = () => {
   $("#balanceDetailDlg").close();
 };
-
+// Close transaction information dialog.
+$("#closeTransactionInfo").addEventListener("click", () => {
+  $("#transactionInfoDlg").close();
+});
 
 // Total Receivables details.
 $("#receivablesBalance").onclick = () => {
