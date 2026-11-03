@@ -106,6 +106,35 @@
         <b id="t">₹0</b>
       </article>
     </section>
+        <!-- Balances overview -->
+    <section class="panel">
+      <h2>Balances Overview</h2>
+      <p class="hint">
+        Click any balance to see the transactions contributing to it.
+      </p>
+
+      <section class="stats">
+        <button type="button" class="balance-card" id="receivablesBalance">
+          <small>TOTAL RECEIVABLES</small>
+          <b id="totalReceivables">₹0</b>
+        </button>
+
+        <button type="button" class="balance-card" id="payablesBalance">
+          <small>TOTAL PAYABLES</small>
+          <b id="totalPayables">₹0</b>
+        </button>
+
+        <button type="button" class="balance-card" id="creditCardsBalance">
+          <small>CREDIT CARD OUTSTANDING</small>
+          <b id="totalCardOutstanding">₹0</b>
+        </button>
+
+        <button type="button" class="balance-card" id="bankBalance">
+          <small>TOTAL BANK BALANCE</small>
+          <b id="totalBankBalance">₹0</b>
+        </button>
+      </section>
+    </section>
 
     <section class="panel">
       <div class="head">
@@ -139,6 +168,22 @@
       <p class="hint">Track statement generation, billing cycle and payment due dates separately from individual purchases.</p>
       <div id="cards"></div>
       <button id="addCard">＋ Add credit card</button>
+    </section>
+    
+        <!-- Bank accounts -->
+    <section class="panel">
+      <div class="head">
+        <h2>Bank Accounts</h2>
+        <button id="addBankAccount" type="button">
+          ＋ Add bank account
+        </button>
+      </div>
+
+      <p class="hint">
+        View account-wise balances and transaction history.
+      </p>
+
+      <div id="bankAccounts"></div>
     </section>
 
     <section class="panel">
@@ -177,19 +222,6 @@
       <p id="reminderState" class="hint">Local reminder preferences only — email sending is not connected yet.</p>
     </section>
 
-    <section class="panel">
-      <h2>Available funds</h2>
-      <p>Main account <b>₹45,114</b></p>
-      <p>Other account <b>₹2,246</b></p>
-      <p>Total personal funds <b>₹47,360</b></p>
-      <small>Common payables are excluded from personal funds.</small>
-    </section>
-
-    <section class="panel">
-      <h2>ChatGPT connection</h2>
-      <p>Local device storage is active. Cloud database and ChatGPT access still need credentials and deployment.</p>
-      <b class="warn">Backend not connected</b>
-    </section>
   </main>
 
   <!-- Add/edit payable dialog -->
@@ -388,6 +420,65 @@
         <button type="submit">Save person</button>
       </div>
     </form>
+  </dialog>
+  
+    <!-- Add/edit bank account dialog -->
+  <dialog id="bankAccountDlg">
+    <form id="bankAccountForm">
+      <h2 id="bankAccountFormTitle">Add bank account</h2>
+
+      <input id="bankAccountId" type="hidden">
+
+      <label>Account name
+        <input id="bankAccountName" type="text" required>
+      </label>
+
+      <label>Bank / Institution
+        <input id="bankInstitution" type="text">
+      </label>
+
+      <label>Account type
+        <select id="bankAccountType">
+          <option value="bank">Bank</option>
+        </select>
+      </label>
+
+      <label>Last four digits (optional)
+        <input id="bankLastFour" type="text" maxlength="4">
+      </label>
+
+      <label>Notes (optional)
+        <input id="bankAccountNotes" type="text">
+      </label>
+
+      <div class="actions">
+        <button type="button" class="secondary" id="cancelBankAccount">
+          Cancel
+        </button>
+        <button type="submit">Save account</button>
+      </div>
+    </form>
+  </dialog>
+    <!-- Balance and transaction details -->
+  <dialog id="balanceDetailDlg">
+    <div>
+      <h2 id="balanceDetailTitle">Balance details</h2>
+
+      <div id="balanceDetailSummary"></div>
+
+      <h3>Pending transactions</h3>
+      <div id="balanceDetailTransactions"></div>
+
+      <div class="actions">
+        <button
+          type="button"
+          class="secondary"
+          id="closeBalanceDetail"
+        >
+          Close
+        </button>
+      </div>
+    </div>
   </dialog>
   <!-- EMI dialog -->
   <dialog id="emiDlg">
