@@ -147,7 +147,18 @@
       <div id="emis"></div>
       <button id="addEmi">＋ Add EMI schedule</button>
     </section>
-
+    <section class="panel">
+      <div class="head">
+        <h2>People</h2>
+        <button id="addPerson" type="button">＋ Add person</button>
+      </div>
+    
+      <p class="hint">
+        Manage people for shared expenses, receivables and payable destinations.
+      </p>
+    
+      <div id="peopleList"></div>
+    </section>
     <section class="panel">
       <h2>Payment reminders</h2>
       <p class="hint">Choose how early you want reminders. Email delivery requires the cloud backend, a verified email address and an email provider to be configured.</p>
@@ -351,7 +362,33 @@
       </div>
     </form>
   </dialog>
-
+<!-- Add/edit person dialog -->
+  <dialog id="personDlg">
+    <form id="personForm">
+      <h2 id="personFormTitle">Add person</h2>
+  
+      <input id="personId" type="hidden">
+  
+      <label>Person name
+        <input id="personName" type="text" required>
+      </label>
+  
+      <label>Phone number (optional)
+        <input id="personPhone" type="tel">
+      </label>
+  
+      <label>Notes (optional)
+        <input id="personNotes" type="text">
+      </label>
+  
+      <div class="actions">
+        <button type="button" class="secondary" id="cancelPerson">
+          Cancel
+        </button>
+        <button type="submit">Save person</button>
+      </div>
+    </form>
+  </dialog>
   <!-- EMI dialog -->
   <dialog id="emiDlg">
     <form id="emiForm">
