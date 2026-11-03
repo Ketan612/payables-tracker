@@ -190,8 +190,12 @@ function render() {
         </div>
         <div class="right">
           <strong>${fmt(x.amt)}</strong><br>
-          <button class="edit" data-edit="${x.id}">Edit</button>
-          ${pending(x) ? `<button class="paid" data-paid="${x.id}">Paid</button>` : ""}
+          ${x.typ !== "Shared"
+            ? `<button class="edit" data-edit="${x.id}">Edit</button>`
+            : ""}
+          ${pending(x) && x.typ !== "Shared"
+            ? `<button class="paid" data-paid="${x.id}">Paid</button>`
+            : ""}
         </div>
       </div>
     `).join("")
@@ -205,9 +209,13 @@ function render() {
     .filter(x => pending(x) && x.typ === "Common")
     .reduce((v, x) => v + x.amt, 0);
 
+  let shared = rows
+    .filter(x => pending(x) && x.typ === "Shared")
+    .reduce((v, x) => v + x.amt, 0);
+
   $("#p").textContent = fmt(p);
   $("#c").textContent = fmt(c);
-  $("#t").textContent = fmt(p + c);
+  $("#t").textContent = fmt(p + c + shared);
 }
 
 function edit(x) {
