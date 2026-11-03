@@ -24,6 +24,7 @@ let rows;
 // ==========================================
 
 let people = [];
+let accounts = [];
 
 async function loadPeople() {
   const userId = currentUserId;
@@ -55,6 +56,64 @@ try {
   rows = JSON.parse(localStorage.getItem(K)) || seed;
 } catch {
   rows = seed;
+}
+async function loadAccounts() {
+  const userId = currentUserId;
+
+  if (!userId) {
+    accounts = [];
+    return;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("bank_accounts")
+    .select("id, account_name, account_type")
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .order("account_name", { ascending: true });
+
+  if (currentUserId !== userId) return;
+
+  if (error) {
+    console.error("Failed to load accounts:", error);
+    alert("Could not load accounts: " + error.message);
+    accounts = [];
+    return;
+  }
+
+  accounts = data || [];
+}
+function populatePaymentDropdowns() {
+  const method = $("#paymentMethod").value;
+
+  const sourceAccounts = accounts.filter(
+    account => account.account_type === method
+  );
+
+  const accountOptions = (items, labelField) =>
+    items.map(item =>
+      `<option value="${safe(item.id)}">${safe(item[labelField])}</option>`
+    ).join("");
+
+  $("#paymentAccount").innerHTML =
+    '<option value="">Select account</option>' +
+    accountOptions(sourceAccounts, "account_name");
+
+  $("#payableAccount").innerHTML =
+    '<option value="">Select account / fund</option>' +
+    accountOptions(accounts, "account_name");
+
+  $("#paymentCard").innerHTML =
+    '<option value="">Select card</option>' +
+    accountOptions(cards, "name");
+
+  $("#payableCard").innerHTML =
+    '<option value="">Select card</option>' +
+    accountOptions(cards, "name");
+
+  $("#payablePerson").innerHTML =
+    '<option value="">Select person</option>' +
+    accountOptions(people, "name");
 }
 
 const $ = s => document.querySelector(s);
@@ -1295,10 +1354,16 @@ function initializeAuth() {
     }
     
     if (session) {
-      setTimeout(() => {
-        loadTransactions();
-        loadEmis();
-        loadCards();
+      setTimeout(async () => {
+        await Promise.all([
+          loadTransactions(),
+          loadEmis(),
+          loadCards(),
+          loadPeople(),
+          loadAccounts()
+        ]);
+    
+        populatePaymentDropdowns();
       }, 0);
     } else {
       rows = [];
