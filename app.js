@@ -115,30 +115,73 @@ function populatePaymentDropdowns() {
     '<option value="">Select person</option>' +
     accountOptions(people, "name");
 }
+function updateDefaultPayableAmount() {
+  if (!$("#createPayable").checked) return;
+
+  const method = $("#paymentMethod").value;
+
+  // Credit-card purchases always create a payable for the full amount.
+  // Shared expenses paid by other methods default to your own share.
+  const amount = method === "credit_card"
+    ? Number($("#amt").value) || 0
+    : $("#typ").value === "Shared"
+      ? Number($("#yourShare").value) || 0
+      : Number($("#amt").value) || 0;
+
+  const payableAmount = $("#payableAmount");
+
+  if (!payableAmount.dataset.manuallyEdited) {
+    payableAmount.value = amount > 0 ? amount.toFixed(2) : "";
+  }
+}
+
 function updatePaymentFields() {
   const method = $("#paymentMethod").value;
-  const createPayable = $("#createPayable").checked;
+
+  // Credit-card purchases automatically require a payable.
+  if (method === "credit_card") {
+    $("#createPayable").checked = true;
+    $("#createPayable").disabled = true;
+  
+    // Credit-card payable must always equal the full purchase amount.
+    $("#payableAmount").dataset.manuallyEdited = "";
+    $("#payableAmount").value =
+      (Number($("#amt").value) || 0).toFixed(2);
+  } else {
+    $("#createPayable").disabled = false;
+  }
+
+  const createPayable =
+    $("#createPayable").checked || method === "credit_card";
+
   const payableType = $("#payableType").value;
 
-  // Payment source fields
   $("#paymentAccountField").hidden =
     !["bank", "cash", "wallet"].includes(method);
 
   $("#paymentCardField").hidden =
     method !== "credit_card";
 
-  // Payable details
   $("#payableFields").hidden = !createPayable;
 
-  // Payable destination fields
+  // Card destination is automatic for credit-card purchases.
+  $("#payableType").closest("label").hidden =
+    method === "credit_card";
+
   $("#payablePersonField").hidden =
-    !createPayable || payableType !== "person";
+    !createPayable ||
+    method === "credit_card" ||
+    payableType !== "person";
 
   $("#payableAccountField").hidden =
-    !createPayable || payableType !== "account";
+    !createPayable ||
+    method === "credit_card" ||
+    payableType !== "account";
 
   $("#payableCardField").hidden =
-    !createPayable || payableType !== "credit_card";
+    !createPayable ||
+    method === "credit_card" ||
+    payableType !== "credit_card";
 }
 
 const $ = s => document.querySelector(s);
@@ -148,7 +191,15 @@ $("#paymentMethod").addEventListener("change", () => {
   updatePaymentFields();
 });
 
-$("#createPayable").addEventListener("change", updatePaymentFields);
+$("#createPayable").addEventListener("change", () => {
+  $("#payableAmount").dataset.manuallyEdited = "";
+  updateDefaultPayableAmount();
+  updatePaymentFields();
+});
+
+$("#payableAmount").addEventListener("input", () => {
+  $("#payableAmount").dataset.manuallyEdited = "true";
+});
 
 $("#payableType").addEventListener("change", updatePaymentFields);
 
@@ -213,15 +264,12 @@ async function loadTransactions() {
       .eq("user_id", userId)
       .order("transaction_date", { ascending: false });
 
-    // Ignore results if the user changed during the request.
     if (currentUserId !== userId) return;
 
     if (error) {
       console.error("Failed to load transactions:", error);
-
       rows = [];
       render();
-
       alert("Could not load cloud transactions: " + error.message);
       return;
     }
@@ -232,7 +280,13 @@ async function loadTransactions() {
       amt: Number(x.amount),
       transactionDate: x.transaction_date,
       due: x.due_date || "",
-      typ: x.expense_context === "shared"
+      typ: (
+        x.transaction_kind === "shared_expense" ||
+        (
+          x.transaction_kind === "expense" &&
+          x.expense_context === "shared"
+        )
+      )
         ? "Shared"
         : x.expense_scope === "common"
           ? "Common"
@@ -246,7 +300,14 @@ async function loadTransactions() {
         settled: "Settled",
         cancelled: "Cancelled"
       }[x.status] || x.status,
-      note: x.notes || ""
+      note: x.notes || "",
+      transactionKind: x.transaction_kind,
+      relatedTransactionId: x.related_transaction_id,
+      expenseContext: x.expense_context,
+      paymentMethod: x.payment_method,
+      paymentAccountId: x.payment_account_id,
+      paymentCardId: x.payment_card_id,
+      payableToType: x.payable_to_type
     }));
 
     render();
@@ -255,20 +316,27 @@ async function loadTransactions() {
     if (currentUserId !== userId) return;
 
     console.error("Unexpected transaction loading error:", error);
-
     rows = [];
     render();
 
     alert("Unable to load transactions. Please check your connection and try again.");
   }
 }
-
 function render() {
-  let m = $("#monthF").value;
-  let t = $("#typeF").value;
-  let s = $("#statusF").value;
+  const m = $("#monthF").value;
+  const t = $("#typeF").value;
+  const s = $("#statusF").value;
 
-  let a = rows.filter(x =>
+  const linkedExpenseIds = new Set(
+    rows
+      .filter(x =>
+        x.transactionKind === "payable" &&
+        x.relatedTransactionId
+      )
+      .map(x => x.relatedTransactionId)
+  );
+
+  const a = rows.filter(x =>
     (m === "all" || monthLabel(x) === m) &&
     (t === "all" || x.typ === t) &&
     (s === "all" || x.st === s)
@@ -279,32 +347,49 @@ function render() {
       <div class="item">
         <div>
           <b>${safe(x.desc)}</b>
-          <small>${safe(monthLabel(x))} · ${safe(x.typ)} · ${safe(x.cat)}</small>
+          <small>
+            ${safe(monthLabel(x))} · ${safe(x.typ)} · ${safe(x.cat)}
+            ${x.transactionKind === "payable" ? " · Payable" : ""}
+          </small>
           <small>${safe(x.st)} ${x.note ? "· " + safe(x.note) : ""}</small>
         </div>
+
         <div class="right">
           <strong>${fmt(x.amt)}</strong><br>
+
           ${x.typ !== "Shared"
-            ? `<button class="edit" data-edit="${x.id}">Edit</button>`
+            ? `<button class="edit" data-edit="${safe(x.id)}">Edit</button>`
             : ""}
-          ${pending(x) && x.typ !== "Shared"
-            ? `<button class="paid" data-paid="${x.id}">Paid</button>`
+
+          ${pending(x) &&
+            (x.typ !== "Shared" || x.transactionKind === "payable")
+            ? `<button class="paid" data-paid="${safe(x.id)}">Paid</button>`
             : ""}
         </div>
       </div>
     `).join("")
     : "<p>No records in this view.</p>";
 
-  let p = rows
-    .filter(x => pending(x) && x.typ === "Personal")
+  // Exclude a master expense when it has a linked payable.
+  // The payable itself is counted instead.
+  const pendingForTotals = rows.filter(x =>
+    pending(x) &&
+    !(
+      x.transactionKind === "expense" &&
+      linkedExpenseIds.has(x.id)
+    )
+  );
+
+  const p = pendingForTotals
+    .filter(x => x.typ === "Personal")
     .reduce((v, x) => v + x.amt, 0);
 
-  let c = rows
-    .filter(x => pending(x) && x.typ === "Common")
+  const c = pendingForTotals
+    .filter(x => x.typ === "Common")
     .reduce((v, x) => v + x.amt, 0);
 
-  let shared = rows
-    .filter(x => pending(x) && x.typ === "Shared")
+  const shared = pendingForTotals
+    .filter(x => x.typ === "Shared")
     .reduce((v, x) => v + x.amt, 0);
 
   $("#p").textContent = fmt(p);
@@ -332,11 +417,37 @@ function edit(x) {
     }[k] || "");
   }
 
-  $("#transactionDate").value = x?.transactionDate || (x ? "" : todayDate());
-  
+  $("#transactionDate").value =
+    x?.transactionDate || (x ? "" : todayDate());
+
+  // Reset payment form state. Existing payment details are not editable here.
+  $("#paymentMethod").value = "unpaid";
+  $("#paymentAccount").value = "";
+  $("#paymentCard").value = "";
+
+  $("#createPayable").checked = false;
+  $("#createPayable").disabled = false;
+
+  $("#payableType").value = "";
+  $("#payablePerson").value = "";
+  $("#payableAccount").value = "";
+  $("#payableCard").value = "";
+
+  $("#payableAmount").value = "";
+  $("#payableAmount").dataset.manuallyEdited = "";
+
+  $("#payableDueDate").value = "";
+  $("#payableNotes").value = "";
+
+  // Payment details are only available when creating a new transaction.
+  $("#paymentFields").hidden = !!x;
+
+  // Preserve the existing shared expense section behavior.
+  $("#sharedFields").hidden = x?.typ !== "Shared";
+
   populatePaymentDropdowns();
   updatePaymentFields();
-  
+
   $("#dlg").showModal();
 }
 // ==========================================
@@ -425,8 +536,15 @@ $("#typ").addEventListener("change", async () => {
   }
 });
 
-$("#amt").addEventListener("input", updateSplitTotal);
-$("#yourShare").addEventListener("input", updateSplitTotal);
+$("#amt").addEventListener("input", () => {
+  updateSplitTotal();
+  updateDefaultPayableAmount();
+});
+
+$("#yourShare").addEventListener("input", () => {
+  updateSplitTotal();
+  updateDefaultPayableAmount();
+});
 
 $("#addSplitPerson").addEventListener("click", () => {
   if (!people.length) {
@@ -493,71 +611,37 @@ $("#form").onsubmit = async e => {
   e.preventDefault();
 
   if (!currentUserId) {
-    alert("Please log in before adding a payable.");
+    alert("Please log in before adding a transaction.");
     return;
   }
 
   const id = $("#id").value;
-  
-  // Shared expense creation
-  if ($("#typ").value === "Shared") {
-    if (!validateSharedSplit()) return;
-  
-    // The current database function creates a new shared expense.
-    // Editing an existing transaction as Shared is not supported yet.
-    if (id) {
-      alert("Editing an existing transaction as Shared is not supported yet.");
-      return;
-    }
-  
-    const amount = Number($("#amt").value);
-    const yourShare = Number($("#yourShare").value);
-  
-    const splits = [
-      {
-        person_id: null,
-        participant_label: "You",
-        share_amount: yourShare,
-        is_current_user: true
-      }
-    ];
-  
-    document.querySelectorAll(".participant-row").forEach(row => {
-      const personId = row.querySelector(".participant-person").value;
-      const share = Number(row.querySelector(".participant-share").value);
-      const person = people.find(p => p.id === personId);
-  
-      splits.push({
-        person_id: personId,
-        participant_label: person.name,
-        share_amount: share,
-        is_current_user: false
-      });
-    });
-  
-    const { data, error } = await supabaseClient.rpc(
-      "create_shared_expense",
-      {
-        p_title: $("#desc").value.trim(),
-        p_amount: amount,
-        p_transaction_date: $("#transactionDate").value,
-        p_category: $("#cat").value,
-        p_notes: $("#note").value || null,
-        p_splits: splits
-      }
-    );
-  
-    if (error) {
-      console.error("Shared expense save failed:", error);
-      alert("Could not save shared expense: " + error.message);
-      return;
-    }
-  
-    $("#dlg").close();
-    await loadTransactions();
+  const type = $("#typ").value;
+  const amount = Number($("#amt").value);
+  const transactionDate = $("#transactionDate").value;
+  const paymentMethod = $("#paymentMethod").value;
+  const createPayable = $("#createPayable").checked;
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    alert("Enter a valid transaction amount.");
     return;
   }
-  
+
+  if (!transactionDate) {
+    alert("Select a transaction date.");
+    return;
+  }
+
+  if (type === "Shared" && !validateSharedSplit()) {
+    return;
+  }
+
+  // Existing shared transaction editing is not supported.
+  if (id && type === "Shared") {
+    alert("Editing an existing Shared transaction is not supported yet.");
+    return;
+  }
+
   const statusMap = {
     "Pending": "pending",
     "Partially Paid": "partially_paid",
@@ -567,54 +651,217 @@ $("#form").onsubmit = async e => {
     "Cancelled": "cancelled"
   };
 
-  const payload = {
-    user_id: currentUserId,
-    title: $("#desc").value.trim(),
-    amount: Number($("#amt").value),
-    transaction_date: $("#transactionDate").value,
-    due_date: $("#due").value || null,
-    transaction_kind: $("#typ").value === "Common"
-      ? "shared_expense"
-      : "payable",
-    expense_scope: $("#typ").value === "Common"
-      ? "common"
-      : "personal",
-    category: $("#cat").value,
-    status: statusMap[$("#st").value],
-    notes: $("#note").value || null
-  };
-
-  if (!payload.status) {
-    alert("Invalid transaction status.");
-    return;
-  }
-
-  let query;
-
+  // Existing transaction: update basic fields only.
+  // Do not overwrite its payment source or transaction relationships.
   if (id) {
-    query = supabaseClient
+    const status = statusMap[$("#st").value];
+
+    if (!status) {
+      alert("Invalid transaction status.");
+      return;
+    }
+
+    const payload = {
+      title: $("#desc").value.trim(),
+      amount,
+      transaction_date: transactionDate,
+      due_date: $("#due").value || null,
+      category: $("#cat").value,
+      status,
+      notes: $("#note").value || null
+    };
+
+    const { error } = await supabaseClient
       .from("transactions")
       .update(payload)
       .eq("id", id)
       .eq("user_id", currentUserId);
-  } else {
-    query = supabaseClient
-      .from("transactions")
-      .insert(payload);
-  }
 
-  const { error } = await query;
+    if (error) {
+      console.error("Transaction update failed:", error);
+      alert("Could not update transaction: " + error.message);
+      return;
+    }
 
-  if (error) {
-    console.error("Transaction save failed:", error);
-    alert("Could not save transaction: " + error.message);
+    $("#dlg").close();
+    await loadTransactions();
     return;
   }
 
-  $("#dlg").close();
-  await loadTransactions();
-};
+  // Validate payment source.
+  if (["bank", "cash", "wallet"].includes(paymentMethod)) {
+    if (!$("#paymentAccount").value) {
+      alert("Select the account used for this payment.");
+      return;
+    }
+  }
 
+  if (paymentMethod === "credit_card") {
+    if (!$("#paymentCard").value) {
+      alert("Select the credit card used for this purchase.");
+      return;
+    }
+  }
+
+  // Validate optional payable destination.
+  // Credit-card purchases automatically create a full card payable.
+  if (createPayable && paymentMethod !== "credit_card") {
+    const payableType = $("#payableType").value;
+
+    if (!payableType) {
+      alert("Select a payable destination type.");
+      return;
+    }
+
+    const destinationSelected = {
+      person: $("#payablePerson").value,
+      account: $("#payableAccount").value,
+      credit_card: $("#payableCard").value
+    }[payableType];
+
+    if (!destinationSelected) {
+      alert("Select the payable destination.");
+      return;
+    }
+
+    const payableAmount = Number($("#payableAmount").value);
+
+    if (
+      !Number.isFinite(payableAmount) ||
+      payableAmount <= 0 ||
+      payableAmount > amount
+    ) {
+      alert("Enter a valid payable amount not exceeding the transaction amount.");
+      return;
+    }
+  }
+
+  const payableAmount = createPayable
+    ? Number($("#payableAmount").value) || null
+    : null;
+
+  const payableType =
+    createPayable && paymentMethod !== "credit_card"
+      ? $("#payableType").value || null
+      : null;
+
+  const payablePersonId =
+    payableType === "person"
+      ? $("#payablePerson").value || null
+      : null;
+
+  const payableAccountId =
+    payableType === "account"
+      ? $("#payableAccount").value || null
+      : null;
+
+  const payableCardId =
+    payableType === "credit_card"
+      ? $("#payableCard").value || null
+      : null;
+
+  const paymentAccountId =
+    ["bank", "cash", "wallet"].includes(paymentMethod)
+      ? $("#paymentAccount").value
+      : null;
+
+  const paymentCardId =
+    paymentMethod === "credit_card"
+      ? $("#paymentCard").value
+      : null;
+
+  const commonParams = {
+    p_title: $("#desc").value.trim(),
+    p_amount: amount,
+    p_transaction_date: transactionDate,
+    p_category: $("#cat").value,
+    p_notes: $("#note").value || null,
+    p_payment_method: paymentMethod,
+    p_payment_account_id: paymentAccountId,
+    p_payment_card_id: paymentCardId,
+    p_create_payable: createPayable,
+    p_payable_amount: payableAmount,
+    p_payable_to_type: payableType,
+    p_payable_to_person_id: payablePersonId,
+    p_payable_to_account_id: payableAccountId,
+    p_payable_to_card_id: payableCardId,
+    p_payable_due_date: createPayable
+      ? $("#payableDueDate").value || null
+      : null,
+    p_payable_notes: createPayable
+      ? $("#payableNotes").value || null
+      : null
+  };
+
+  let functionName;
+  let rpcParams;
+
+  if (type === "Shared") {
+    const yourShare = Number($("#yourShare").value);
+
+    const splits = [
+      {
+        person_id: null,
+        participant_label: "You",
+        share_amount: yourShare,
+        is_current_user: true
+      }
+    ];
+
+    document.querySelectorAll(".participant-row").forEach(row => {
+      const personId = row.querySelector(".participant-person").value;
+      const share = Number(row.querySelector(".participant-share").value);
+      const person = people.find(p => p.id === personId);
+
+      splits.push({
+        person_id: personId,
+        participant_label: person.name,
+        share_amount: share,
+        is_current_user: false
+      });
+    });
+
+    functionName = "create_shared_expense_v3";
+
+    rpcParams = {
+      ...commonParams,
+      p_splits: splits
+    };
+
+  } else {
+    functionName = "create_expense_v1";
+
+    rpcParams = {
+      ...commonParams,
+      p_expense_scope: type === "Common" ? "common" : "personal"
+    };
+  }
+
+  try {
+    const { data, error } = await supabaseClient.rpc(
+      functionName,
+      rpcParams
+    );
+
+    if (error) {
+      console.error("Transaction save failed:", error);
+      alert("Could not save transaction: " + error.message);
+      return;
+    }
+
+    if (!data) {
+      alert("The database did not return a transaction ID. Please verify the transaction before retrying.");
+      return;
+    }
+
+    $("#dlg").close();
+    await loadTransactions();
+
+  } catch (error) {
+    console.error("Unexpected transaction save error:", error);
+    alert("Unable to save transaction. Please try again.");
+  }
+};
 $("#list").onclick = async e => {
   const editId = e.target.dataset.edit;
   const paidId = e.target.dataset.paid;
@@ -929,6 +1176,7 @@ $("#cardForm").onsubmit = async e => {
     e.target.reset();
 
     await loadCards();
+    populatePaymentDropdowns();
 
   } catch (error) {
     console.error("Unexpected credit-card save error:", error);
@@ -1035,6 +1283,7 @@ document.addEventListener("click", async e => {
       }
 
       await loadCards();
+      populatePaymentDropdowns();
 
     } catch (error) {
       console.error("Unexpected credit-card removal error:", error);
