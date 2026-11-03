@@ -138,7 +138,11 @@ async function loadTransactions() {
       amt: Number(x.amount),
       transactionDate: x.transaction_date,
       due: x.due_date || "",
-      typ: x.expense_scope === "common" ? "Common" : "Personal",
+      typ: x.expense_context === "shared"
+        ? "Shared"
+        : x.expense_scope === "common"
+          ? "Common"
+          : "Personal",
       cat: x.category,
       st: {
         pending: "Pending",
