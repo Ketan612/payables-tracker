@@ -19,6 +19,37 @@ const seed = [
 ];
 
 let rows;
+// ==========================================
+// Shared expense participants
+// ==========================================
+
+let people = [];
+
+async function loadPeople() {
+  const userId = currentUserId;
+
+  if (!userId) {
+    people = [];
+    return;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("people")
+    .select("id, name")
+    .eq("user_id", userId)
+    .order("name", { ascending: true });
+
+  if (currentUserId !== userId) return;
+
+  if (error) {
+    console.error("Failed to load people:", error);
+    alert("Could not load participants: " + error.message);
+    people = [];
+    return;
+  }
+
+  people = data || [];
+}
 
 try {
   rows = JSON.parse(localStorage.getItem(K)) || seed;
@@ -199,6 +230,151 @@ function edit(x) {
 
   $("#dlg").showModal();
 }
+// ==========================================
+// Shared expense split UI
+// ==========================================
+
+function updateSplitTotal() {
+  const amount = Number($("#amt").value) || 0;
+  const yourShare = Number($("#yourShare").value) || 0;
+
+  const participantInputs = [
+    ...document.querySelectorAll(".participant-share")
+  ];
+
+  const participantTotal = participantInputs.reduce(
+    (sum, input) => sum + (Number(input.value) || 0),
+    0
+  );
+
+  const total = yourShare + participantTotal;
+  const remaining = amount - total;
+
+  $("#splitTotal").textContent =
+    `Allocated: ${fmt(total)} / ${fmt(amount)} · ` +
+    (Math.abs(remaining) < 0.005
+      ? "Split balanced"
+      : remaining > 0
+        ? `Remaining: ${fmt(remaining)}`
+        : `Excess: ${fmt(Math.abs(remaining))}`);
+}
+
+function addSplitPerson() {
+  const wrapper = document.createElement("div");
+  wrapper.className = "grid participant-row";
+
+  const options = people.map(person =>
+    `<option value="${safe(person.id)}">${safe(person.name)}</option>`
+  ).join("");
+
+  wrapper.innerHTML = `
+    <label>Participant
+      <select class="participant-person" required>
+        <option value="">Select person</option>
+        ${options}
+      </select>
+    </label>
+
+    <label>Share (₹)
+      <input
+        class="participant-share"
+        type="number"
+        min="0.01"
+        step=".01"
+        required
+      >
+    </label>
+
+    <button type="button" class="secondary remove-split">
+      Remove
+    </button>
+  `;
+
+  $("#participantSplits").appendChild(wrapper);
+
+  wrapper.querySelector(".participant-share")
+    .addEventListener("input", updateSplitTotal);
+
+  wrapper.querySelector(".remove-split")
+    .addEventListener("click", () => {
+      wrapper.remove();
+      updateSplitTotal();
+    });
+}
+
+$("#typ").addEventListener("change", async () => {
+  const isShared = $("#typ").value === "Shared";
+
+  $("#sharedFields").hidden = !isShared;
+
+  if (isShared) {
+    await loadPeople();
+
+    $("#participantSplits").innerHTML = "";
+    $("#yourShare").value = "";
+    updateSplitTotal();
+  }
+});
+
+$("#amt").addEventListener("input", updateSplitTotal);
+$("#yourShare").addEventListener("input", updateSplitTotal);
+
+$("#addSplitPerson").addEventListener("click", () => {
+  if (!people.length) {
+    alert("No participants found. Add people first.");
+    return;
+  }
+
+  addSplitPerson();
+});
+function validateSharedSplit() {
+  if ($("#typ").value !== "Shared") return true;
+
+  const amount = Math.round((Number($("#amt").value) || 0) * 100);
+  const yourShare = Math.round((Number($("#yourShare").value) || 0) * 100);
+
+  const rows = [
+    ...document.querySelectorAll(".participant-row")
+  ];
+
+  if (amount <= 0 || yourShare <= 0) {
+    alert("Enter a valid expense amount and your share.");
+    return false;
+  }
+
+  if (!rows.length) {
+    alert("Add at least one participant.");
+    return false;
+  }
+
+  const selectedPeople = [];
+  let participantTotal = 0;
+
+  for (const row of rows) {
+    const personId = row.querySelector(".participant-person").value;
+    const share = Number(row.querySelector(".participant-share").value);
+
+    if (!personId || !Number.isFinite(share) || share <= 0) {
+      alert("Select a participant and enter a valid share for every row.");
+      return false;
+    }
+
+    if (selectedPeople.includes(personId)) {
+      alert("A participant cannot be added more than once.");
+      return false;
+    }
+
+    selectedPeople.push(personId);
+    participantTotal += Math.round(share * 100);
+  }
+
+  if (yourShare + participantTotal !== amount) {
+    alert("Your share and participant shares must equal the expense amount.");
+    return false;
+  }
+
+  return true;
+}
 
 $("#add").onclick = () => edit();
 
@@ -213,7 +389,66 @@ $("#form").onsubmit = async e => {
   }
 
   const id = $("#id").value;
-
+  
+  // Shared expense creation
+  if ($("#typ").value === "Shared") {
+    if (!validateSharedSplit()) return;
+  
+    // The current database function creates a new shared expense.
+    // Editing an existing transaction as Shared is not supported yet.
+    if (id) {
+      alert("Editing an existing transaction as Shared is not supported yet.");
+      return;
+    }
+  
+    const amount = Number($("#amt").value);
+    const yourShare = Number($("#yourShare").value);
+  
+    const splits = [
+      {
+        person_id: null,
+        participant_label: "You",
+        share_amount: yourShare,
+        is_current_user: true
+      }
+    ];
+  
+    document.querySelectorAll(".participant-row").forEach(row => {
+      const personId = row.querySelector(".participant-person").value;
+      const share = Number(row.querySelector(".participant-share").value);
+      const person = people.find(p => p.id === personId);
+  
+      splits.push({
+        person_id: personId,
+        participant_label: person.name,
+        share_amount: share,
+        is_current_user: false
+      });
+    });
+  
+    const { data, error } = await supabaseClient.rpc(
+      "create_shared_expense",
+      {
+        p_title: $("#desc").value.trim(),
+        p_amount: amount,
+        p_transaction_date: $("#transactionDate").value,
+        p_category: $("#cat").value,
+        p_notes: $("#note").value || null,
+        p_splits: splits
+      }
+    );
+  
+    if (error) {
+      console.error("Shared expense save failed:", error);
+      alert("Could not save shared expense: " + error.message);
+      return;
+    }
+  
+    $("#dlg").close();
+    await loadTransactions();
+    return;
+  }
+  
   const statusMap = {
     "Pending": "pending",
     "Partially Paid": "partially_paid",
