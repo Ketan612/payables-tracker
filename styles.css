@@ -291,3 +291,135 @@ small {
   background: #eff8ff;
   border: 1px solid #b2ddff;
 }
+
+/* ==============================
+   Balances Overview
+================================ */
+
+.panel .stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.balance-card {
+  width: 100%;
+  min-width: 0;
+  min-height: 90px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  text-align: left;
+  background: #f8faff;
+  color: #172033;
+  border: 1px solid #e2e8f2;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s,
+    transform 0.2s;
+}
+
+.balance-card:hover {
+  background: #eef4ff;
+  border-color: #b8cafa;
+}
+
+.balance-card:active {
+  transform: scale(0.98);
+}
+
+.balance-card:focus-visible {
+  outline: 3px solid #8db1ff;
+  outline-offset: 2px;
+}
+
+.balance-card small {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  color: #718096;
+}
+
+.balance-card b {
+  display: block;
+  margin-top: 9px;
+  font-size: 20px;
+  color: #172033;
+  overflow-wrap: anywhere;
+}
+
+/* ==============================
+   Bank Accounts
+================================ */
+
+#bankAccounts {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+#bankAccounts:empty::after {
+  content: "No bank accounts added yet.";
+  display: block;
+  padding: 16px;
+  text-align: center;
+  color: #718096;
+  font-size: 13px;
+  background: #f8faff;
+  border: 1px dashed #dce2eb;
+  border-radius: 10px;
+}
+
+/* ==============================
+   Balance Details Dialog
+================================ */
+
+#balanceDetailDlg {
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+#balanceDetailSummary {
+  margin: 12px 0 18px;
+}
+
+#balanceDetailTransactions {
+  display: grid;
+  gap: 8px;
+}
+
+#balanceDetailDlg h3 {
+  font-size: 14px;
+  margin: 18px 0 10px;
+}
+
+/* ==============================
+   Responsive Dashboard
+================================ */
+
+@media (max-width: 480px) {
+  .panel .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .balance-card {
+    min-height: 82px;
+    padding: 11px;
+  }
+
+  .balance-card b {
+    font-size: 17px;
+  }
+
+  .balance-card small {
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 340px) {
+  .panel .stats {
+    grid-template-columns: 1fr;
+  }
+}
+
