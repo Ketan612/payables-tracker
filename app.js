@@ -1947,9 +1947,9 @@ $("#form").onsubmit = async e => {
   }
 
   // Validate payment source.
-  if (["bank", "cash", "wallet"].includes(paymentMethod)) {
+  if (paymentMethod === "bank") {
     if (!$("#paymentAccount").value) {
-      alert("Select the account used for this payment.");
+      alert("Select the bank account used for this payment.");
       return;
     }
   }
@@ -2019,7 +2019,7 @@ $("#form").onsubmit = async e => {
       : null;
 
   const paymentAccountId =
-    ["bank", "cash", "wallet"].includes(paymentMethod)
+    paymentMethod === "bank"
       ? $("#paymentAccount").value
       : null;
 
