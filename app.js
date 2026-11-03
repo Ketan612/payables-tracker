@@ -461,41 +461,68 @@ async function loadTransactions() {
       return;
     }
 
-    rows = (data || []).map(x => ({
-      id: x.id,
-      desc: x.title,
-      amt: Number(x.amount),
-      transactionDate: x.transaction_date,
-      due: x.due_date || "",
-      typ: (
-        x.transaction_kind === "shared_expense" ||
-        (
-          x.transaction_kind === "expense" &&
-          x.expense_context === "shared"
-        )
-      )
-        ? "Shared"
-        : x.expense_scope === "common"
-          ? "Common"
-          : "Personal",
-      cat: x.category,
-      st: {
-        pending: "Pending",
-        partially_paid: "Partially Paid",
-        paid: "Paid",
-        received: "Received",
-        settled: "Settled",
-        cancelled: "Cancelled"
-      }[x.status] || x.status,
-      note: x.notes || "",
-      transactionKind: x.transaction_kind,
-      relatedTransactionId: x.related_transaction_id,
-      expenseContext: x.expense_context,
-      paymentMethod: x.payment_method,
-      paymentAccountId: x.payment_account_id,
-      paymentCardId: x.payment_card_id,
-      payableToType: x.payable_to_type
-    }));
+    
+rows = (data || []).map(x => ({
+  id: x.id,
+  desc: x.title,
+  amt: Number(x.amount),
+  transactionDate: x.transaction_date,
+  due: x.due_date || "",
+
+  typ: (
+    x.transaction_kind === "shared_expense" ||
+    (
+      x.transaction_kind === "expense" &&
+      x.expense_context === "shared"
+    )
+  )
+    ? "Shared"
+    : x.expense_scope === "common"
+      ? "Common"
+      : "Personal",
+
+  cat: x.category,
+
+  st: {
+    pending: "Pending",
+    partially_paid: "Partially Paid",
+    paid: "Paid",
+    received: "Received",
+    settled: "Settled",
+    cancelled: "Cancelled"
+  }[x.status] || x.status,
+
+  rawStatus: x.status,
+  note: x.notes || "",
+
+  // Transaction relationship
+  transactionKind: x.transaction_kind,
+  relatedTransactionId: x.related_transaction_id,
+
+  // Expense classification
+  expenseContext: x.expense_context,
+  expenseScope: x.expense_scope,
+
+  // Payment source
+  paymentMethod: x.payment_method,
+  paymentAccountId: x.payment_account_id,
+  paymentCardId: x.payment_card_id,
+  payerType: x.payer_type,
+
+  // Payable destination
+  payableToType: x.payable_to_type,
+  payableToPersonId: x.payable_to_person_id,
+  payableToAccountId: x.payable_to_account_id,
+  payableToCardId: x.payable_to_card_id,
+
+  // Counterparty
+  counterpartyPersonId: x.counterparty_person_id,
+
+  // Carry-forward / accounting
+  isCarriedForward: x.is_carried_forward,
+  carriedFromMonth: x.carried_from_month,
+  accountingCycle: x.accounting_cycle
+}));
 
     render();
 
@@ -557,33 +584,224 @@ function render() {
     `).join("")
     : "<p>No records in this view.</p>";
 
-  // Exclude a master expense when it has a linked payable.
-  // The payable itself is counted instead.
-  const pendingForTotals = rows.filter(x =>
-    pending(x) &&
-    !(
-      x.transactionKind === "expense" &&
-      linkedExpenseIds.has(x.id)
-    )
-  );
+  
+  
+// Exclude master expenses linked to payables from pending totals.
+const pendingForTotals = rows.filter(x =>
+  pending(x) &&
+  !(
+    x.transactionKind === "expense" &&
+    linkedExpenseIds.has(x.id)
+  )
+);
 
-  const p = pendingForTotals
-    .filter(x => x.typ === "Personal")
-    .reduce((v, x) => v + x.amt, 0);
+const p = pendingForTotals
+  .filter(x => x.typ === "Personal")
+  .reduce((v, x) => v + x.amt, 0);
 
-  const c = pendingForTotals
-    .filter(x => x.typ === "Common")
-    .reduce((v, x) => v + x.amt, 0);
+const c = pendingForTotals
+  .filter(x => x.typ === "Common")
+  .reduce((v, x) => v + x.amt, 0);
 
-  const shared = pendingForTotals
-    .filter(x => x.typ === "Shared")
-    .reduce((v, x) => v + x.amt, 0);
+const shared = pendingForTotals
+  .filter(x => x.typ === "Shared")
+  .reduce((v, x) => v + x.amt, 0);
 
-  $("#p").textContent = fmt(p);
-  $("#c").textContent = fmt(c);
-  $("#t").textContent = fmt(p + c + shared);
+$("#p").textContent = fmt(p);
+$("#c").textContent = fmt(c);
+$("#t").textContent = fmt(p + c + shared);
+
+
+// 1. Total receivables: remaining amount people owe you.
+const totalReceivables = transactionSplits
+  .filter(x =>
+    x.balance_direction === "person_owes_user" &&
+    !x.is_current_user
+  )
+  .reduce((total, x) =>
+    total + Math.max(
+      0,
+      Number(x.share_amount || 0) -
+      Number(x.amount_settled || 0)
+    ), 0);
+
+
+// 2. Total payables: pending payable transactions.
+const payableRows = rows.filter(x =>
+  x.transactionKind === "payable" &&
+  pending(x)
+);
+
+const totalPayables = payableRows
+  .reduce((total, x) => total + x.amt, 0);
+
+
+// 3. Credit-card outstanding: payables specifically assigned to cards.
+const totalCardOutstanding = payableRows
+  .filter(x => x.payableToType === "credit_card")
+  .reduce((total, x) => total + x.amt, 0);
+
+
+// 4. Expenses created in the current month.
+// Count master expenses only, not their linked payable transactions.
+const currentMonth = todayDate().slice(0, 7);
+
+const totalExpensesThisMonth = rows
+  .filter(x =>
+    ["expense", "shared_expense"].includes(x.transactionKind) &&
+    x.transactionDate &&
+    x.transactionDate.slice(0, 7) === currentMonth
+  )
+  .reduce((total, x) => total + x.amt, 0);
+
+
+// Update dashboard cards.
+$("#totalReceivables").textContent = fmt(totalReceivables);
+$("#totalPayables").textContent = fmt(totalPayables);
+$("#totalCardOutstanding").textContent = fmt(totalCardOutstanding);
+
+$("#bankBalance small").textContent = "TOTAL EXPENSES THIS MONTH";
+$("#totalBankBalance").textContent = fmt(totalExpensesThisMonth);
+}
+function showBalanceDetails(title, items, summary) {
+  $("#balanceDetailTitle").textContent = title;
+  $("#balanceDetailSummary").textContent = summary;
+
+  $("#balanceDetailTransactions").innerHTML = items.length
+    ? items.map(item => `
+        <div class="item">
+          <div>
+            <b>${safe(item.title)}</b>
+            <small>${safe(item.subtitle || "")}</small>
+          </div>
+          <div class="right">
+            <strong>${fmt(item.amount)}</strong>
+          </div>
+        </div>
+      `).join("")
+    : "<p>No transactions found.</p>";
+
+  $("#balanceDetailDlg").showModal();
 }
 
+
+// Close dashboard detail dialog.
+$("#closeBalanceDetail").onclick = () => {
+  $("#balanceDetailDlg").close();
+};
+
+
+// Total Receivables details.
+$("#receivablesBalance").onclick = () => {
+  const items = transactionSplits
+    .filter(x =>
+      x.balance_direction === "person_owes_user" &&
+      !x.is_current_user
+    )
+    .map(x => {
+      const transaction = rows.find(
+        r => r.id === x.transaction_id
+      );
+
+      const person = people.find(
+        p => p.id === x.person_id
+      );
+
+      const outstanding = Math.max(
+        0,
+        Number(x.share_amount || 0) -
+        Number(x.amount_settled || 0)
+      );
+
+      return {
+        title: transaction?.desc || "Shared expense",
+        subtitle: person?.name || x.participant_label || "Person",
+        amount: outstanding
+      };
+    })
+    .filter(x => x.amount > 0);
+
+  showBalanceDetails(
+    "Total Receivables",
+    items,
+    "Outstanding amounts people owe you."
+  );
+};
+
+
+// Total Payables details.
+$("#payablesBalance").onclick = () => {
+  const items = rows
+    .filter(x =>
+      x.transactionKind === "payable" &&
+      pending(x)
+    )
+    .map(x => ({
+      title: x.desc,
+      subtitle: x.due
+        ? "Due: " + x.due
+        : "Pending payable",
+      amount: x.amt
+    }));
+
+  showBalanceDetails(
+    "Total Payables",
+    items,
+    "All pending payable transactions."
+  );
+};
+
+
+// Credit Card Outstanding details.
+$("#creditCardsBalance").onclick = () => {
+  const items = rows
+    .filter(x =>
+      x.transactionKind === "payable" &&
+      pending(x) &&
+      x.payableToType === "credit_card"
+    )
+    .map(x => {
+      const card = cards.find(
+        c => c.id === x.payableToCardId
+      );
+
+      return {
+        title: x.desc,
+        subtitle: card?.name || "Credit card payable",
+        amount: x.amt
+      };
+    });
+
+  showBalanceDetails(
+    "Credit Card Outstanding",
+    items,
+    "Pending amounts payable to credit cards."
+  );
+};
+
+
+// Total Expenses This Month details.
+$("#bankBalance").onclick = () => {
+  const currentMonth = todayDate().slice(0, 7);
+
+  const items = rows
+    .filter(x =>
+      ["expense", "shared_expense"].includes(x.transactionKind) &&
+      x.transactionDate &&
+      x.transactionDate.slice(0, 7) === currentMonth
+    )
+    .map(x => ({
+      title: x.desc,
+      subtitle: x.transactionDate,
+      amount: x.amt
+    }));
+
+  showBalanceDetails(
+    "Total Expenses This Month",
+    items,
+    "Expenses recorded during the current month."
+  );
+};
 function edit(x) {
   $("#ft").textContent = x ? "Edit payable" : "Add payable";
   $("#id").value = x?.id || "";
