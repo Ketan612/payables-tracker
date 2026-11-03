@@ -232,6 +232,89 @@
           Split total must equal the expense amount.
         </p>
       </div>
+      <div id="paymentFields">
+        <h3>Payment details</h3>
+      
+        <label>Payment source
+          <select id="paymentMethod">
+            <option value="unpaid">Unpaid / Not paid yet</option>
+            <option value="bank">Bank account</option>
+            <option value="cash">Cash</option>
+            <option value="wallet">Wallet</option>
+            <option value="credit_card">Credit card</option>
+          </select>
+        </label>
+      
+        <div id="paymentAccountField" hidden>
+          <label>Paid from
+            <select id="paymentAccount">
+              <option value="">Select account</option>
+            </select>
+          </label>
+        </div>
+      
+        <div id="paymentCardField" hidden>
+          <label>Credit card used
+            <select id="paymentCard">
+              <option value="">Select card</option>
+            </select>
+          </label>
+        </div>
+      
+        <div class="divider"></div>
+      
+        <label>
+          <input type="checkbox" id="createPayable">
+          Create a payable for this transaction
+        </label>
+      
+        <div id="payableFields" hidden>
+          <label>Payable destination
+            <select id="payableType">
+              <option value="">Select destination type</option>
+              <option value="person">Person</option>
+              <option value="account">Account / Fund</option>
+              <option value="credit_card">Credit card</option>
+            </select>
+          </label>
+      
+          <div id="payablePersonField" hidden>
+            <label>Person to repay
+              <select id="payablePerson">
+                <option value="">Select person</option>
+              </select>
+            </label>
+          </div>
+      
+          <div id="payableAccountField" hidden>
+            <label>Account / Fund to repay
+              <select id="payableAccount">
+                <option value="">Select account</option>
+              </select>
+            </label>
+          </div>
+      
+          <div id="payableCardField" hidden>
+            <label>Credit card to repay
+              <select id="payableCard">
+                <option value="">Select card</option>
+              </select>
+            </label>
+          </div>
+      
+          <label>Payable amount (₹)
+            <input id="payableAmount" type="number" min="0.01" step=".01">
+          </label>
+      
+          <label>Expected repayment date
+            <input id="payableDueDate" type="date">
+          </label>
+      
+          <label>Payable notes
+            <input id="payableNotes" type="text">
+          </label>
+        </div>
+      </div>
       <label>Due date<input id="due" type="date"></label>
       <label>Status
         <select id="st">
