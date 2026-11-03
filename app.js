@@ -317,7 +317,9 @@ const CARDKEY = "payables-cards-v1";
 const EMIKEY = "payables-emis-v1";
 const PREFKEY = "payables-reminders-v1";
 
-let cards = JSON.parse(localStorage.getItem(CARDKEY) || "[]");
+// Credit cards are now loaded from Supabase.
+let cards = [];
+
 let emis = JSON.parse(localStorage.getItem(EMIKEY) || "[]");
 
 let prefs = JSON.parse(
@@ -388,15 +390,61 @@ async function loadEmis() {
 
 
 // ==========================================
-// Save credit-card schedules (local)
+// Load credit-card schedules from Supabase
 // ==========================================
 
-function saveCards() {
-  localStorage.setItem(CARDKEY, JSON.stringify(cards));
-  renderSchedules();
+async function loadCards() {
+  const userId = currentUserId;
+
+  if (!userId) {
+    cards = [];
+    renderSchedules();
+    return;
+  }
+
+  try {
+    const { data, error } = await supabaseClient
+      .from("payment_cards")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .order("created_at", { ascending: true });
+
+    if (currentUserId !== userId) return;
+
+    if (error) {
+      console.error("Failed to load credit cards:", error);
+      cards = [];
+      renderSchedules();
+      alert("Could not load cloud credit cards: " + error.message);
+      return;
+    }
+
+    cards = (data || []).map(x => ({
+      id: x.id,
+      name: x.card_name,
+      start: x.cycle_start_day,
+      statement: x.statement_day,
+      end: x.cycle_end_day,
+      dueDay: x.due_day,
+      dueDate: x.payment_due_date || "",
+      issuer: x.issuer || "",
+      lastFour: x.last_four || "",
+      notes: x.notes || ""
+    }));
+
+    renderSchedules();
+
+  } catch (error) {
+    if (currentUserId !== userId) return;
+
+    console.error("Unexpected credit-card loading error:", error);
+    cards = [];
+    renderSchedules();
+
+    alert("Unable to load credit cards. Please check your connection and try again.");
+  }
 }
-
-
 // ==========================================
 // Save EMI schedules (temporary local)
 // ==========================================
@@ -410,22 +458,24 @@ function saveEmis() {
 // ==========================================
 // Render credit cards and EMI schedules
 // ==========================================
-
 function renderSchedules() {
 
   $("#cards").innerHTML = cards.length
-    ? cards.map((c, i) => `
+    ? cards.map(c => `
         <div class="item">
           <div>
             <b>${safe(c.name)}</b>
             <small>
-              Cycle ${c.start}–${c.end} · Statement day ${c.statement}
+              Cycle ${safe(c.start ?? "—")}–${safe(c.end ?? "—")}
+              · Statement day ${safe(c.statement ?? "—")}
             </small>
-            <small>Payment due: ${safe(c.dueDate)}</small>
+            <small>
+              Payment due: ${safe(c.dueDate || "Not specified")}
+            </small>
           </div>
 
           <div class="right">
-            <button class="edit" data-card="${i}">Remove</button>
+            <button class="edit" data-card="${safe(c.id)}">Remove</button>
           </div>
         </div>
       `).join("")
@@ -452,34 +502,89 @@ function renderSchedules() {
     : '<p class="hint">No recurring EMIs added yet.</p>';
 }
 
-
 // ==========================================
-// Credit-card dialog handlers
+// Credit-card dialog handlers (Supabase)
 // ==========================================
 
-$("#addCard").onclick = () => $("#cardDlg").showModal();
+$("#addCard").onclick = () => {
+  if (!currentUserId) {
+    alert("Please log in before adding a credit card.");
+    return;
+  }
+
+  $("#cardDlg").showModal();
+};
 
 $("#cancelCard").onclick = () => $("#cardDlg").close();
 
-$("#cardForm").onsubmit = e => {
+$("#cardForm").onsubmit = async e => {
   e.preventDefault();
 
-  cards.push({
-    name: $("#cardName").value,
-    start: +$("#cycleStart").value,
-    statement: +$("#statementDay").value,
-    end: +$("#cycleEnd").value,
-    dueDay: +$("#cardDueDay").value,
-    dueDate: $("#cardDueDate").value
-  });
+  const userId = currentUserId;
 
-  saveCards();
+  if (!userId) {
+    alert("Please log in before adding a credit card.");
+    return;
+  }
 
-  $("#cardDlg").close();
-  e.target.reset();
+  const name = $("#cardName").value.trim();
+  const start = Number($("#cycleStart").value);
+  const statement = Number($("#statementDay").value);
+  const end = Number($("#cycleEnd").value);
+  const dueDay = Number($("#cardDueDay").value);
+  const dueDate = $("#cardDueDate").value || null;
+
+  if (!name) {
+    alert("Please enter a card name.");
+    return;
+  }
+
+  for (const [label, value] of [
+    ["Cycle start day", start],
+    ["Statement day", statement],
+    ["Cycle end day", end],
+    ["Payment due day", dueDay]
+  ]) {
+    if (!Number.isInteger(value) || value < 1 || value > 31) {
+      alert(label + " must be between 1 and 31.");
+      return;
+    }
+  }
+
+  const payload = {
+    user_id: userId,
+    card_name: name,
+    cycle_start_day: start,
+    statement_day: statement,
+    cycle_end_day: end,
+    due_day: dueDay,
+    payment_due_date: dueDate,
+    is_active: true
+  };
+
+  try {
+    const { error } = await supabaseClient
+      .from("payment_cards")
+      .insert(payload);
+
+    if (currentUserId !== userId) return;
+
+    if (error) {
+      console.error("Failed to save credit card:", error);
+      alert("Could not save credit card: " + error.message);
+      return;
+    }
+
+    $("#cardDlg").close();
+    e.target.reset();
+
+    await loadCards();
+
+  } catch (error) {
+    console.error("Unexpected credit-card save error:", error);
+    alert("Unable to save credit card. Please try again.");
+  }
 };
-
-
 // ==========================================
 // EMI dialog handlers (Supabase)
 // ==========================================
@@ -547,14 +652,50 @@ $("#emiForm").onsubmit = async e => {
 
 document.addEventListener("click", async e => {
 
-  // Remove credit card (local storage)
+  // Remove credit card from Supabase
   if (e.target.dataset.card !== undefined) {
-    cards.splice(Number(e.target.dataset.card), 1);
-    saveCards();
+
+    const userId = currentUserId;
+    const cardId = e.target.dataset.card;
+
+    if (!userId) {
+      alert("Please log in before removing a credit card.");
+      return;
+    }
+
+    const confirmed = confirm(
+      "Are you sure you want to remove this credit card?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabaseClient
+        .from("payment_cards")
+        .delete()
+        .eq("id", cardId)
+        .eq("user_id", userId);
+
+      if (currentUserId !== userId) return;
+
+      if (error) {
+        console.error("Failed to remove credit card:", error);
+        alert("Could not remove credit card: " + error.message);
+        return;
+      }
+
+      await loadCards();
+
+    } catch (error) {
+      console.error("Unexpected credit-card removal error:", error);
+      alert("Unable to remove credit card. Please try again.");
+    }
+
     return;
   }
 
-  // Remove EMI (Supabase)
+
+  // Remove EMI from Supabase
   if (e.target.dataset.emi !== undefined) {
 
     if (!currentUserId) {
@@ -576,11 +717,15 @@ document.addEventListener("click", async e => {
 
     if (!confirmed) return;
 
+    const userId = currentUserId;
+
     const { error } = await supabaseClient
       .from("emi_schedules")
       .delete()
       .eq("id", selectedEmi.id)
-      .eq("user_id", currentUserId);
+      .eq("user_id", userId);
+
+    if (currentUserId !== userId) return;
 
     if (error) {
       console.error("Failed to remove EMI schedule:", error);
@@ -592,7 +737,6 @@ document.addEventListener("click", async e => {
   }
 
 });
-
 // ==========================================
 // Save reminder preferences (local)
 // ==========================================
@@ -891,6 +1035,7 @@ function initializeAuth() {
     if (previousUserId !== currentUserId) {
       rows = [];
       emis = [];
+      cards = [];
     
       render();
       renderSchedules();
@@ -900,10 +1045,12 @@ function initializeAuth() {
       setTimeout(() => {
         loadTransactions();
         loadEmis();
+        loadCards();
       }, 0);
     } else {
       rows = [];
       emis = [];
+      cards = [];
     
       render();
       renderSchedules();
