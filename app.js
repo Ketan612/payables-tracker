@@ -31,12 +31,13 @@ async function loadPeople() {
 
   if (!userId) {
     people = [];
+    renderPeople();
     return;
   }
 
   const { data, error } = await supabaseClient
     .from("people")
-    .select("id, name")
+    .select("id, name, phone, notes")
     .eq("user_id", userId)
     .order("name", { ascending: true });
 
@@ -44,12 +45,14 @@ async function loadPeople() {
 
   if (error) {
     console.error("Failed to load people:", error);
-    alert("Could not load participants: " + error.message);
+    alert("Could not load people: " + error.message);
     people = [];
+    renderPeople();
     return;
   }
 
   people = data || [];
+  renderPeople();
 }
 
 try {
@@ -185,6 +188,146 @@ function updatePaymentFields() {
 }
 
 const $ = s => document.querySelector(s);
+// ==========================================
+// People management
+// ==========================================
+
+function renderPeople() {
+  const container = $("#peopleList");
+  if (!container) return;
+
+  container.innerHTML = people.length
+    ? people.map(person => `
+        <div class="item">
+          <div>
+            <b>${safe(person.name)}</b>
+            <small>${safe(person.phone || "No phone number")}</small>
+            ${person.notes
+              ? `<small>${safe(person.notes)}</small>`
+              : ""}
+          </div>
+
+          <div class="right">
+            <button
+              type="button"
+              class="edit"
+              data-person-edit="${safe(person.id)}"
+            >
+              Edit
+            </button>
+          </div>
+        </div>
+      `).join("")
+    : '<p class="hint">No people added yet.</p>';
+}
+
+function openPersonDialog(person = null) {
+  $("#personFormTitle").textContent =
+    person ? "Edit person" : "Add person";
+
+  $("#personId").value = person?.id || "";
+  $("#personName").value = person?.name || "";
+  $("#personPhone").value = person?.phone || "";
+  $("#personNotes").value = person?.notes || "";
+
+  $("#personDlg").showModal();
+}
+
+$("#addPerson").addEventListener("click", () => {
+  if (!currentUserId) {
+    alert("Please log in before adding a person.");
+    return;
+  }
+
+  openPersonDialog();
+});
+
+$("#cancelPerson").addEventListener("click", () => {
+  $("#personDlg").close();
+});
+
+$("#peopleList").addEventListener("click", event => {
+  const button = event.target.closest("[data-person-edit]");
+  if (!button) return;
+
+  const personId = button.dataset.personEdit;
+
+  const person = people.find(item => item.id === personId);
+
+  if (person) {
+    openPersonDialog(person);
+  }
+});
+
+$("#personForm").addEventListener("submit", async event => {
+  event.preventDefault();
+
+  const userId = currentUserId;
+
+  if (!userId) {
+    alert("Please log in before saving a person.");
+    return;
+  }
+
+  const personId = $("#personId").value;
+  const name = $("#personName").value.trim();
+  const phone = $("#personPhone").value.trim();
+  const notes = $("#personNotes").value.trim();
+
+  if (!name) {
+    alert("Please enter the person's name.");
+    return;
+  }
+
+  const payload = {
+    name,
+    phone: phone || null,
+    notes: notes || null
+  };
+
+  try {
+    let result;
+
+    if (personId) {
+      result = await supabaseClient
+        .from("people")
+        .update(payload)
+        .eq("id", personId)
+        .eq("user_id", userId)
+        .select("id")
+        .single();
+    } else {
+      result = await supabaseClient
+        .from("people")
+        .insert({
+          ...payload,
+          user_id: userId
+        })
+        .select("id")
+        .single();
+    }
+
+    if (currentUserId !== userId) return;
+
+    if (result.error) {
+      console.error("People save failed:", result.error);
+      alert("Could not save person: " + result.error.message);
+      return;
+    }
+
+    $("#personDlg").close();
+    $("#personForm").reset();
+
+    await loadPeople();
+    populatePaymentDropdowns();
+
+    alert(personId ? "Person updated successfully." : "Person added successfully.");
+
+  } catch (error) {
+    console.error("Unexpected people save error:", error);
+    alert("Unable to save person. Please try again.");
+  }
+});
 
 $("#paymentMethod").addEventListener("change", () => {
   populatePaymentDropdowns();
@@ -1635,9 +1778,12 @@ function initializeAuth() {
       rows = [];
       emis = [];
       cards = [];
+      people = [];
+      accounts = [];
     
       render();
       renderSchedules();
+      renderPeople();
     }
     
     if (session) {
@@ -1656,6 +1802,9 @@ function initializeAuth() {
       rows = [];
       emis = [];
       cards = [];
+      people = [];
+      accounts = [];
+      renderPeople();
     
       render();
       renderSchedules();
