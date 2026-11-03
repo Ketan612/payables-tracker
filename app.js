@@ -551,11 +551,15 @@ function render() {
   );
 
   const a = rows.filter(x =>
+    !(
+      x.transactionKind === "payable" &&
+      x.relatedTransactionId
+    ) &&
     (m === "all" || monthLabel(x) === m) &&
     (t === "all" || x.typ === t) &&
     (s === "all" || x.st === s)
   );
-
+  
   $("#list").innerHTML = a.length
     ? a.map(x => `
       <div class="item">
@@ -570,6 +574,10 @@ function render() {
 
         <div class="right">
           <strong>${fmt(x.amt)}</strong><br>
+
+          ${linkedExpenseIds.has(x.id)
+            ? `<button class="edit" data-details="${safe(x.id)}">Details</button>`
+            : ""}
 
           ${x.typ !== "Shared"
             ? `<button class="edit" data-edit="${safe(x.id)}">Edit</button>`
@@ -590,7 +598,7 @@ function render() {
 const pendingForTotals = rows.filter(x =>
   pending(x) &&
   !(
-    x.transactionKind === "expense" &&
+    ["expense", "shared_expense"].includes(x.transactionKind) &&
     linkedExpenseIds.has(x.id)
   )
 );
@@ -738,8 +746,43 @@ function showTransactionDetails(transaction, extra = {}) {
     payableDestination = payableCard?.name || "Credit card";
   }
 
+  const linkedPayables = rows.filter(x =>
+    x.transactionKind === "payable" &&
+    x.relatedTransactionId === transaction.id
+  );
+
+  const participantSplits = transactionSplits.filter(x =>
+    x.transaction_id === transaction.id
+  );
+
   const fields = [
     ["Amount", fmt(transaction.amt)],
+
+    ...participantSplits.map(x => [
+      `Participant: ${x.participant_label || "Unknown"}`,
+      `Share: ${fmt(x.share_amount)} · Settled: ${fmt(x.amount_settled)} · Outstanding: ${
+        fmt(Math.max(
+          0,
+          Number(x.share_amount || 0) - Number(x.amount_settled || 0)
+        ))
+      }`
+    ]),
+
+    ...linkedPayables.map(x => {
+      const destination =
+        x.payableToType === "person"
+          ? people.find(p => p.id === x.payableToPersonId)?.name || "Person"
+          : x.payableToType === "account"
+            ? accounts.find(a => a.id === x.payableToAccountId)?.account_name || "Account"
+            : x.payableToType === "credit_card"
+              ? cards.find(c => c.id === x.payableToCardId)?.name || "Credit card"
+              : "Not specified";
+    
+      return [
+        `Linked payable: ${x.desc}`,
+        `${fmt(x.amt)} · ${x.st} · To: ${destination} · Due: ${x.due || "Not specified"}`
+      ];
+    }),
   
     ...(extra.receivableAmount !== undefined
       ? [
@@ -760,9 +803,9 @@ function showTransactionDetails(transaction, extra = {}) {
 
   $("#balanceDetailTitle").textContent = transaction.desc;
 
-  $("#balanceDetailSummary").innerHTML =
-    `<button type="button" class="secondary" id="backToBalanceList">← Back to list</button>`;
-
+  $("#balanceDetailSummary").innerHTML = extra.hideBackButton
+    ? ""
+    : `<button type="button" class="secondary" id="backToBalanceList">← Back to list</button>`;
   $("#balanceDetailTransactions").innerHTML = fields.map(([label, value]) => `
     <div class="item">
       <div>
@@ -1404,6 +1447,17 @@ $("#form").onsubmit = async e => {
   }
 };
 $("#list").onclick = async e => {
+  const detailsId = e.target.dataset.details;
+
+  if (detailsId) {
+    const transaction = rows.find(x => x.id === detailsId);
+
+    if (transaction) {
+      showTransactionDetails(transaction, { hideBackButton: true });
+    }
+
+    return;
+  }
   const editId = e.target.dataset.edit;
   const paidId = e.target.dataset.paid;
 
