@@ -26,6 +26,7 @@ let rows;
 let people = [];
 let accounts = [];
 let transactionSplits = [];
+let transactionSettlements = [];
 
 async function loadPeople() {
   const userId = currentUserId;
@@ -93,6 +94,43 @@ async function loadTransactionSplits() {
   }
 
   transactionSplits = data || [];
+}
+async function loadTransactionSettlements() {
+  const userId = currentUserId;
+
+  if (!userId) {
+    transactionSettlements = [];
+    return;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("transaction_settlements")
+    .select(`
+      id,
+      transaction_id,
+      split_id,
+      payable_transaction_id,
+      settlement_type,
+      amount,
+      settlement_date,
+      notes,
+      is_opening_balance,
+      created_at
+    `)
+    .eq("user_id", userId)
+    .order("settlement_date", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (currentUserId !== userId) return;
+
+  if (error) {
+    console.error("Failed to load settlement history:", error);
+    transactionSettlements = [];
+    alert("Could not load settlement history: " + error.message);
+    return;
+  }
+
+  transactionSettlements = data || [];
 }
 async function loadAccounts() {
   const userId = currentUserId;
@@ -575,18 +613,33 @@ function render() {
         <div class="right">
           <strong>${fmt(x.amt)}</strong><br>
 
-          ${linkedExpenseIds.has(x.id)
+          ${(
+            linkedExpenseIds.has(x.id) ||
+            transactionSplits.some(split => split.transaction_id === x.id)
+          )
             ? `<button class="edit" data-details="${safe(x.id)}">Details</button>`
             : ""}
 
-          ${x.typ !== "Shared"
-            ? `<button class="edit" data-edit="${safe(x.id)}">Edit</button>`
-            : ""}
+            ${x.typ !== "Shared" &&
+            !linkedExpenseIds.has(x.id) &&
+            !transactionSplits.some(split => split.transaction_id === x.id)
+              ? `<button class="edit" data-edit="${safe(x.id)}">Edit</button>`
+              : ""}
 
-          ${pending(x) &&
-            (x.typ !== "Shared" || x.transactionKind === "payable")
-            ? `<button class="paid" data-paid="${safe(x.id)}">Paid</button>`
-            : ""}
+            ${pending(x) && x.transactionKind === "payable"
+            ? `<button
+                type="button"
+                class="paid"
+                data-settle-type="payable"
+                data-settle-id="${safe(x.id)}"
+              >Record Payment</button>`
+            : pending(x) &&
+              !linkedExpenseIds.has(x.id) &&
+              !transactionSplits.some(split => split.transaction_id === x.id) &&
+              x.transactionKind !== "payable" &&
+              x.typ !== "Shared"
+                ? `<button class="paid" data-paid="${safe(x.id)}">Paid</button>`
+                : ""}
         </div>
       </div>
     `).join("")
@@ -637,17 +690,32 @@ const totalReceivables = transactionSplits
 // 2. Total payables: pending payable transactions.
 const payableRows = rows.filter(x =>
   x.transactionKind === "payable" &&
-  pending(x)
+  getPayableOutstanding(x) > 0.005
 );
 
-const totalPayables = payableRows
-  .reduce((total, x) => total + x.amt, 0);
+const participantPayables = transactionSplits.filter(x =>
+  x.balance_direction === "user_owes_person" &&
+  !x.is_current_user
+);
 
+const participantPayableTotal = participantPayables.reduce(
+  (total, x) => total + getReceivableOutstanding(x),
+  0
+);
 
-// 3. Credit-card outstanding: payables specifically assigned to cards.
+const linkedPayableTotal = payableRows.reduce(
+  (total, x) => total + getPayableOutstanding(x),
+  0
+);
+
+const totalPayables = linkedPayableTotal + participantPayableTotal;
+
 const totalCardOutstanding = payableRows
   .filter(x => x.payableToType === "credit_card")
-  .reduce((total, x) => total + x.amt, 0);
+  .reduce(
+    (total, x) => total + getPayableOutstanding(x),
+    0
+  );
 
 
 // 4. Expenses created in the current month.
@@ -700,11 +768,309 @@ function showBalanceDetails(title, items, summary) {
 
 // Stores the currently displayed balance list for the Back action.
 let balanceDetailView = null;
+let activeDetailsTransactionId = null;
+let activeDetailsHideBackButton = false;
+
+function getReceivableOutstanding(split) {
+  return Math.max(
+    0,
+    Number(split.share_amount || 0) -
+    Number(split.amount_settled || 0)
+  );
+}
+
+function getPayableSettled(payableId) {
+  return transactionSettlements
+    .filter(x =>
+      x.settlement_type === "payable" &&
+      x.payable_transaction_id === payableId
+    )
+    .reduce((total, x) => total + Number(x.amount || 0), 0);
+}
+
+function getPayableOutstanding(payable) {
+  return Math.max(
+    0,
+    Number(payable.amt || 0) - getPayableSettled(payable.id)
+  );
+}
+
+// Open the settlement dialog for one specific obligation.
+
+function openSettlementDialog(type, targetId) {
+  let outstanding = 0;
+  let title = "";
+
+  if (type === "payable") {
+    const payable = rows.find(x =>
+      x.id === targetId &&
+      x.transactionKind === "payable"
+    );
+
+    if (!payable) {
+      alert("Payable transaction could not be found.");
+      return;
+    }
+
+    outstanding = getPayableOutstanding(payable);
+    title = payable.desc;
+
+  } else if (
+    type === "receivable" ||
+    type === "participant_payable"
+  ) {
+    const split = transactionSplits.find(x =>
+      x.id === targetId
+    );
+
+    if (!split) {
+      alert("Participant record could not be found.");
+      return;
+    }
+
+    if (
+      type === "receivable" &&
+      split.balance_direction !== "person_owes_user"
+    ) {
+      alert("This is not a receivable record.");
+      return;
+    }
+
+    if (
+      type === "participant_payable" &&
+      split.balance_direction !== "user_owes_person"
+    ) {
+      alert("This is not a participant payable record.");
+      return;
+    }
+
+    outstanding = Math.max(
+      0,
+      Number(split.share_amount || 0) -
+      Number(split.amount_settled || 0)
+    );
+
+    const person = people.find(p =>
+      p.id === split.person_id
+    );
+
+    title = person?.name ||
+      split.participant_label ||
+      "Participant";
+
+  } else {
+    alert("Invalid settlement type.");
+    return;
+  }
+
+  if (outstanding <= 0.005) {
+    alert("This obligation has already been fully settled.");
+    return;
+  }
+
+  $("#settlementTitle").textContent =
+    type === "receivable"
+      ? "Record amount received — " + title
+      : "Record payment — " + title;
+
+  $("#settlementOutstanding").textContent =
+    "Outstanding amount: " + fmt(outstanding);
+
+  $("#settlementTargetId").value = targetId;
+  $("#settlementType").value = type;
+  $("#settlementAmount").value = outstanding.toFixed(2);
+  $("#settlementDate").value = todayDate();
+  $("#settlementNotes").value = "";
+
+  $("#settlementDlg").showModal();
+}
+
+// Cancel settlement.
+$("#cancelSettlement").addEventListener("click", () => {
+  $("#settlementDlg").close();
+});
+
+// Save settlement through the database RPC.
+$("#settlementForm").addEventListener("submit", async event => {
+  event.preventDefault();
+
+  const userId = currentUserId;
+
+  if (!userId) {
+    alert("Please log in before recording a settlement.");
+    return;
+  }
+
+  const type = $("#settlementType").value;
+  const targetId = $("#settlementTargetId").value;
+  const amount = Number($("#settlementAmount").value);
+  const settlementDate = $("#settlementDate").value;
+  const notes = $("#settlementNotes").value.trim();
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    alert("Enter a valid settlement amount greater than zero.");
+    return;
+  }
+
+  if (!settlementDate) {
+    alert("Select the settlement date.");
+    return;
+  }
+
+  // Recalculate outstanding immediately before saving.
+  let outstanding = 0;
+  let masterId = null;
+
+  if (type === "payable") {
+    const payable = rows.find(x =>
+      x.id === targetId &&
+      x.transactionKind === "payable"
+    );
+
+    if (!payable) {
+      alert("Payable transaction could not be found. Refresh and try again.");
+      return;
+    }
+
+    outstanding = getPayableOutstanding(payable);
+    masterId = payable.relatedTransactionId || null;
+
+  } else if (
+    type === "receivable" ||
+    type === "participant_payable"
+  ) {
+    const split = transactionSplits.find(x =>
+      x.id === targetId
+    );
+
+    if (!split) {
+      alert("Participant record could not be found. Refresh and try again.");
+      return;
+    }
+
+    if (
+      type === "receivable" &&
+      split.balance_direction !== "person_owes_user"
+    ) {
+      alert("This is not a receivable record.");
+      return;
+    }
+
+    if (
+      type === "participant_payable" &&
+      split.balance_direction !== "user_owes_person"
+    ) {
+      alert("This is not a participant payable record.");
+      return;
+    }
+
+    outstanding = Math.max(
+      0,
+      Number(split.share_amount || 0) -
+      Number(split.amount_settled || 0)
+    );
+
+    masterId = split.transaction_id;
+
+  } else {
+    alert("Invalid settlement type.");
+    return;
+  }
+
+  if (outstanding <= 0.005) {
+    alert("This obligation has already been fully settled.");
+    return;
+  }
+
+  const amountInPaise = Math.round(amount * 100);
+  const outstandingInPaise = Math.round(outstanding * 100);
+
+  if (amountInPaise > outstandingInPaise) {
+    alert(
+      "Settlement amount cannot exceed the current outstanding amount of " +
+      fmt(outstanding) + "."
+    );
+    return;
+  }
+
+  try {
+    let result;
+
+    if (type === "payable") {
+      result = await supabaseClient.rpc("record_payable_settlement", {
+        p_payable_transaction_id: targetId,
+        p_amount: amount,
+        p_settlement_date: settlementDate,
+        p_notes: notes || null
+      });
+
+    } else if (type === "participant_payable") {
+      result = await supabaseClient.rpc(
+        "record_participant_payable_settlement",
+        {
+          p_split_id: targetId,
+          p_amount: amount,
+          p_settlement_date: settlementDate,
+          p_notes: notes || null
+        }
+      );
+
+    } else {
+      result = await supabaseClient.rpc("record_receivable_settlement", {
+        p_split_id: targetId,
+        p_amount: amount,
+        p_settlement_date: settlementDate,
+        p_notes: notes || null
+      });
+    }
+
+    if (currentUserId !== userId) return;
+
+    if (result.error) {
+      console.error("Settlement recording failed:", result.error);
+      alert("Could not record settlement: " + result.error.message);
+      return;
+    }
+
+    $("#settlementDlg").close();
+
+    // Reload transactions, split balances and settlement history.
+    await Promise.all([
+      loadTransactions(),
+      loadTransactionSplits(),
+      loadTransactionSettlements()
+    ]);
+
+    if (currentUserId !== userId) return;
+
+    render();
+
+    // Refresh master transaction details.
+    if (masterId) {
+      const master = rows.find(x => x.id === masterId);
+
+      if (master) {
+        showTransactionDetails(master, {
+          hideBackButton: activeDetailsHideBackButton
+        });
+      }
+    }
+
+    alert("Settlement recorded successfully.");
+
+  } catch (error) {
+    console.error("Unexpected settlement error:", error);
+    alert("Unable to record settlement. Please try again.");
+  }
+});
 
 
 // Display complete details for an individual transaction.
+
 function showTransactionDetails(transaction, extra = {}) {
   if (!transaction) return;
+  activeDetailsTransactionId = transaction.id;
+  activeDetailsHideBackButton = !!extra.hideBackButton;
 
   const paymentAccount = accounts.find(
     x => x.id === transaction.paymentAccountId
@@ -755,42 +1121,192 @@ function showTransactionDetails(transaction, extra = {}) {
     x.transaction_id === transaction.id
   );
 
+  const receivables = participantSplits.filter(x =>
+    x.balance_direction === "person_owes_user" &&
+    !x.is_current_user
+  );
+
+  const participantPayables = participantSplits.filter(x =>
+    x.balance_direction === "user_owes_person" &&
+    !x.is_current_user
+  );
+
+  const receivableHtml = receivables.length
+    ? receivables.map(split => {
+        const outstanding = getReceivableOutstanding(split);
+        const settled = Number(split.amount_settled || 0);
+        const person = people.find(p => p.id === split.person_id);
+
+        return `
+          <div class="item">
+            <div>
+              <b>${safe(person?.name || split.participant_label || "Participant")}</b>
+              <small>Share: ${fmt(split.share_amount)}</small>
+              <small>Received: ${fmt(settled)}</small>
+              <small>Outstanding: ${fmt(outstanding)}</small>
+            </div>
+            <div class="right">
+              ${outstanding > 0.005
+                ? `<button type="button" class="edit"
+                    data-settle-type="receivable"
+                    data-settle-id="${safe(split.id)}"
+                    data-settle-outstanding="${outstanding}">
+                    Settle Amount
+                  </button>`
+                : `<small>Fully received</small>`
+              }
+            </div>
+          </div>
+        `;
+      }).join("")
+    : "<p>No receivables recorded for this transaction.</p>";
+
+  const participantPayableHtml = participantPayables.length
+    ? participantPayables.map(split => {
+        const outstanding = Math.max(
+          0,
+          Number(split.share_amount || 0) -
+          Number(split.amount_settled || 0)
+        );
+
+        const settled = Number(split.amount_settled || 0);
+        const person = people.find(p => p.id === split.person_id);
+
+        return `
+          <div class="item">
+            <div>
+              <b>${safe(person?.name || split.participant_label || "Participant")}</b>
+              <small>Total: ${fmt(split.share_amount)}</small>
+              <small>Paid: ${fmt(settled)}</small>
+              <small>Outstanding: ${fmt(outstanding)}</small>
+              <small>Type: Participant payable</small>
+            </div>
+            <div class="right">
+              ${outstanding > 0.005
+                ? `<button type="button" class="paid"
+                    data-settle-type="participant_payable"
+                    data-settle-id="${safe(split.id)}"
+                    data-settle-outstanding="${outstanding}">
+                    Record Payment
+                  </button>`
+                : `<small>Fully paid</small>`
+              }
+            </div>
+          </div>
+        `;
+      }).join("")
+    : "<p>No participant payables recorded.</p>";
+
+  const linkedPayableHtml = linkedPayables.length
+    ? linkedPayables.map(payable => {
+        const outstanding = getPayableOutstanding(payable);
+        const settled = getPayableSettled(payable.id);
+
+        let destination = "Not specified";
+
+        if (payable.payableToType === "person") {
+          destination = people.find(p =>
+            p.id === payable.payableToPersonId
+          )?.name || "Person";
+        } else if (payable.payableToType === "account") {
+          destination = accounts.find(a =>
+            a.id === payable.payableToAccountId
+          )?.account_name || "Account";
+        } else if (payable.payableToType === "credit_card") {
+          destination = cards.find(c =>
+            c.id === payable.payableToCardId
+          )?.name || "Credit card";
+        }
+
+        return `
+          <div class="item">
+            <div>
+              <b>${safe(payable.desc)}</b>
+              <small>Total: ${fmt(payable.amt)}</small>
+              <small>Paid: ${fmt(settled)}</small>
+              <small>Outstanding: ${fmt(outstanding)}</small>
+              <small>Destination: ${safe(destination)}</small>
+              <small>Due: ${safe(payable.due || "Not specified")}</small>
+            </div>
+            <div class="right">
+              ${outstanding > 0.005
+                ? `<button type="button" class="paid"
+                    data-settle-type="payable"
+                    data-settle-id="${safe(payable.id)}"
+                    data-settle-outstanding="${outstanding}">
+                    Record Payment
+                  </button>`
+                : `<small>Fully paid</small>`
+              }
+            </div>
+          </div>
+        `;
+      }).join("")
+    : "<p>No linked payables recorded.</p>";
+
+  const payableHtml = `
+    <h4>Participant Payables</h4>
+    ${participantPayableHtml}
+    <h4>Linked Payables</h4>
+    ${linkedPayableHtml}
+  `;
+
+  const history = transactionSettlements.filter(x =>
+    (
+      x.settlement_type === "receivable" &&
+      receivables.some(s => s.id === x.split_id)
+    ) ||
+    (
+      x.settlement_type === "payable" &&
+      (
+        participantPayables.some(s => s.id === x.split_id) ||
+        linkedPayables.some(p => p.id === x.payable_transaction_id)
+      )
+    )
+  );
+
+  const historyHtml = history.length
+    ? history.map(item => {
+        const split = participantSplits.find(
+          s => s.id === item.split_id
+        );
+
+        const payable = linkedPayables.find(
+          p => p.id === item.payable_transaction_id
+        );
+
+        const person = split
+          ? people.find(p => p.id === split.person_id)
+          : null;
+
+        const target = split
+          ? person?.name || split.participant_label || "Participant"
+          : payable?.desc || "Payable";
+
+        return `
+          <div class="item">
+            <div>
+              <b>${safe(target)}</b>
+              <small>
+                ${item.settlement_type === "receivable"
+                  ? "Received"
+                  : "Payment made"}
+                · ${safe(item.settlement_date || "")}
+              </small>
+              <small>${safe(item.notes || (item.is_opening_balance
+                ? "Opening balance"
+                : "No notes"))}</small>
+            </div>
+            <div class="right">
+              <strong>${fmt(item.amount)}</strong>
+            </div>
+          </div>
+        `;
+      }).join("")
+    : "<p>No settlement history yet.</p>";
+
   const fields = [
     ["Amount", fmt(transaction.amt)],
-
-    ...participantSplits.map(x => [
-      `Participant: ${x.participant_label || "Unknown"}`,
-      `Share: ${fmt(x.share_amount)} · Settled: ${fmt(x.amount_settled)} · Outstanding: ${
-        fmt(Math.max(
-          0,
-          Number(x.share_amount || 0) - Number(x.amount_settled || 0)
-        ))
-      }`
-    ]),
-
-    ...linkedPayables.map(x => {
-      const destination =
-        x.payableToType === "person"
-          ? people.find(p => p.id === x.payableToPersonId)?.name || "Person"
-          : x.payableToType === "account"
-            ? accounts.find(a => a.id === x.payableToAccountId)?.account_name || "Account"
-            : x.payableToType === "credit_card"
-              ? cards.find(c => c.id === x.payableToCardId)?.name || "Credit card"
-              : "Not specified";
-    
-      return [
-        `Linked payable: ${x.desc}`,
-        `${fmt(x.amt)} · ${x.st} · To: ${destination} · Due: ${x.due || "Not specified"}`
-      ];
-    }),
-  
-    ...(extra.receivableAmount !== undefined
-      ? [
-          ["Person owing you", extra.receivablePerson || "Person"],
-          ["Outstanding receivable", fmt(extra.receivableAmount)]
-        ]
-      : []),
-  
     ["Transaction date", transaction.transactionDate || "Not specified"],
     ["Due date", transaction.due || "Not specified"],
     ["Type", transaction.typ || "Not specified"],
@@ -806,20 +1322,56 @@ function showTransactionDetails(transaction, extra = {}) {
   $("#balanceDetailSummary").innerHTML = extra.hideBackButton
     ? ""
     : `<button type="button" class="secondary" id="backToBalanceList">← Back to list</button>`;
-  $("#balanceDetailTransactions").innerHTML = fields.map(([label, value]) => `
+
+  $("#balanceDetailTransactions").innerHTML = `
     <div class="item">
       <div>
-        <small>${safe(label)}</small>
-        <b>${safe(String(value))}</b>
+        <b>Master Transaction</b>
+        <small>${safe(transaction.desc)}</small>
+        <small>${safe(transaction.note || "No description")}</small>
+      </div>
+      <div class="right">
+        <strong>${fmt(transaction.amt)}</strong>
       </div>
     </div>
-  `).join("");
 
-  $("#balanceDetailDlg").showModal();
+    <h3>Receivables</h3>
+    ${receivableHtml}
+
+    <h3>Payables</h3>
+    ${payableHtml}
+
+    <h3>Settlement History</h3>
+    ${historyHtml}
+
+    <h3>Transaction Information</h3>
+    ${fields.map(([label, value]) => `
+      <div class="item">
+        <div>
+          <small>${safe(label)}</small>
+          <b>${safe(String(value))}</b>
+        </div>
+      </div>
+    `).join("")}
+  `;
+
+  if (!$("#balanceDetailDlg").open) {
+    $("#balanceDetailDlg").showModal();
+  }
 }
 
 // Open individual transaction when clicked.
 $("#balanceDetailTransactions").addEventListener("click", event => {
+  const settleButton = event.target.closest("[data-settle-type]");
+
+  if (settleButton) {
+    openSettlementDialog(
+      settleButton.dataset.settleType,
+      settleButton.dataset.settleId
+    );
+    return;
+  }
+
   const itemElement = event.target.closest("[data-item-index]");
   if (!itemElement || !balanceDetailView) return;
 
@@ -907,24 +1459,48 @@ $("#receivablesBalance").onclick = () => {
 
 // Total Payables details.
 $("#payablesBalance").onclick = () => {
-  const items = rows
+  const linkedItems = rows
     .filter(x =>
       x.transactionKind === "payable" &&
-      pending(x)
+      getPayableOutstanding(x) > 0.005
     )
-      .map(x => ({
-        transactionId: x.id,
-        title: x.desc,
-        subtitle: x.due
-          ? "Due: " + x.due
-          : "Pending payable",
-        amount: x.amt
-      }));
+    .map(x => ({
+      transactionId: x.id,
+      title: x.desc,
+      subtitle: x.due
+        ? "Due: " + x.due
+        : "Pending payable",
+      amount: getPayableOutstanding(x)
+    }));
+
+  const participantItems = transactionSplits
+    .filter(x =>
+      x.balance_direction === "user_owes_person" &&
+      !x.is_current_user
+    )
+    .map(x => {
+      const transaction = rows.find(
+        r => r.id === x.transaction_id
+      );
+
+      const person = people.find(
+        p => p.id === x.person_id
+      );
+
+      return {
+        transactionId: x.transaction_id,
+        title: transaction?.desc || "Shared expense",
+        subtitle: "Payable to: " +
+          (person?.name || x.participant_label || "Person"),
+        amount: getReceivableOutstanding(x)
+      };
+    })
+    .filter(x => x.amount > 0.005);
 
   showBalanceDetails(
     "Total Payables",
-    items,
-    "All pending payable transactions."
+    [...linkedItems, ...participantItems],
+    "All outstanding payable balances."
   );
 };
 
@@ -934,8 +1510,8 @@ $("#creditCardsBalance").onclick = () => {
   const items = rows
     .filter(x =>
       x.transactionKind === "payable" &&
-      pending(x) &&
-      x.payableToType === "credit_card"
+      x.payableToType === "credit_card" &&
+      getPayableOutstanding(x) > 0.005
     )
     .map(x => {
       const card = cards.find(
@@ -946,14 +1522,14 @@ $("#creditCardsBalance").onclick = () => {
         transactionId: x.id,
         title: x.desc,
         subtitle: card?.name || "Credit card payable",
-        amount: x.amt
+        amount: getPayableOutstanding(x)
       };
     });
 
   showBalanceDetails(
     "Credit Card Outstanding",
     items,
-    "Pending amounts payable to credit cards."
+    "Outstanding amounts payable to credit cards."
   );
 };
 
@@ -1236,24 +1812,50 @@ $("#form").onsubmit = async e => {
   };
 
   // Existing transaction: update basic fields only.
-  // Do not overwrite its payment source or transaction relationships.
+  // Settlement-controlled transactions cannot have their amount or status
+  // changed through the regular edit form.
   if (id) {
-    const status = statusMap[$("#st").value];
+    const existingTransaction = rows.find(x => x.id === id);
 
-    if (!status) {
-      alert("Invalid transaction status.");
+    if (!existingTransaction) {
+      alert("Transaction could not be found. Please refresh and try again.");
+      return;
+    }
+
+    const hasObligations =
+      existingTransaction.transactionKind === "payable" ||
+      rows.some(x =>
+        x.transactionKind === "payable" &&
+        x.relatedTransactionId === id
+      ) ||
+      transactionSplits.some(split => split.transaction_id === id);
+
+    if (existingTransaction.transactionKind === "payable") {
+      alert("Payable transactions must be updated through their settlement records.");
       return;
     }
 
     const payload = {
       title: $("#desc").value.trim(),
-      amount,
       transaction_date: transactionDate,
       due_date: $("#due").value || null,
       category: $("#cat").value,
-      status,
       notes: $("#note").value || null
     };
+
+    // Only transactions without obligations can have their amount/status
+    // changed through this form.
+    if (!hasObligations) {
+      const status = statusMap[$("#st").value];
+
+      if (!status) {
+        alert("Invalid transaction status.");
+        return;
+      }
+
+      payload.amount = amount;
+      payload.status = status;
+    }
 
     const { error } = await supabaseClient
       .from("transactions")
@@ -1269,6 +1871,7 @@ $("#form").onsubmit = async e => {
 
     $("#dlg").close();
     await loadTransactions();
+    render();
     return;
   }
 
@@ -1447,27 +2050,70 @@ $("#form").onsubmit = async e => {
   }
 };
 $("#list").onclick = async e => {
-  const detailsId = e.target.dataset.details;
+  const detailsButton = e.target.closest("[data-details]");
 
-  if (detailsId) {
-    const transaction = rows.find(x => x.id === detailsId);
+  if (detailsButton) {
+    const transaction = rows.find(
+      x => x.id === detailsButton.dataset.details
+    );
 
     if (transaction) {
-      showTransactionDetails(transaction, { hideBackButton: true });
+      showTransactionDetails(transaction, {
+        hideBackButton: true
+      });
     }
 
     return;
   }
-  const editId = e.target.dataset.edit;
-  const paidId = e.target.dataset.paid;
 
-  if (editId) {
-    const x = rows.find(r => r.id === editId);
-    if (x) edit(x);
+  const settlementButton = e.target.closest("[data-settle-type]");
+
+  if (settlementButton) {
+    openSettlementDialog(
+      settlementButton.dataset.settleType,
+      settlementButton.dataset.settleId
+    );
     return;
   }
 
-  if (paidId && confirm("Mark this payable as paid?")) {
+  const editButton = e.target.closest("[data-edit]");
+
+  if (editButton) {
+    const transaction = rows.find(
+      x => x.id === editButton.dataset.edit
+    );
+
+    if (transaction) edit(transaction);
+    return;
+  }
+
+  const paidButton = e.target.closest("[data-paid]");
+
+  if (paidButton) {
+    const paidId = paidButton.dataset.paid;
+
+    const transaction = rows.find(x => x.id === paidId);
+
+    if (!transaction) return;
+
+    // Never bypass settlement history for payable/master obligations.
+    const hasObligations =
+      transaction.transactionKind === "payable" ||
+      rows.some(x =>
+        x.transactionKind === "payable" &&
+        x.relatedTransactionId === paidId
+      ) ||
+      transactionSplits.some(
+        split => split.transaction_id === paidId
+      );
+
+    if (hasObligations) {
+      alert("Please use the settlement details to record this payment.");
+      return;
+    }
+
+    if (!confirm("Mark this transaction as paid?")) return;
+
     if (!currentUserId) {
       alert("Please log in first.");
       return;
@@ -2233,6 +2879,7 @@ function initializeAuth() {
       people = [];
       accounts = [];
       transactionSplits = [];
+      transactionSettlements = [];
     
       render();
       renderSchedules();
@@ -2247,7 +2894,8 @@ function initializeAuth() {
           loadCards(),
           loadPeople(),
           loadAccounts(),
-          loadTransactionSplits()
+          loadTransactionSplits(),
+          loadTransactionSettlements()
         ]);
         
         render();
@@ -2260,6 +2908,7 @@ function initializeAuth() {
             people = [];
             accounts = [];
             transactionSplits = [];
+            transactionSettlements = [];
           
             renderPeople();
           

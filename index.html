@@ -480,6 +480,59 @@
       </div>
     </div>
   </dialog>
+
+  <!-- Record settlement dialog -->
+  <dialog id="settlementDlg">
+    <form id="settlementForm">
+      <h2 id="settlementTitle">Record settlement</h2>
+
+      <p id="settlementOutstanding" class="hint"></p>
+
+      <input id="settlementTargetId" type="hidden">
+      <input id="settlementType" type="hidden">
+
+      <label>Settlement amount (₹)
+        <input
+          id="settlementAmount"
+          type="number"
+          min="0.01"
+          step="0.01"
+          required
+        >
+      </label>
+
+      <label>Settlement date
+        <input
+          id="settlementDate"
+          type="date"
+          required
+        >
+      </label>
+
+      <label>Notes (optional)
+        <input
+          id="settlementNotes"
+          type="text"
+          placeholder="Add payment reference or notes"
+        >
+      </label>
+
+      <div class="actions">
+        <button
+          type="button"
+          class="secondary"
+          id="cancelSettlement"
+        >
+          Cancel
+        </button>
+
+        <button type="submit">
+          Save settlement
+        </button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- EMI dialog -->
   <dialog id="emiDlg">
     <form id="emiForm">
