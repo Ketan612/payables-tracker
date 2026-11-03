@@ -138,6 +138,7 @@ function updateDefaultPayableAmount() {
   }
 }
 
+
 function updatePaymentFields() {
   const method = $("#paymentMethod").value;
 
@@ -145,8 +146,8 @@ function updatePaymentFields() {
   if (method === "credit_card") {
     $("#createPayable").checked = true;
     $("#createPayable").disabled = true;
-  
-    // Credit-card payable must always equal the full purchase amount.
+
+    // Credit-card payable must equal the full purchase amount.
     $("#payableAmount").dataset.manuallyEdited = "";
     $("#payableAmount").value =
       (Number($("#amt").value) || 0).toFixed(2);
@@ -159,9 +160,10 @@ function updatePaymentFields() {
 
   const payableType = $("#payableType").value;
 
-  $("#paymentAccountField").hidden =
-    !["bank", "cash", "wallet"].includes(method);
+  // Only Bank requires a specific payment account.
+  $("#paymentAccountField").hidden = method !== "bank";
 
+  // Only Credit Card requires card selection.
   $("#paymentCardField").hidden =
     method !== "credit_card";
 
