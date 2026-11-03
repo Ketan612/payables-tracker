@@ -563,10 +563,16 @@ $("#cardForm").onsubmit = async e => {
   };
 
   try {
-    const { error } = await supabaseClient
+    console.log("Saving credit card:", payload);
+    
+    const { data, error } = await supabaseClient
       .from("payment_cards")
-      .insert(payload);
-
+      .insert(payload)
+      .select("id, user_id, card_name")
+      .single();
+    
+    console.log("Supabase insert response:", { data, error });
+    
     if (currentUserId !== userId) return;
 
     if (error) {
