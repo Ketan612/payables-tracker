@@ -663,13 +663,18 @@ $("#totalCardOutstanding").textContent = fmt(totalCardOutstanding);
 $("#bankBalance small").textContent = "TOTAL EXPENSES THIS MONTH";
 $("#totalBankBalance").textContent = fmt(totalExpensesThisMonth);
 }
+
 function showBalanceDetails(title, items, summary) {
+  balanceDetailView = { title, items, summary };
+
   $("#balanceDetailTitle").textContent = title;
   $("#balanceDetailSummary").textContent = summary;
 
   $("#balanceDetailTransactions").innerHTML = items.length
-    ? items.map(item => `
-        <div class="item">
+    ? items.map((item, index) => `
+        <div class="item"
+             data-item-index="${index}"
+             style="cursor:pointer">
           <div>
             <b>${safe(item.title)}</b>
             <small>${safe(item.subtitle || "")}</small>
@@ -683,6 +688,133 @@ function showBalanceDetails(title, items, summary) {
 
   $("#balanceDetailDlg").showModal();
 }
+
+
+// Stores the currently displayed balance list for the Back action.
+let balanceDetailView = null;
+
+
+// Display complete details for an individual transaction.
+function showTransactionDetails(transaction, extra = {}) {
+  if (!transaction) return;
+
+  const paymentAccount = accounts.find(
+    x => x.id === transaction.paymentAccountId
+  );
+
+  const paymentCard = cards.find(
+    x => x.id === transaction.paymentCardId
+  );
+
+  const payablePerson = people.find(
+    x => x.id === transaction.payableToPersonId
+  );
+
+  const payableAccount = accounts.find(
+    x => x.id === transaction.payableToAccountId
+  );
+
+  const payableCard = cards.find(
+    x => x.id === transaction.payableToCardId
+  );
+
+  const paymentSource = {
+    bank: paymentAccount?.account_name || "Bank account",
+    cash: "Cash",
+    wallet: paymentAccount?.account_name || "Wallet",
+    credit_card: paymentCard?.name || "Credit card",
+    friend_card: "Friend's card",
+    unpaid: "Unpaid",
+    other: "Other"
+  }[transaction.paymentMethod] || "Not specified";
+
+  let payableDestination = "Not specified";
+
+  if (transaction.payableToType === "person") {
+    payableDestination = payablePerson?.name || "Person";
+  } else if (transaction.payableToType === "account") {
+    payableDestination = payableAccount?.account_name || "Account";
+  } else if (transaction.payableToType === "credit_card") {
+    payableDestination = payableCard?.name || "Credit card";
+  }
+
+  const fields = [
+    ["Amount", fmt(transaction.amt)],
+  
+    ...(extra.receivableAmount !== undefined
+      ? [
+          ["Person owing you", extra.receivablePerson || "Person"],
+          ["Outstanding receivable", fmt(extra.receivableAmount)]
+        ]
+      : []),
+  
+    ["Transaction date", transaction.transactionDate || "Not specified"],
+    ["Due date", transaction.due || "Not specified"],
+    ["Type", transaction.typ || "Not specified"],
+    ["Category", transaction.cat || "Not specified"],
+    ["Status", transaction.st || "Not specified"],
+    ["Payment source", paymentSource],
+    ["Payable destination", payableDestination],
+    ["Description / Notes", transaction.note || "None"]
+  ];
+
+  $("#balanceDetailTitle").textContent = transaction.desc;
+
+  $("#balanceDetailSummary").innerHTML =
+    `<button type="button" class="secondary" id="backToBalanceList">← Back to list</button>`;
+
+  $("#balanceDetailTransactions").innerHTML = fields.map(([label, value]) => `
+    <div class="item">
+      <div>
+        <small>${safe(label)}</small>
+        <b>${safe(String(value))}</b>
+      </div>
+    </div>
+  `).join("");
+
+  $("#balanceDetailDlg").showModal();
+}
+
+// Open individual transaction when clicked.
+$("#balanceDetailTransactions").addEventListener("click", event => {
+  const itemElement = event.target.closest("[data-item-index]");
+  if (!itemElement || !balanceDetailView) return;
+
+  const index = Number(itemElement.dataset.itemIndex);
+  const selectedItem = balanceDetailView.items[index];
+
+  if (!selectedItem) return;
+
+  const transaction = rows.find(
+    x => x.id === selectedItem.transactionId
+  );
+
+  if (!transaction) {
+    alert("Transaction details could not be found.");
+    return;
+  }
+
+  const extra = balanceDetailView.title === "Total Receivables"
+    ? {
+        receivableAmount: selectedItem.amount,
+        receivablePerson: selectedItem.subtitle
+      }
+    : {};
+
+  showTransactionDetails(transaction, extra);
+});
+
+// Return to the original balance transaction list.
+$("#balanceDetailSummary").addEventListener("click", event => {
+  if (event.target.id !== "backToBalanceList") return;
+  if (!balanceDetailView) return;
+
+  showBalanceDetails(
+    balanceDetailView.title,
+    balanceDetailView.items,
+    balanceDetailView.summary
+  );
+});
 
 
 // Close dashboard detail dialog.
@@ -714,10 +846,11 @@ $("#receivablesBalance").onclick = () => {
       );
 
       return {
-        title: transaction?.desc || "Shared expense",
-        subtitle: person?.name || x.participant_label || "Person",
-        amount: outstanding
-      };
+          transactionId: transaction?.id,
+          title: transaction?.desc || "Shared expense",
+          subtitle: person?.name || x.participant_label || "Person",
+          amount: outstanding
+        };
     })
     .filter(x => x.amount > 0);
 
@@ -736,13 +869,14 @@ $("#payablesBalance").onclick = () => {
       x.transactionKind === "payable" &&
       pending(x)
     )
-    .map(x => ({
-      title: x.desc,
-      subtitle: x.due
-        ? "Due: " + x.due
-        : "Pending payable",
-      amount: x.amt
-    }));
+      .map(x => ({
+        transactionId: x.id,
+        title: x.desc,
+        subtitle: x.due
+          ? "Due: " + x.due
+          : "Pending payable",
+        amount: x.amt
+      }));
 
   showBalanceDetails(
     "Total Payables",
@@ -766,6 +900,7 @@ $("#creditCardsBalance").onclick = () => {
       );
 
       return {
+        transactionId: x.id,
         title: x.desc,
         subtitle: card?.name || "Credit card payable",
         amount: x.amt
@@ -791,6 +926,7 @@ $("#bankBalance").onclick = () => {
       x.transactionDate.slice(0, 7) === currentMonth
     )
     .map(x => ({
+      transactionId: x.id,
       title: x.desc,
       subtitle: x.transactionDate,
       amount: x.amt
