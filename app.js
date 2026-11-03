@@ -2059,7 +2059,8 @@ function initializeAuth() {
           loadAccounts(),
           loadTransactionSplits()
         ]);
-    
+        
+        render();
         populatePaymentDropdowns();
       }, 0);
     } else {
