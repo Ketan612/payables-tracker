@@ -25,6 +25,7 @@ let rows;
 
 let people = [];
 let accounts = [];
+let transactionSplits = [];
 
 async function loadPeople() {
   const userId = currentUserId;
@@ -60,14 +61,48 @@ try {
 } catch {
   rows = seed;
 }
+async function loadTransactionSplits() {
+  const userId = currentUserId;
+
+  if (!userId) {
+    transactionSplits = [];
+    return;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("transaction_splits")
+    .select(`
+      id,
+      transaction_id,
+      person_id,
+      participant_label,
+      share_amount,
+      is_current_user,
+      amount_settled,
+      balance_direction
+    `)
+    .eq("user_id", userId);
+
+  if (currentUserId !== userId) return;
+
+  if (error) {
+    console.error("Failed to load transaction splits:", error);
+    transactionSplits = [];
+    alert("Could not load shared expense details: " + error.message);
+    return;
+  }
+
+  transactionSplits = data || [];
+}
 async function loadAccounts() {
   const userId = currentUserId;
 
   if (!userId) {
     accounts = [];
+    transactionSplits = [];
     return;
   }
-
+  
   const { data, error } = await supabaseClient
     .from("bank_accounts")
     .select("id, account_name, account_type")
@@ -1789,6 +1824,7 @@ function initializeAuth() {
       cards = [];
       people = [];
       accounts = [];
+      transactionSplits = [];
     
       render();
       renderSchedules();
@@ -1802,22 +1838,25 @@ function initializeAuth() {
           loadEmis(),
           loadCards(),
           loadPeople(),
-          loadAccounts()
+          loadAccounts(),
+          loadTransactionSplits()
         ]);
     
         populatePaymentDropdowns();
       }, 0);
     } else {
-      rows = [];
-      emis = [];
-      cards = [];
-      people = [];
-      accounts = [];
-      renderPeople();
-    
-      render();
-      renderSchedules();
-    }
+            rows = [];
+            emis = [];
+            cards = [];
+            people = [];
+            accounts = [];
+            transactionSplits = [];
+          
+            renderPeople();
+          
+            render();
+            renderSchedules();
+          }
   });
 }
 $("#logoutBtn").onclick = async () => {
