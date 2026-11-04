@@ -254,7 +254,7 @@ BEGIN
 
         ('bd04d889-d0f9-48b9-9ac5-13e7b2d00786'::uuid,
          '2b85197c-8a06-4c8c-a851-abce745d9de5'::uuid,
-         'b96598c6-1ad4-4c90-a5d3-2030aafa6676'::uuid,
+         'b96598c6-1ad4-4cde-83cd-05f871c36774'::uuid,
          '3dcfdbbe-4921-4838-b80d-8d2b72842367'::uuid,
          1800::numeric, DATE '2026-11-04'),
 
