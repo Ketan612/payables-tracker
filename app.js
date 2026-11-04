@@ -105,7 +105,28 @@ async function loadTransactionSettlements() {
     return;
   }
 
-  const [legacyResult, ledgerResult] = await Promise.all([
+  const loadLedger = (includeLegacyId = true) =>
+    supabaseClient
+      .from("settlements")
+      .select(`
+        id,
+        transaction_id,
+        split_id,
+        person_id,
+        amount,
+        settlement_date,
+        direction,
+        payment_method,
+        account_id,
+        reference_note,
+        ${includeLegacyId ? "legacy_transaction_settlement_id," : ""}
+        created_at
+      `)
+      .eq("user_id", userId)
+      .order("settlement_date", { ascending: false })
+      .order("created_at", { ascending: false });
+
+  const [legacyResult, initialLedgerResult] = await Promise.all([
     supabaseClient
       .from("transaction_settlements")
       .select(`
@@ -124,25 +145,7 @@ async function loadTransactionSettlements() {
       .order("settlement_date", { ascending: false })
       .order("created_at", { ascending: false }),
 
-    supabaseClient
-      .from("settlements")
-      .select(`
-        id,
-        transaction_id,
-        split_id,
-        person_id,
-        amount,
-        settlement_date,
-        direction,
-        payment_method,
-        account_id,
-        reference_note,
-        legacy_transaction_settlement_id,
-        created_at
-      `)
-      .eq("user_id", userId)
-      .order("settlement_date", { ascending: false })
-      .order("created_at", { ascending: false })
+    loadLedger(true)
   ]);
 
   if (currentUserId !== userId) return;
@@ -153,6 +156,7 @@ async function loadTransactionSettlements() {
       legacyResult.error
     );
     transactionSettlements = [];
+    settlements = [];
     alert(
       "Could not load legacy settlement history: " +
       legacyResult.error.message
@@ -160,11 +164,43 @@ async function loadTransactionSettlements() {
     return;
   }
 
+  let ledgerResult = initialLedgerResult;
+
+  // Before migration, retry without the not-yet-created column.
+  if (
+    ledgerResult.error &&
+    ledgerResult.error.message?.includes(
+      "legacy_transaction_settlement_id"
+    ) &&
+    (
+      ledgerResult.error.code === "42703" ||
+      ledgerResult.error.code === "PGRST204" ||
+      ledgerResult.error.message.toLowerCase().includes("schema cache") ||
+      ledgerResult.error.message.toLowerCase().includes("does not exist")
+    )
+  ) {
+    console.warn(
+      "Settlement migration column not found. Retrying without it."
+    );
+
+    ledgerResult = await loadLedger(false);
+
+    if (!ledgerResult.error) {
+      ledgerResult.data = (ledgerResult.data || []).map(item => ({
+        ...item,
+        legacy_transaction_settlement_id: null
+      }));
+    }
+  }
+
+  if (currentUserId !== userId) return;
+
   if (ledgerResult.error) {
     console.error(
       "Failed to load settlement ledger:",
       ledgerResult.error
     );
+    transactionSettlements = [];
     settlements = [];
     alert(
       "Could not load settlement ledger: " +
