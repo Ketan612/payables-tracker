@@ -27,6 +27,7 @@ let people = [];
 let accounts = [];
 let transactionSplits = [];
 let transactionSettlements = [];
+let settlements = [];
 
 async function loadPeople() {
   const userId = currentUserId;
@@ -100,37 +101,80 @@ async function loadTransactionSettlements() {
 
   if (!userId) {
     transactionSettlements = [];
+    settlements = [];
     return;
   }
 
-  const { data, error } = await supabaseClient
-    .from("transaction_settlements")
-    .select(`
-      id,
-      transaction_id,
-      split_id,
-      payable_transaction_id,
-      settlement_type,
-      amount,
-      settlement_date,
-      notes,
-      is_opening_balance,
-      created_at
-    `)
-    .eq("user_id", userId)
-    .order("settlement_date", { ascending: false })
-    .order("created_at", { ascending: false });
+  const [legacyResult, ledgerResult] = await Promise.all([
+    supabaseClient
+      .from("transaction_settlements")
+      .select(`
+        id,
+        transaction_id,
+        split_id,
+        payable_transaction_id,
+        settlement_type,
+        amount,
+        settlement_date,
+        notes,
+        is_opening_balance,
+        created_at
+      `)
+      .eq("user_id", userId)
+      .order("settlement_date", { ascending: false })
+      .order("created_at", { ascending: false }),
+
+    supabaseClient
+      .from("settlements")
+      .select(`
+        id,
+        transaction_id,
+        split_id,
+        person_id,
+        amount,
+        settlement_date,
+        direction,
+        payment_method,
+        account_id,
+        reference_note,
+        legacy_transaction_settlement_id,
+        created_at
+      `)
+      .eq("user_id", userId)
+      .order("settlement_date", { ascending: false })
+      .order("created_at", { ascending: false })
+  ]);
 
   if (currentUserId !== userId) return;
 
-  if (error) {
-    console.error("Failed to load settlement history:", error);
+  if (legacyResult.error) {
+    console.error(
+      "Failed to load legacy settlement history:",
+      legacyResult.error
+    );
     transactionSettlements = [];
-    alert("Could not load settlement history: " + error.message);
+    alert(
+      "Could not load legacy settlement history: " +
+      legacyResult.error.message
+    );
     return;
   }
 
-  transactionSettlements = data || [];
+  if (ledgerResult.error) {
+    console.error(
+      "Failed to load settlement ledger:",
+      ledgerResult.error
+    );
+    settlements = [];
+    alert(
+      "Could not load settlement ledger: " +
+      ledgerResult.error.message
+    );
+    return;
+  }
+
+  transactionSettlements = legacyResult.data || [];
+  settlements = ledgerResult.data || [];
 }
 async function loadAccounts() {
   const userId = currentUserId;
@@ -1302,7 +1346,7 @@ function showTransactionDetails(transaction, extra = {}) {
     ${linkedPayableHtml}
   `;
 
-  const history = transactionSettlements.filter(x =>
+  const legacyHistory = transactionSettlements.filter(x =>
     (
       x.settlement_type === "receivable" &&
       receivables.some(s => s.id === x.split_id)
@@ -1315,6 +1359,53 @@ function showTransactionDetails(transaction, extra = {}) {
       )
     )
   );
+
+  // Exclude legacy receivable rows already represented in the new ledger.
+  const migratedLegacyIds = new Set(
+    settlements
+      .map(x => x.legacy_transaction_settlement_id)
+      .filter(Boolean)
+  );
+
+  const visibleLegacyHistory = legacyHistory.filter(x =>
+    !migratedLegacyIds.has(x.id)
+  );
+
+  const newLedgerHistory = settlements
+    .filter(x =>
+      (
+        x.direction === "received_by_user" &&
+        receivables.some(s => s.id === x.split_id)
+      ) ||
+      (
+        x.direction === "paid_by_user" &&
+        participantPayables.some(s => s.id === x.split_id)
+      )
+    )
+    .map(x => ({
+      ...x,
+      settlement_type: x.direction === "received_by_user"
+        ? "receivable"
+        : "payable",
+      notes: x.reference_note,
+      is_opening_balance: false
+    }));
+
+  const history = [
+    ...visibleLegacyHistory,
+    ...newLedgerHistory
+  ].sort((a, b) => {
+    const dateCompare =
+      String(b.settlement_date || "").localeCompare(
+        String(a.settlement_date || "")
+      );
+
+    if (dateCompare !== 0) return dateCompare;
+
+    return String(b.created_at || "").localeCompare(
+      String(a.created_at || "")
+    );
+  });
 
   const historyHtml = history.length
     ? history.map(item => {
@@ -1344,9 +1435,14 @@ function showTransactionDetails(transaction, extra = {}) {
                   : "Payment made"}
                 · ${safe(item.settlement_date || "")}
               </small>
-              <small>${safe(item.notes || (item.is_opening_balance
-                ? "Opening balance"
-                : "No notes"))}</small>
+              <small>${safe(
+                item.notes ||
+                (item.is_opening_balance
+                  ? "Opening balance"
+                  : item.payment_method
+                    ? "Payment method: " + item.payment_method
+                    : "No notes")
+              )}</small>
             </div>
             <div class="right">
               <strong>${fmt(item.amount)}</strong>
@@ -3002,6 +3098,7 @@ function initializeAuth() {
       accounts = [];
       transactionSplits = [];
       transactionSettlements = [];
+      settlements = [];
     
       render();
       renderSchedules();
@@ -3031,6 +3128,7 @@ function initializeAuth() {
             accounts = [];
             transactionSplits = [];
             transactionSettlements = [];
+            settlements = [];
           
             renderPeople();
           
