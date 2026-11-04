@@ -219,10 +219,74 @@ BEGIN
           'be9a8137-3390-43e5-936a-63f58b477003'::uuid
       );
 
-    IF v_existing_ledger_count <> 0 THEN
+    IF v_existing_ledger_count <> 6 THEN
         RAISE EXCEPTION
-            'Backfill stopped: found % existing ledger rows on audited splits',
+            'Expected 6 existing matching ledger rows, found %',
             v_existing_ledger_count;
+    END IF;
+
+    WITH expected (
+        legacy_id,
+        transaction_id,
+        split_id,
+        person_id,
+        amount,
+        settlement_date
+    ) AS (
+        VALUES
+        ('2907f236-3c97-4e09-ae71-1be38514c62e'::uuid,
+         '418dbd14-9b5d-496e-9465-c2afe295212b'::uuid,
+         '00bf17ca-8ff4-4c90-a5d3-2030aafa6676'::uuid,
+         '3dcfdbbe-4921-4838-b80d-8d2b72842367'::uuid,
+         1000::numeric, DATE '2026-11-04'),
+
+        ('116c00f7-cdb0-4da0-975c-735e4fd062b6'::uuid,
+         '418dbd14-9b5d-496e-9465-c2afe295212b'::uuid,
+         '00bf17ca-8ff4-4c90-a5d3-2030aafa6676'::uuid,
+         '3dcfdbbe-4921-4838-b80d-8d2b72842367'::uuid,
+         800::numeric, DATE '2026-11-04'),
+
+        ('355d8076-3459-4d47-a86b-cafc935290f4'::uuid,
+         '418dbd14-9b5d-496e-9465-c2afe295212b'::uuid,
+         '8c67b99a-290e-4863-afb8-f3608b9bb4bf'::uuid,
+         'e989eec9-6343-418c-8c57-1b1a0dca8ede'::uuid,
+         2200::numeric, DATE '2026-11-04'),
+
+        ('bd04d889-d0f9-48b9-9ac5-13e7b2d00786'::uuid,
+         '2b85197c-8a06-4c8c-a851-abce745d9de5'::uuid,
+         'b96598c6-1ad4-4c90-a5d3-2030aafa6676'::uuid,
+         '3dcfdbbe-4921-4838-b80d-8d2b72842367'::uuid,
+         1800::numeric, DATE '2026-11-04'),
+
+        ('d207e46d-9025-4b8d-9efe-6f4214edd597'::uuid,
+         '2b85197c-8a06-4c8c-a851-abce745d9de5'::uuid,
+         '3770a90e-b226-4514-b593-3a7631e48bb7'::uuid,
+         'e989eec9-6343-418c-8c57-1b1a0dca8ede'::uuid,
+         2200::numeric, DATE '2026-11-04'),
+
+        ('65ba2e8b-ee53-4121-ac13-8445a9d476f2'::uuid,
+         '8c800c4e-ed22-4ba9-9f1f-8f0e82f12987'::uuid,
+         'be9a8137-3390-43e5-936a-63f58b477003'::uuid,
+         '3dcfdbbe-4921-4838-b80d-8d2b72842367'::uuid,
+         1000::numeric, DATE '2026-11-04')
+    )
+    SELECT COUNT(*)
+    INTO v_valid_count
+    FROM expected e
+    JOIN public.settlements s
+      ON s.legacy_transaction_settlement_id = e.legacy_id
+     AND s.user_id = v_user_id
+     AND s.transaction_id = e.transaction_id
+     AND s.split_id = e.split_id
+     AND s.person_id = e.person_id
+     AND s.amount = e.amount
+     AND s.settlement_date = e.settlement_date
+     AND s.direction = 'received_by_user';
+
+    IF v_valid_count <> 6 THEN
+        RAISE EXCEPTION
+            'Existing ledger validation failed: expected 6 exact matches, found %',
+            v_valid_count;
     END IF;
 END;
 $$;
