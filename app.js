@@ -882,12 +882,42 @@ function openSettlementDialog(type, targetId) {
   $("#settlementDate").value = todayDate();
   $("#settlementNotes").value = "";
 
+  const paymentMethod = $("#settlementPaymentMethod");
+  const accountSelect = $("#settlementAccount");
+  const accountField = $("#settlementAccountField");
+
+  paymentMethod.value = "bank";
+  accountSelect.innerHTML =
+    '<option value="">Select bank account</option>';
+
+  accounts
+    .filter(account =>
+      account.account_type === "bank"
+    )
+    .forEach(account => {
+      const option = document.createElement("option");
+      option.value = account.id;
+      option.textContent = account.account_name;
+      accountSelect.appendChild(option);
+    });
+
+  accountField.hidden = true;
+  accountSelect.required = false;
+
   $("#settlementDlg").showModal();
 }
 
 // Cancel settlement.
 $("#cancelSettlement").addEventListener("click", () => {
   $("#settlementDlg").close();
+});
+
+// Show bank account selection only for bank settlements.
+$("#settlementPaymentMethod").addEventListener("change", () => {
+  const isBank = $("#settlementPaymentMethod").value === "bank";
+
+  $("#settlementAccountField").hidden = !isBank;
+  $("#settlementAccount").required = isBank;
 });
 
 // Save settlement through the database RPC.
@@ -904,9 +934,12 @@ $("#settlementForm").addEventListener("submit", async event => {
   const type = $("#settlementType").value;
   const targetId = $("#settlementTargetId").value;
   const amount = Number($("#settlementAmount").value);
-  const settlementDate = $("#settlementDate").value;
+    const settlementDate = $("#settlementDate").value;
   const notes = $("#settlementNotes").value.trim();
-
+  const paymentMethod = $("#settlementPaymentMethod").value;
+  const accountId = paymentMethod === "bank"
+    ? $("#settlementAccount").value
+    : null;
   if (!Number.isFinite(amount) || amount <= 0) {
     alert("Enter a valid settlement amount greater than zero.");
     return;
@@ -914,6 +947,15 @@ $("#settlementForm").addEventListener("submit", async event => {
 
   if (!settlementDate) {
     alert("Select the settlement date.");
+    return;
+  }
+    if (!["bank", "cash", "wallet", "other"].includes(paymentMethod)) {
+    alert("Select a valid payment method.");
+    return;
+  }
+
+  if (paymentMethod === "bank" && !accountId) {
+    alert("Select the bank account used for this settlement.");
     return;
   }
 
@@ -1004,23 +1046,32 @@ $("#settlementForm").addEventListener("submit", async event => {
         p_notes: notes || null
       });
 
-    } else if (type === "participant_payable") {
-      result = await supabaseClient.rpc(
-        "record_participant_payable_settlement",
-        {
-          p_split_id: targetId,
-          p_amount: amount,
-          p_settlement_date: settlementDate,
-          p_notes: notes || null
-        }
+        } else {
+      const split = transactionSplits.find(x =>
+        x.id === targetId
       );
 
-    } else {
-      result = await supabaseClient.rpc("record_receivable_settlement", {
-        p_split_id: targetId,
-        p_amount: amount,
+      if (!split) {
+        alert("Participant record could not be found. Refresh and try again.");
+        return;
+      }
+
+      result = await supabaseClient.rpc("record_person_settlement", {
+        p_person_id: split.person_id,
+        p_direction: type === "receivable"
+          ? "received_by_user"
+          : "paid_by_user",
+        p_total_amount: amount,
         p_settlement_date: settlementDate,
-        p_notes: notes || null
+        p_payment_method: paymentMethod,
+        p_account_id: accountId,
+        p_allocations: [
+          {
+            split_id: targetId,
+            amount: amount
+          }
+        ],
+        p_reference_note: notes || null
       });
     }
 
