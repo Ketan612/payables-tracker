@@ -526,6 +526,22 @@
           required
         >
       </label>
+      <label>Payment method
+      <select id="settlementPaymentMethod" required>
+        <option value="bank">Bank</option>
+        <option value="cash">Cash</option>
+        <option value="wallet">Wallet</option>
+        <option value="other">Other</option>
+      </select>
+    </label>
+    
+    <div id="settlementAccountField">
+      <label>Bank account
+        <select id="settlementAccount">
+          <option value="">Select bank account</option>
+        </select>
+      </label>
+    </div>
 
       <label>Notes (optional)
         <input
