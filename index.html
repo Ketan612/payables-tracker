@@ -260,6 +260,12 @@
       </div>
       <div id="sharedFields" hidden>
         <h3>Expense split</h3>
+        <label>Paid by
+          <select id="sharedPayer">
+            <option value="user">Me</option>
+            <option value="participant">Someone else</option>
+          </select>
+        </label>
       
         <label>Your share (₹)
           <input id="yourShare" type="number" min="0.01" step=".01">
