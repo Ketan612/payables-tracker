@@ -981,8 +981,9 @@ function openSettlementDialog(type, targetId) {
       accountSelect.appendChild(option);
     });
 
-  accountField.hidden = true;
-  accountSelect.required = false;
+  const isBank = paymentMethod.value === "bank";
+  accountField.hidden = !isBank;
+  accountSelect.required = isBank;
 
   $("#settlementDlg").showModal();
 }
@@ -1261,6 +1262,46 @@ function showTransactionDetails(transaction, extra = {}) {
     x.balance_direction === "user_owes_person" &&
     !x.is_current_user
   );
+const allSharesHtml = participantSplits.length
+  ? participantSplits.map(split => {
+      const person = split.is_current_user
+        ? null
+        : people.find(p => p.id === split.person_id);
+
+      const name = split.is_current_user
+        ? "You"
+        : person?.name || split.participant_label || "Participant";
+
+      return `
+        <div class="item">
+          <div>
+            <b>${safe(name)}</b>
+            <small>Share: ${fmt(split.share_amount)}</small>
+          </div>
+        </div>
+      `;
+    }).join("")
+  : "<p>No participant shares recorded.</p>";
+  const allSharesHtml = participantSplits.length
+  ? participantSplits.map(split => {
+      const person = split.is_current_user
+        ? null
+        : people.find(p => p.id === split.person_id);
+
+      const name = split.is_current_user
+        ? "You"
+        : person?.name || split.participant_label || "Participant";
+
+      return `
+        <div class="item">
+          <div>
+            <b>${safe(name)}</b>
+            <small>Share: ${fmt(split.share_amount)}</small>
+          </div>
+        </div>
+      `;
+    }).join("")
+  : "<p>No participant shares recorded.</p>";
 
   const receivableHtml = receivables.length
     ? receivables.map(split => {
@@ -1515,10 +1556,14 @@ function showTransactionDetails(transaction, extra = {}) {
         <small>${safe(transaction.desc)}</small>
         <small>${safe(transaction.note || "No description")}</small>
       </div>
+      <h3>Expense Split</h3>
+${allSharesHtml}
       <div class="right">
         <strong>${fmt(transaction.amt)}</strong>
       </div>
     </div>
+    <h3>Expense Split</h3>
+    ${allSharesHtml}
 
     <h3>Receivables</h3>
     ${receivableHtml}
@@ -1858,6 +1903,8 @@ function edit(x) {
 
   // Preserve the existing shared expense section behavior.
   $("#sharedFields").hidden = x?.typ !== "Shared";
+  $("#sharedPayer").value = "user";
+updateSharedPayerField();
 
   populatePaymentDropdowns();
   updatePaymentFields();
@@ -1867,7 +1914,57 @@ function edit(x) {
 // ==========================================
 // Shared expense split UI
 // ==========================================
+function ensureSharedPayerPersonField() {
+  const payerSelect = $("#sharedPayer");
 
+  if (!payerSelect || $("#sharedPayerPersonField")) return;
+
+  const field = document.createElement("div");
+  field.id = "sharedPayerPersonField";
+  field.hidden = true;
+
+  field.innerHTML = `
+    <label>Who paid?
+      <select id="sharedPayerPerson">
+        <option value="">Select participant</option>
+      </select>
+    </label>
+  `;
+
+  payerSelect.closest("label")
+    .insertAdjacentElement("afterend", field);
+}
+
+function updateSharedPayerOptions() {
+  const select = $("#sharedPayerPerson");
+  if (!select) return;
+
+  const previousValue = select.value;
+
+  select.innerHTML =
+    '<option value="">Select participant</option>' +
+    people.map(person =>
+      `<option value="${safe(person.id)}">${safe(person.name)}</option>`
+    ).join("");
+
+  if (people.some(person => person.id === previousValue)) {
+    select.value = previousValue;
+  }
+}
+
+function updateSharedPayerField() {
+  const isSomeoneElse = $("#sharedPayer").value === "participant";
+
+  $("#sharedPayerPersonField").hidden = !isSomeoneElse;
+
+  if (isSomeoneElse) {
+    updateSharedPayerOptions();
+  }
+}
+
+ensureSharedPayerPersonField();
+
+$("#sharedPayer").addEventListener("change", updateSharedPayerField);
 function updateSplitTotal() {
   const amount = Number($("#amt").value) || 0;
   const yourShare = Number($("#yourShare").value) || 0;
@@ -1943,12 +2040,14 @@ $("#typ").addEventListener("change", async () => {
 
   if (isShared) {
     await loadPeople();
-
+  
+    $("#sharedPayer").value = "user";
+    updateSharedPayerField();
+  
     $("#participantSplits").innerHTML = "";
     $("#yourShare").value = "";
     updateSplitTotal();
   }
-});
 
 $("#amt").addEventListener("input", () => {
   updateSplitTotal();
@@ -2013,7 +2112,19 @@ function validateSharedSplit() {
     alert("Your share and participant shares must equal the expense amount.");
     return false;
   }
-
+  if ($("#sharedPayer").value === "participant") {
+    const payerId = $("#sharedPayerPerson").value;
+  
+    if (!payerId) {
+      alert("Select who paid for this expense.");
+      return false;
+    }
+  
+    if (!selectedPeople.includes(payerId)) {
+      alert("The person who paid must also be included in the expense split.");
+      return false;
+    }
+  }
   return true;
 }
 
@@ -2049,6 +2160,16 @@ $("#form").onsubmit = async e => {
   if (type === "Shared" && !validateSharedSplit()) {
     return;
   }
+  if (
+  type === "Shared" &&
+  $("#sharedPayer").value === "participant"
+) {
+  alert(
+    "Someone else as payer is not enabled yet. " +
+    "Apply the shared payer database migration before saving."
+  );
+  return;
+}
 
   // Existing shared transaction editing is not supported.
   if (id && type === "Shared") {
