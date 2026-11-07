@@ -2125,7 +2125,10 @@ $("#form").onsubmit = async e => {
   const transactionDate = $("#transactionDate").value;
   const paymentMethod = $("#paymentMethod").value;
   const createPayable = $("#createPayable").checked;
-
+  const someoneElsePays =
+    type === "Shared" &&
+    $("#sharedPayer").value === "participant";
+    
   if (!Number.isFinite(amount) || amount <= 0) {
     alert("Enter a valid transaction amount.");
     return;
@@ -2139,16 +2142,6 @@ $("#form").onsubmit = async e => {
   if (type === "Shared" && !validateSharedSplit()) {
     return;
   }
-  if (
-  type === "Shared" &&
-  $("#sharedPayer").value === "participant"
-) {
-  alert(
-    "Someone else as payer is not enabled yet. " +
-    "Apply the shared payer database migration before saving."
-  );
-  return;
-}
 
   // Existing shared transaction editing is not supported.
   if (id && type === "Shared") {
@@ -2230,14 +2223,14 @@ $("#form").onsubmit = async e => {
   }
 
   // Validate payment source.
-  if (paymentMethod === "bank") {
+  if (!someoneElsePays && paymentMethod === "bank") {
     if (!$("#paymentAccount").value) {
       alert("Select the bank account used for this payment.");
       return;
     }
   }
 
-  if (paymentMethod === "credit_card") {
+  if (!someoneElsePays && paymentMethod === "credit_card") {
     if (!$("#paymentCard").value) {
       alert("Select the credit card used for this purchase.");
       return;
@@ -2246,7 +2239,11 @@ $("#form").onsubmit = async e => {
 
   // Validate optional payable destination.
   // Credit-card purchases automatically create a full card payable.
-  if (createPayable && paymentMethod !== "credit_card") {
+  if (
+  !someoneElsePays &&
+  createPayable &&
+  paymentMethod !== "credit_card"
+) {
     const payableType = $("#payableType").value;
 
     if (!payableType) {
@@ -2311,6 +2308,7 @@ $("#form").onsubmit = async e => {
       ? $("#paymentCard").value
       : null;
 
+  
   const commonParams = {
     p_title: $("#desc").value.trim(),
     p_amount: amount,
@@ -2320,20 +2318,27 @@ $("#form").onsubmit = async e => {
     p_payment_method: paymentMethod,
     p_payment_account_id: paymentAccountId,
     p_payment_card_id: paymentCardId,
-    p_create_payable: createPayable,
-    p_payable_amount: payableAmount,
-    p_payable_to_type: payableType,
-    p_payable_to_person_id: payablePersonId,
-    p_payable_to_account_id: payableAccountId,
-    p_payable_to_card_id: payableCardId,
-    p_payable_due_date: createPayable
-      ? $("#payableDueDate").value || null
-      : null,
-    p_payable_notes: createPayable
-      ? $("#payableNotes").value || null
-      : null
+  
+    p_create_payable: someoneElsePays ? false : createPayable,
+    p_payable_amount: someoneElsePays ? null : payableAmount,
+    p_payable_to_type: someoneElsePays ? null : payableType,
+    p_payable_to_person_id: someoneElsePays ? null : payablePersonId,
+    p_payable_to_account_id: someoneElsePays ? null : payableAccountId,
+    p_payable_to_card_id: someoneElsePays ? null : payableCardId,
+  
+    p_payable_due_date: someoneElsePays
+      ? null
+      : createPayable
+        ? $("#payableDueDate").value || null
+        : null,
+  
+    p_payable_notes: someoneElsePays
+      ? null
+      : createPayable
+        ? $("#payableNotes").value || null
+        : null
   };
-
+  
   let functionName;
   let rpcParams;
 
@@ -2362,11 +2367,14 @@ $("#form").onsubmit = async e => {
       });
     });
 
-    functionName = "create_shared_expense_v3";
-
+    functionName = "create_shared_expense_v4";
+    
     rpcParams = {
       ...commonParams,
-      p_splits: splits
+      p_splits: splits,
+      p_payer_person_id: someoneElsePays
+        ? $("#sharedPayerPerson").value
+        : null
     };
 
   } else {
