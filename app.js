@@ -1283,8 +1283,8 @@ const allSharesHtml = participantSplits.length
     }).join("")
   : "<p>No participant shares recorded.</p>";
 
-  const receivableHtml = receivables.length
-    ? receivables.map(split => {
+  const receivableHtml = displayReceivables.length
+    ? displayReceivables.map(split => {
         const outstanding = getReceivableOutstanding(split);
         const settled = Number(split.amount_settled || 0);
         const person = people.find(p => p.id === split.person_id);
@@ -1313,8 +1313,8 @@ const allSharesHtml = participantSplits.length
       }).join("")
     : "<p>No receivables recorded for this transaction.</p>";
 
-  const participantPayableHtml = participantPayables.length
-    ? participantPayables.map(split => {
+  const participantPayableHtml = displayParticipantPayables.length
+    ? displayParticipantPayables.map(split => {
         const outstanding = Math.max(
           0,
           Number(split.share_amount || 0) -
@@ -1349,8 +1349,8 @@ const allSharesHtml = participantSplits.length
       }).join("")
     : "<p>No participant payables recorded.</p>";
 
-  const linkedPayableHtml = linkedPayables.length
-    ? linkedPayables.map(payable => {
+  const linkedPayableHtml = displayLinkedPayables.length
+    ? displayLinkedPayables.map(payable => {
         const outstanding = getPayableOutstanding(payable);
         const settled = getPayableSettled(payable.id);
   
@@ -1395,26 +1395,29 @@ const allSharesHtml = participantSplits.length
         `;
       }).join("")
     : "";
+  const displayReceivables = receivables.filter(
+    split => getReceivableOutstanding(split) > 0.005
+  );
+  
+  const displayParticipantPayables = participantPayables.filter(
+    split => getReceivableOutstanding(split) > 0.005
+  );
+  
+  const displayLinkedPayables = linkedPayables.filter(
+    payable => getPayableOutstanding(payable) > 0.005
+  );
   
   const payableSections = [];
   
-  if (participantPayables.length) {
-    payableSections.push(`
-      <h4>Participant Payables</h4>
-      ${participantPayableHtml}
-    `);
+  if (displayParticipantPayables.length) {
+    payableSections.push(participantPayableHtml);
   }
   
-  if (linkedPayables.length) {
-    payableSections.push(`
-      <h4>Linked Payables</h4>
-      ${linkedPayableHtml}
-    `);
+  if (displayLinkedPayables.length) {
+    payableSections.push(linkedPayableHtml);
   }
   
-  const payableHtml = payableSections.length
-    ? payableSections.join("")
-    : "<p>No payables recorded for this transaction.</p>";
+  const payableHtml = payableSections.join("");
 
   const legacyHistory = transactionSettlements.filter(x =>
     (
@@ -1557,11 +1560,13 @@ $("#balanceDetailTransactions").innerHTML = `
     <h3>Expense Split</h3>
     ${allSharesHtml}
 
-    <h3>Receivables</h3>
-    ${receivableHtml}
+    ${displayReceivables.length
+      ? `<h3>Receivables</h3>${receivableHtml}`
+      : ""}
 
-    <h3>Payables</h3>
-    ${payableHtml}
+    ${payableSections.length
+      ? `<h3>Payables</h3>${payableHtml}`
+      : ""}
 
     <h3>Settlement History</h3>
     ${historyHtml}
