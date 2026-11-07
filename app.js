@@ -1353,9 +1353,9 @@ const allSharesHtml = participantSplits.length
     ? linkedPayables.map(payable => {
         const outstanding = getPayableOutstanding(payable);
         const settled = getPayableSettled(payable.id);
-
+  
         let destination = "Not specified";
-
+  
         if (payable.payableToType === "person") {
           destination = people.find(p =>
             p.id === payable.payableToPersonId
@@ -1369,15 +1369,15 @@ const allSharesHtml = participantSplits.length
             c.id === payable.payableToCardId
           )?.name || "Credit card";
         }
-
+  
         return `
           <div class="item">
             <div>
-              <b>${safe(payable.desc)}</b>
-              <small>Total: ${fmt(payable.amt)}</small>
+              <b>Pay ${fmt(outstanding)} to ${safe(destination)}</b>
+              <small>Expense: ${safe(payable.desc)}</small>
+              <small>Total payable: ${fmt(payable.amt)}</small>
               <small>Paid: ${fmt(settled)}</small>
-              <small>Outstanding: ${fmt(outstanding)}</small>
-              <small>Destination: ${safe(destination)}</small>
+              <small>Remaining: ${fmt(outstanding)}</small>
               <small>Due: ${safe(payable.due || "Not specified")}</small>
             </div>
             <div class="right">
@@ -1394,14 +1394,27 @@ const allSharesHtml = participantSplits.length
           </div>
         `;
       }).join("")
-    : "<p>No linked payables recorded.</p>";
-
-  const payableHtml = `
-    <h4>Participant Payables</h4>
-    ${participantPayableHtml}
-    <h4>Linked Payables</h4>
-    ${linkedPayableHtml}
-  `;
+    : "";
+  
+  const payableSections = [];
+  
+  if (participantPayables.length) {
+    payableSections.push(`
+      <h4>Participant Payables</h4>
+      ${participantPayableHtml}
+    `);
+  }
+  
+  if (linkedPayables.length) {
+    payableSections.push(`
+      <h4>Linked Payables</h4>
+      ${linkedPayableHtml}
+    `);
+  }
+  
+  const payableHtml = payableSections.length
+    ? payableSections.join("")
+    : "<p>No payables recorded for this transaction.</p>";
 
   const legacyHistory = transactionSettlements.filter(x =>
     (
