@@ -1282,26 +1282,6 @@ const allSharesHtml = participantSplits.length
       `;
     }).join("")
   : "<p>No participant shares recorded.</p>";
-  const allSharesHtml = participantSplits.length
-  ? participantSplits.map(split => {
-      const person = split.is_current_user
-        ? null
-        : people.find(p => p.id === split.person_id);
-
-      const name = split.is_current_user
-        ? "You"
-        : person?.name || split.participant_label || "Participant";
-
-      return `
-        <div class="item">
-          <div>
-            <b>${safe(name)}</b>
-            <small>Share: ${fmt(split.share_amount)}</small>
-          </div>
-        </div>
-      `;
-    }).join("")
-  : "<p>No participant shares recorded.</p>";
 
   const receivableHtml = receivables.length
     ? receivables.map(split => {
@@ -1549,19 +1529,18 @@ const allSharesHtml = participantSplits.length
     </button>
   </div>
 `;
-  $("#balanceDetailTransactions").innerHTML = `
+$("#balanceDetailTransactions").innerHTML = `
     <div class="item">
       <div>
         <b>Master Transaction</b>
         <small>${safe(transaction.desc)}</small>
         <small>${safe(transaction.note || "No description")}</small>
       </div>
-      <h3>Expense Split</h3>
-${allSharesHtml}
       <div class="right">
         <strong>${fmt(transaction.amt)}</strong>
       </div>
     </div>
+
     <h3>Expense Split</h3>
     ${allSharesHtml}
 
@@ -1573,8 +1552,7 @@ ${allSharesHtml}
 
     <h3>Settlement History</h3>
     ${historyHtml}
-
-  `;
+`;
 
   if (!$("#balanceDetailDlg").open) {
     $("#balanceDetailDlg").showModal();
@@ -2048,6 +2026,7 @@ $("#typ").addEventListener("change", async () => {
     $("#yourShare").value = "";
     updateSplitTotal();
   }
+  });
 
 $("#amt").addEventListener("input", () => {
   updateSplitTotal();
