@@ -1248,6 +1248,17 @@ function showTransactionDetails(transaction, extra = {}) {
     x.transactionKind === "payable" &&
     x.relatedTransactionId === transaction.id
   );
+  const displayReceivables = receivables.filter(
+    split => getReceivableOutstanding(split) > 0.005
+  );
+  
+  const displayParticipantPayables = participantPayables.filter(
+    split => getReceivableOutstanding(split) > 0.005
+  );
+  
+  const displayLinkedPayables = linkedPayables.filter(
+    payable => getPayableOutstanding(payable) > 0.005
+  );
 
   const participantSplits = transactionSplits.filter(x =>
     x.transaction_id === transaction.id
@@ -1395,18 +1406,7 @@ const allSharesHtml = participantSplits.length
         `;
       }).join("")
     : "";
-  const displayReceivables = receivables.filter(
-    split => getReceivableOutstanding(split) > 0.005
-  );
-  
-  const displayParticipantPayables = participantPayables.filter(
-    split => getReceivableOutstanding(split) > 0.005
-  );
-  
-  const displayLinkedPayables = linkedPayables.filter(
-    payable => getPayableOutstanding(payable) > 0.005
-  );
-  
+
   const payableSections = [];
   
   if (displayParticipantPayables.length) {
