@@ -824,8 +824,9 @@ function showBalanceDetails(title, items, summary) {
   balanceDetailView = { title, items, summary };
 
   $("#balanceDetailTitle").textContent = title;
+  $("#balanceDetailHeaderActions").innerHTML = "";
   $("#balanceDetailSummary").textContent = summary;
-
+  
   $("#balanceDetailTransactions").innerHTML = items.length
     ? items.map((item, index) => `
         <div class="item"
@@ -1529,15 +1530,7 @@ const allSharesHtml = participantSplits.length
 
   $("#balanceDetailTitle").textContent = transaction.desc;
 
-  $("#balanceDetailSummary").innerHTML = `
-  <div class="actions">
-    ${extra.hideBackButton
-      ? ""
-      : `<button type="button" class="secondary" id="backToBalanceList">
-           ← Back to list
-         </button>`
-    }
-
+  $("#balanceDetailHeaderActions").innerHTML = `
     <button
       type="button"
       class="secondary"
@@ -1545,8 +1538,18 @@ const allSharesHtml = participantSplits.length
     >
       Transaction Details
     </button>
-  </div>
-`;
+  `;
+  
+  $("#balanceDetailSummary").innerHTML = `
+    ${extra.hideBackButton
+      ? ""
+      : `<div class="actions">
+           <button type="button" class="secondary" id="backToBalanceList">
+             ← Back to list
+           </button>
+         </div>`
+    }
+  `;
 $("#balanceDetailTransactions").innerHTML = `
     <div class="item">
       <div>
@@ -2014,8 +2017,13 @@ function addSplitPerson() {
       >
     </label>
 
-    <button type="button" class="secondary remove-split">
-      Remove
+    <button
+      type="button"
+      class="remove-split"
+      aria-label="Remove participant"
+      title="Remove participant"
+    >
+      <span aria-hidden="true">−</span>
     </button>
   `;
 
