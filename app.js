@@ -1274,10 +1274,6 @@ function showTransactionDetails(transaction, extra = {}) {
   const displayLinkedPayables = linkedPayables.filter(
     payable => getPayableOutstanding(payable) > 0.005
   );
-  
-  const displayLinkedPayables = linkedPayables.filter(
-    payable => getPayableOutstanding(payable) > 0.005
-  );
 
 const allSharesHtml = participantSplits.length
   ? participantSplits.map(split => {
