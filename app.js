@@ -1248,6 +1248,21 @@ function showTransactionDetails(transaction, extra = {}) {
     x.transactionKind === "payable" &&
     x.relatedTransactionId === transaction.id
   );
+  
+  const participantSplits = transactionSplits.filter(x =>
+    x.transaction_id === transaction.id
+  );
+  
+  const receivables = participantSplits.filter(x =>
+    x.balance_direction === "person_owes_user" &&
+    !x.is_current_user
+  );
+  
+  const participantPayables = participantSplits.filter(x =>
+    x.balance_direction === "user_owes_person" &&
+    !x.is_current_user
+  );
+  
   const displayReceivables = receivables.filter(
     split => getReceivableOutstanding(split) > 0.005
   );
@@ -1259,20 +1274,11 @@ function showTransactionDetails(transaction, extra = {}) {
   const displayLinkedPayables = linkedPayables.filter(
     payable => getPayableOutstanding(payable) > 0.005
   );
-
-  const participantSplits = transactionSplits.filter(x =>
-    x.transaction_id === transaction.id
+  
+  const displayLinkedPayables = linkedPayables.filter(
+    payable => getPayableOutstanding(payable) > 0.005
   );
 
-  const receivables = participantSplits.filter(x =>
-    x.balance_direction === "person_owes_user" &&
-    !x.is_current_user
-  );
-
-  const participantPayables = participantSplits.filter(x =>
-    x.balance_direction === "user_owes_person" &&
-    !x.is_current_user
-  );
 const allSharesHtml = participantSplits.length
   ? participantSplits.map(split => {
       const person = split.is_current_user
