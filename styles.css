@@ -422,4 +422,49 @@ small {
     grid-template-columns: 1fr;
   }
 }
+.balance-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
 
+.balance-detail-header h2 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+
+#balanceDetailHeaderActions {
+  flex: 0 0 auto;
+}
+
+#balanceDetailHeaderActions button {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.participant-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 34px;
+  align-items: end;
+  gap: 8px;
+}
+
+.participant-row .remove-split {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  padding: 0;
+  margin: 0 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #dc2626;
+  border-radius: 50%;
+  background: white;
+  color: #dc2626;
+  font-size: 23px;
+  font-weight: 500;
+  line-height: 1;
+}
