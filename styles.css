@@ -468,3 +468,404 @@ small {
   font-weight: 500;
   line-height: 1;
 }
+
+/* =========================================
+   PERSON LEDGER - PROFESSIONAL LEDGER UI
+========================================= */
+
+/* Main ledger dialog */
+#balanceDetailDlg {
+  width: min(96vw, 900px);
+  max-width: 900px;
+  max-height: 90vh;
+  padding: 26px;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: #f8faff;
+  color: #172033;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.22);
+  overflow-y: auto;
+}
+
+#balanceDetailDlg::backdrop {
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(3px);
+}
+
+/* Person name */
+#balanceDetailTitle {
+  font-size: 24px;
+  font-weight: 750;
+  color: #172033;
+  margin: 0 0 18px;
+  letter-spacing: -0.5px;
+}
+
+/* Summary panel */
+#balanceDetailSummary {
+  margin: 0 0 24px;
+}
+
+.person-ledger-summary {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 20px;
+  align-items: center;
+  padding: 24px;
+  border-radius: 17px;
+  color: white;
+  background: linear-gradient(120deg, #1761b5, #142e60);
+  box-shadow: 0 8px 22px rgba(23, 73, 139, 0.18);
+}
+
+.person-net-balance {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.person-net-balance small {
+  color: #d4e5ff;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.person-net-balance strong {
+  font-size: clamp(25px, 4vw, 36px);
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: white;
+}
+
+.person-net-balance strong.person-net-receivable {
+  color: #a7f3d0;
+}
+
+.person-net-balance strong.person-net-payable {
+  color: #fecaca;
+}
+
+.person-ledger-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding-left: 20px;
+  border-left: 1px solid rgba(255,255,255,0.3);
+}
+
+.person-ledger-summary-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 15px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.18);
+  min-width: 0;
+}
+
+.person-ledger-summary-grid small {
+  color: #dceaff;
+  font-size: 12px;
+}
+
+.person-ledger-summary-grid strong {
+  font-size: 18px;
+  color: #a7f3d0;
+  overflow-wrap: anywhere;
+}
+
+.person-ledger-summary-grid > div:last-child strong {
+  color: #fecaca;
+}
+
+/* Transaction list area */
+#balanceDetailTransactions {
+  display: grid;
+  gap: 14px;
+}
+
+/* Receivables and payables headings */
+#balanceDetailTransactions h3 {
+  margin: 20px 0 2px;
+  padding: 15px 17px;
+  border: 1px solid #e1e8f2;
+  border-radius: 12px;
+  background: white;
+  color: #172033;
+  font-size: 16px;
+  font-weight: 750;
+}
+
+/* Individual transaction card */
+.person-ledger-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  background: white;
+  border: 1px solid #e1e8f2;
+  border-radius: 14px;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.04);
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.person-ledger-card:hover {
+  border-color: #b9cbea;
+  box-shadow: 0 5px 16px rgba(15, 23, 42, 0.07);
+}
+
+/* Transaction title and status */
+.person-ledger-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.person-ledger-card-head b {
+  color: #172033;
+  font-size: 15px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.person-ledger-status {
+  flex-shrink: 0;
+  padding: 5px 11px;
+  border-radius: 20px;
+  background: #fff0e8;
+  color: #b54708;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.person-ledger-card > small {
+  color: #718096;
+  font-size: 12px;
+}
+
+/* Original / Received / Left amount layout */
+.person-ledger-amounts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px;
+  border-radius: 10px;
+  background: #f7f9fc;
+  border: 1px solid #edf0f5;
+}
+
+.person-ledger-amounts > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.person-ledger-amounts small {
+  color: #718096;
+  font-size: 11px;
+}
+
+.person-ledger-amounts strong {
+  color: #263449;
+  font-size: 14px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+/* Highlight outstanding amount */
+.person-ledger-amounts > div:last-child strong {
+  color: #b42318;
+}
+
+/* Action buttons */
+.person-ledger-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 2px;
+}
+
+.person-ledger-actions button {
+  min-height: 42px;
+  padding: 10px 17px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.person-ledger-actions button.edit {
+  background: #eaf1ff;
+  color: #2459c5;
+}
+
+.person-ledger-actions button.paid {
+  background: #e8f7ee;
+  color: #167344;
+}
+
+.person-ledger-actions button.secondary {
+  background: #edf0f5;
+  color: #334155;
+}
+
+.person-ledger-actions button:hover {
+  filter: brightness(0.96);
+}
+
+/* Empty ledger state */
+#balanceDetailTransactions .hint {
+  padding: 18px;
+  border-radius: 12px;
+  background: white;
+  color: #718096;
+  text-align: center;
+}
+
+/* People dashboard list */
+.person-list-row {
+  align-items: center;
+  gap: 12px;
+  padding: 15px 0;
+}
+
+.person-ledger-open {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 15px 17px;
+  border-radius: 12px;
+  background: #f4f7ff;
+  border: 1px solid #dce6fa;
+  color: #172033;
+  text-align: left;
+  cursor: pointer;
+}
+
+.person-ledger-open b {
+  font-size: 15px;
+  color: #172033;
+}
+
+.person-ledger-open small {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.person-ledger-open:hover {
+  background: #eaf1ff;
+  border-color: #a9c2f2;
+}
+
+/* Close button */
+#balanceDetailDlg > .actions {
+  margin-top: 24px;
+}
+
+/* =========================================
+   RESPONSIVE - MOBILE
+========================================= */
+
+@media (max-width: 600px) {
+  #balanceDetailDlg {
+    width: 96vw;
+    max-width: none;
+    max-height: 92vh;
+    padding: 17px;
+    border-radius: 17px;
+  }
+
+  #balanceDetailTitle {
+    font-size: 21px;
+    margin-bottom: 14px;
+  }
+
+  .person-ledger-summary {
+    grid-template-columns: 1fr;
+    gap: 17px;
+    padding: 18px;
+  }
+
+  .person-net-balance strong {
+    font-size: 29px;
+  }
+
+  .person-ledger-summary-grid {
+    padding: 15px 0 0;
+    border-left: 0;
+    border-top: 1px solid rgba(255,255,255,0.3);
+  }
+
+  .person-ledger-summary-grid > div {
+    padding: 12px;
+  }
+
+  .person-ledger-summary-grid strong {
+    font-size: 15px;
+  }
+
+  #balanceDetailTransactions {
+    gap: 10px;
+  }
+
+  #balanceDetailTransactions h3 {
+    font-size: 14px;
+    margin-top: 15px;
+    padding: 13px;
+  }
+
+  .person-ledger-card {
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .person-ledger-card-head b {
+    font-size: 14px;
+  }
+
+  .person-ledger-amounts {
+    gap: 5px;
+    padding: 11px 8px;
+  }
+
+  .person-ledger-amounts small {
+    font-size: 10px;
+  }
+
+  .person-ledger-amounts strong {
+    font-size: 12px;
+  }
+
+  .person-ledger-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .person-ledger-actions button {
+    width: 100%;
+    min-height: 43px;
+  }
+}
+
+@media (max-width: 360px) {
+  .person-ledger-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .person-ledger-amounts {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .person-ledger-amounts > div:last-child {
+    grid-column: 1 / -1;
+    padding-top: 8px;
+    border-top: 1px solid #e2e8f0;
+  }
+}
+
