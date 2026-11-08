@@ -359,27 +359,46 @@ function renderPeople() {
   if (!container) return;
 
   container.innerHTML = people.length
-    ? people.map(person => `
-        <div class="item">
-          <div>
-            <b>${safe(person.name)}</b>
-            <small>${safe(person.phone || "No phone number")}</small>
-            ${person.notes
-              ? `<small>${safe(person.notes)}</small>`
-              : ""}
-          </div>
+    ? people.map(person => {
+        const balance = getPersonOutstandingSummary(person.id);
 
-          <div class="right">
+        const netLabel = balance.net > 0.005
+          ? `You receive ${fmt(balance.net)}`
+          : balance.net < -0.005
+            ? `You owe ${fmt(Math.abs(balance.net))}`
+            : "No outstanding balance";
+
+        const netClass = balance.net > 0.005
+          ? "person-net-receivable"
+          : balance.net < -0.005
+            ? "person-net-payable"
+            : "";
+
+        return `
+          <div class="item person-list-row">
             <button
               type="button"
-              class="edit"
-              data-person-edit="${safe(person.id)}"
+              class="person-ledger-open"
+              data-person-open="${safe(person.id)}"
             >
-              Edit
+              <b>${safe(person.name)}</b>
+              <small>${safe(netLabel)}</small>
+              <small>
+                Receivable ${fmt(balance.receivable)}
+                · Payable ${fmt(balance.payable)}
+              </small>
             </button>
+
+            <div class="right">
+              <button
+                type="button"
+                class="edit"
+                data-person-edit="${safe(person.id)}"
+              >Edit</button>
+            </div>
           </div>
-        </div>
-      `).join("")
+        `;
+      }).join("")
     : '<p class="hint">No people added yet.</p>';
 }
 
@@ -409,15 +428,21 @@ $("#cancelPerson").addEventListener("click", () => {
 });
 
 $("#peopleList").addEventListener("click", event => {
-  const button = event.target.closest("[data-person-edit]");
-  if (!button) return;
+  const editButton = event.target.closest("[data-person-edit]");
 
-  const personId = button.dataset.personEdit;
+  if (editButton) {
+    const person = people.find(
+      item => item.id === editButton.dataset.personEdit
+    );
 
-  const person = people.find(item => item.id === personId);
+    if (person) openPersonDialog(person);
+    return;
+  }
 
-  if (person) {
-    openPersonDialog(person);
+  const openButton = event.target.closest("[data-person-open]");
+
+  if (openButton) {
+    openPersonLedger(openButton.dataset.personOpen);
   }
 });
 
@@ -875,7 +900,229 @@ function getPayableOutstanding(payable) {
     Number(payable.amt || 0) - getPayableSettled(payable.id)
   );
 }
+function getPersonLedger(personId) {
+  const receivables = transactionSplits
+    .filter(split =>
+      split.person_id === personId &&
+      split.balance_direction === "person_owes_user" &&
+      !split.is_current_user
+    )
+    .map(split => {
+      const master = rows.find(
+        transaction => transaction.id === split.transaction_id
+      );
 
+      const original = Number(split.share_amount || 0);
+      const settled = Number(split.amount_settled || 0);
+
+      return {
+        sourceType: "receivable",
+        sourceId: split.id,
+        masterId: split.transaction_id,
+        title: master?.desc || "Shared expense",
+        date: master?.transactionDate || "",
+        original,
+        settled,
+        outstanding: Math.max(0, original - settled)
+      };
+    });
+
+  const sharedPayables = transactionSplits
+    .filter(split =>
+      split.person_id === personId &&
+      split.balance_direction === "user_owes_person" &&
+      !split.is_current_user
+    )
+    .map(split => {
+      const master = rows.find(
+        transaction => transaction.id === split.transaction_id
+      );
+
+      const original = Number(split.share_amount || 0);
+      const settled = Number(split.amount_settled || 0);
+
+      return {
+        sourceType: "participant_payable",
+        sourceId: split.id,
+        masterId: split.transaction_id,
+        title: master?.desc || "Shared expense",
+        date: master?.transactionDate || "",
+        original,
+        settled,
+        outstanding: Math.max(0, original - settled)
+      };
+    });
+
+  const directPayables = rows
+    .filter(transaction =>
+      transaction.transactionKind === "payable" &&
+      transaction.payableToType === "person" &&
+      transaction.payableToPersonId === personId
+    )
+    .map(payable => {
+      const masterId = payable.relatedTransactionId || payable.id;
+      const master = rows.find(x => x.id === masterId) || payable;
+
+      const settled = getPayableSettled(payable.id);
+
+      return {
+        sourceType: "payable",
+        sourceId: payable.id,
+        masterId,
+        title: master.desc,
+        date: master.transactionDate || payable.transactionDate || "",
+        original: Number(payable.amt || 0),
+        settled,
+        outstanding: getPayableOutstanding(payable)
+      };
+    });
+
+  return {
+    receivables: receivables.filter(x => x.outstanding > 0.005),
+    payables: [...sharedPayables, ...directPayables]
+      .filter(x => x.outstanding > 0.005)
+  };
+}
+
+function getPersonOutstandingSummary(personId) {
+  const ledger = getPersonLedger(personId);
+
+  const receivable = ledger.receivables.reduce(
+    (total, item) => total + item.outstanding,
+    0
+  );
+
+  const payable = ledger.payables.reduce(
+    (total, item) => total + item.outstanding,
+    0
+  );
+
+  return {
+    receivable,
+    payable,
+    net: receivable - payable
+  };
+}
+let activePersonLedgerId = null;
+
+function openPersonLedger(personId) {
+  const person = people.find(x => x.id === personId);
+
+  if (!person) {
+    alert("Person could not be found.");
+    return;
+  }
+
+  activePersonLedgerId = personId;
+
+  const ledger = getPersonLedger(personId);
+  const summary = getPersonOutstandingSummary(personId);
+
+  const netLabel = summary.net > 0.005
+    ? `${person.name} owes you ${fmt(summary.net)} net`
+    : summary.net < -0.005
+      ? `You owe ${person.name} ${fmt(Math.abs(summary.net))} net`
+      : "No net outstanding balance";
+
+  $("#balanceDetailTitle").textContent = person.name;
+
+  $("#balanceDetailHeaderActions").innerHTML = "";
+
+  $("#balanceDetailSummary").innerHTML = `
+    <div class="person-ledger-summary">
+      <div class="person-net-balance">
+        <small>NET OUTSTANDING</small>
+        <strong class="${
+          summary.net > 0.005
+            ? "person-net-receivable"
+            : summary.net < -0.005
+              ? "person-net-payable"
+              : ""
+        }">${summary.net > 0.005 ? "+" : summary.net < -0.005 ? "−" : ""}${fmt(Math.abs(summary.net))}</strong>
+        <small>${safe(netLabel)}</small>
+      </div>
+
+      <div class="person-ledger-summary-grid">
+        <div>
+          <small>Receivable left</small>
+          <strong class="person-net-receivable">${fmt(summary.receivable)}</strong>
+        </div>
+        <div>
+          <small>Payable left</small>
+          <strong class="person-net-payable">${fmt(summary.payable)}</strong>
+        </div>
+      </div>
+    </div>
+  `;
+
+  function renderItems(items, type) {
+    if (!items.length) {
+      return '<p class="hint">No outstanding transactions.</p>';
+    }
+
+    return items.map(item => `
+      <div class="person-ledger-card">
+        <div class="person-ledger-card-head">
+          <b>${safe(item.title)}</b>
+          <span class="person-ledger-status">
+            ${item.settled > 0.005 ? "Partially settled" : "Pending"}
+          </span>
+        </div>
+
+        <small>
+          ${safe(item.date || "Date not specified")}
+          · ${type === "receivable" ? "Receivable" : "Payable"}
+        </small>
+
+        <div class="person-ledger-amounts">
+          <div>
+            <small>Original</small>
+            <strong>${fmt(item.original)}</strong>
+          </div>
+          <div>
+            <small>${type === "receivable" ? "Received" : "Paid"}</small>
+            <strong>${fmt(item.settled)}</strong>
+          </div>
+          <div>
+            <small>Left</small>
+            <strong>${fmt(item.outstanding)}</strong>
+          </div>
+        </div>
+
+        <div class="person-ledger-actions">
+          <button
+            type="button"
+            class="${type === "receivable" ? "edit" : "paid"}"
+            data-settle-type="${safe(item.sourceType)}"
+            data-settle-id="${safe(item.sourceId)}"
+          >
+            ${type === "receivable" ? "Record Received" : "Record Payment"}
+          </button>
+
+          <button
+            type="button"
+            class="secondary"
+            data-person-master="${safe(item.masterId)}"
+          >
+            View Master Transaction
+          </button>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  $("#balanceDetailTransactions").innerHTML = `
+    <h3>Receivables — ${safe(person.name)} owes you</h3>
+    ${renderItems(ledger.receivables, "receivable")}
+
+    <h3>Payables — You owe ${safe(person.name)}</h3>
+    ${renderItems(ledger.payables, "payable")}
+  `;
+
+  if (!$("#balanceDetailDlg").open) {
+    $("#balanceDetailDlg").showModal();
+  }
+}
 // Open the settlement dialog for one specific obligation.
 
 function openSettlementDialog(type, targetId) {
@@ -1593,6 +1840,24 @@ $("#balanceDetailTransactions").addEventListener("click", event => {
     );
     return;
   }
+  // Open the master transaction from the Person Ledger.
+  const masterButton = event.target.closest("[data-person-master]");
+
+  if (masterButton) {
+    const masterId = masterButton.dataset.personMaster;
+
+    const masterTransaction = rows.find(
+      x => x.id === masterId
+    );
+
+    if (!masterTransaction) {
+      alert("Master transaction could not be found.");
+      return;
+    }
+
+    showTransactionDetails(masterTransaction);
+    return;
+  }
 
   const itemElement = event.target.closest("[data-item-index]");
   if (!itemElement || !balanceDetailView) return;
@@ -1617,6 +1882,7 @@ $("#balanceDetailTransactions").addEventListener("click", event => {
         receivablePerson: selectedItem.subtitle
       }
     : {};
+
 
   showTransactionDetails(transaction, extra);
 });
