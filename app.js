@@ -354,51 +354,67 @@ const $ = s => document.querySelector(s);
 // People management
 // ==========================================
 
+
 function renderPeople() {
   const container = $("#peopleList");
   if (!container) return;
 
   container.innerHTML = people.length
-    ? people.map(person => {
-        const balance = getPersonOutstandingSummary(person.id);
+    ? `
+      <div class="people-ledger">
+        <div class="people-ledger-head">
+          <span>Person</span>
+          <span>Receivable</span>
+          <span>Payable</span>
+          <span>Net balance</span>
+          <span></span>
+        </div>
 
-        const netLabel = balance.net > 0.005
-          ? `You receive ${fmt(balance.net)}`
-          : balance.net < -0.005
-            ? `You owe ${fmt(Math.abs(balance.net))}`
-            : "No outstanding balance";
+        ${people.map(person => {
+          const balance = getPersonOutstandingSummary(person.id);
 
-        const netClass = balance.net > 0.005
-          ? "person-net-receivable"
-          : balance.net < -0.005
-            ? "person-net-payable"
-            : "";
-
-        return `
-          <div class="item person-list-row">
-            <button
-              type="button"
-              class="person-ledger-open"
-              data-person-open="${safe(person.id)}"
-            >
-              <b>${safe(person.name)}</b>
-              <small>${safe(netLabel)}</small>
-              <small>
-                Receivable ${fmt(balance.receivable)}
-                · Payable ${fmt(balance.payable)}
-              </small>
-            </button>
-
-            <div class="right">
+          return `
+            <div class="people-ledger-row">
               <button
                 type="button"
-                class="edit"
+                class="people-person-name"
+                data-person-open="${safe(person.id)}"
+              >
+                <strong>${safe(person.name)}</strong>
+                <small>${safe(person.phone || "View ledger")}</small>
+              </button>
+
+              <span class="people-ledger-value">
+                ${fmt(balance.receivable)}
+              </span>
+
+              <span class="people-ledger-value">
+                ${fmt(balance.payable)}
+              </span>
+
+              <strong class="people-net-value ${
+                balance.net > 0.005
+                  ? "positive"
+                  : balance.net < -0.005
+                    ? "negative"
+                    : ""
+              }">
+                ${balance.net > 0.005 ? "+" : balance.net < -0.005 ? "−" : ""}
+                ${fmt(Math.abs(balance.net))}
+              </strong>
+
+              <button
+                type="button"
+                class="people-edit-button"
                 data-person-edit="${safe(person.id)}"
-              >Edit</button>
+              >
+                Edit
+              </button>
             </div>
-          </div>
-        `;
-      }).join("")
+          `;
+        }).join("")}
+      </div>
+    `
     : '<p class="hint">No people added yet.</p>';
 }
 
@@ -1005,6 +1021,7 @@ function getPersonOutstandingSummary(personId) {
 }
 let activePersonLedgerId = null;
 
+
 function openPersonLedger(personId) {
   const person = people.find(x => x.id === personId);
 
@@ -1019,37 +1036,40 @@ function openPersonLedger(personId) {
   const summary = getPersonOutstandingSummary(personId);
 
   const netLabel = summary.net > 0.005
-    ? `${person.name} owes you ${fmt(summary.net)} net`
+    ? `${person.name} owes you ${fmt(summary.net)}`
     : summary.net < -0.005
-      ? `You owe ${person.name} ${fmt(Math.abs(summary.net))} net`
+      ? `You owe ${person.name} ${fmt(Math.abs(summary.net))}`
       : "No net outstanding balance";
 
   $("#balanceDetailTitle").textContent = person.name;
-
   $("#balanceDetailHeaderActions").innerHTML = "";
 
+  // Compact ledger summary
   $("#balanceDetailSummary").innerHTML = `
-    <div class="person-ledger-summary">
-      <div class="person-net-balance">
-        <small>NET OUTSTANDING</small>
+    <div class="ledger-summary">
+      <div class="ledger-net">
+        <span>NET OUTSTANDING</span>
         <strong class="${
           summary.net > 0.005
-            ? "person-net-receivable"
+            ? "positive"
             : summary.net < -0.005
-              ? "person-net-payable"
+              ? "negative"
               : ""
-        }">${summary.net > 0.005 ? "+" : summary.net < -0.005 ? "−" : ""}${fmt(Math.abs(summary.net))}</strong>
+        }">
+          ${summary.net > 0.005 ? "+" : summary.net < -0.005 ? "−" : ""}
+          ${fmt(Math.abs(summary.net))}
+        </strong>
         <small>${safe(netLabel)}</small>
       </div>
 
-      <div class="person-ledger-summary-grid">
+      <div class="ledger-summary-values">
         <div>
-          <small>Receivable left</small>
-          <strong class="person-net-receivable">${fmt(summary.receivable)}</strong>
+          <span>Receivable</span>
+          <strong>${fmt(summary.receivable)}</strong>
         </div>
         <div>
-          <small>Payable left</small>
-          <strong class="person-net-payable">${fmt(summary.payable)}</strong>
+          <span>Payable</span>
+          <strong>${fmt(summary.payable)}</strong>
         </div>
       </div>
     </div>
@@ -1057,72 +1077,101 @@ function openPersonLedger(personId) {
 
   function renderItems(items, type) {
     if (!items.length) {
-      return '<p class="hint">No outstanding transactions.</p>';
+      return `
+        <div class="ledger-empty">
+          No outstanding transactions
+        </div>
+      `;
     }
 
-    return items.map(item => `
-      <div class="person-ledger-card">
-        <div class="person-ledger-card-head">
-          <b>${safe(item.title)}</b>
-          <span class="person-ledger-status">
-            ${item.settled > 0.005 ? "Partially settled" : "Pending"}
-          </span>
+    return `
+      <div class="ledger-table">
+        <div class="ledger-table-head">
+          <span>Transaction</span>
+          <span>Original</span>
+          <span>${type === "receivable" ? "Received" : "Paid"}</span>
+          <span>Pending</span>
+          <span>Action</span>
         </div>
 
-        <small>
-          ${safe(item.date || "Date not specified")}
-          · ${type === "receivable" ? "Receivable" : "Payable"}
-        </small>
+        ${items.map(item => `
+          <div class="ledger-table-row">
+            <div class="ledger-transaction">
+              <strong>${safe(item.title)}</strong>
+              <small>${safe(item.date || "Date not specified")}</small>
+              <button
+                type="button"
+                class="ledger-reference"
+                data-person-master="${safe(item.masterId)}"
+              >
+                View transaction
+              </button>
+            </div>
 
-        <div class="person-ledger-amounts">
-          <div>
-            <small>Original</small>
-            <strong>${fmt(item.original)}</strong>
-          </div>
-          <div>
-            <small>${type === "receivable" ? "Received" : "Paid"}</small>
-            <strong>${fmt(item.settled)}</strong>
-          </div>
-          <div>
-            <small>Left</small>
-            <strong>${fmt(item.outstanding)}</strong>
-          </div>
-        </div>
+            <div class="ledger-amount" data-label="Original">
+              ${fmt(item.original)}
+            </div>
 
-        <div class="person-ledger-actions">
-          <button
-            type="button"
-            class="${type === "receivable" ? "edit" : "paid"}"
-            data-settle-type="${safe(item.sourceType)}"
-            data-settle-id="${safe(item.sourceId)}"
-          >
-            ${type === "receivable" ? "Record Received" : "Record Payment"}
-          </button>
+            <div class="ledger-amount" data-label="${
+              type === "receivable" ? "Received" : "Paid"
+            }">
+              ${fmt(item.settled)}
+            </div>
 
-          <button
-            type="button"
-            class="secondary"
-            data-person-master="${safe(item.masterId)}"
-          >
-            View Master Transaction
-          </button>
-        </div>
+            <div class="ledger-amount pending" data-label="Pending">
+              ${fmt(item.outstanding)}
+              <small>
+                ${item.settled > 0.005 ? "Partially settled" : "Pending"}
+              </small>
+            </div>
+
+            <div class="ledger-action-cell">
+              <button
+                type="button"
+                class="ledger-action ${type}"
+                data-settle-type="${safe(item.sourceType)}"
+                data-settle-id="${safe(item.sourceId)}"
+              >
+                ${type === "receivable" ? "Record Received" : "Record Payment"}
+              </button>
+            </div>
+          </div>
+        `).join("")}
       </div>
-    `).join("");
+    `;
   }
 
   $("#balanceDetailTransactions").innerHTML = `
-    <h3>Receivables — ${safe(person.name)} owes you</h3>
-    ${renderItems(ledger.receivables, "receivable")}
+    <div class="ledger-section">
+      <div class="ledger-section-heading">
+        <div>
+          <h3>Receivables</h3>
+          <small>${safe(person.name)} owes you</small>
+        </div>
+        <strong>${fmt(summary.receivable)}</strong>
+      </div>
 
-    <h3>Payables — You owe ${safe(person.name)}</h3>
-    ${renderItems(ledger.payables, "payable")}
+      ${renderItems(ledger.receivables, "receivable")}
+    </div>
+
+    <div class="ledger-section">
+      <div class="ledger-section-heading">
+        <div>
+          <h3>Payables</h3>
+          <small>You owe ${safe(person.name)}</small>
+        </div>
+        <strong>${fmt(summary.payable)}</strong>
+      </div>
+
+      ${renderItems(ledger.payables, "payable")}
+    </div>
   `;
 
   if (!$("#balanceDetailDlg").open) {
     $("#balanceDetailDlg").showModal();
   }
 }
+
 // Open the settlement dialog for one specific obligation.
 
 function openSettlementDialog(type, targetId) {
