@@ -1,3 +1,33 @@
+// TEMPORARY JAVASCRIPT DIAGNOSTICS
+window.addEventListener("error", function (event) {
+  const message = [
+    "JavaScript Error",
+    event.message,
+    "File: " + (event.filename || "Unknown"),
+    "Line: " + (event.lineno || "Unknown"),
+    "Column: " + (event.colno || "Unknown")
+  ].join("\n");
+
+  console.error(message);
+
+  let box = document.getElementById("jsDiagnosticError");
+
+  if (!box) {
+    box = document.createElement("pre");
+    box.id = "jsDiagnosticError";
+    box.style.cssText =
+      "position:fixed;z-index:999999;top:10px;left:10px;right:10px;" +
+      "padding:16px;background:#7f1d1d;color:white;font-size:13px;" +
+      "white-space:pre-wrap;overflow-wrap:anywhere;border-radius:8px;";
+    document.body.appendChild(box);
+  }
+
+  box.textContent = message;
+});
+
+window.addEventListener("unhandledrejection", function (event) {
+  console.error("Unhandled Promise Rejection:", event.reason);
+});
 const SUPABASE_URL = "https://magxbczgrxeypryjborr.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_o3SjG1KCygJ99RuamTJdsQ_RIkHJ-gX";
 
