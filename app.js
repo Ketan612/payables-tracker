@@ -24,6 +24,12 @@ window.addEventListener("error", function (event) {
 
   box.textContent = message;
 });
+const debugStatus = document.createElement("div");
+debugStatus.textContent = "DEBUG: app.js is executing";
+debugStatus.style.cssText =
+  "position:fixed;top:0;left:0;right:0;z-index:999999;" +
+  "background:green;color:white;padding:12px;text-align:center;";
+document.body.appendChild(debugStatus);
 
 window.addEventListener("unhandledrejection", function (event) {
   console.error("Unhandled Promise Rejection:", event.reason);
