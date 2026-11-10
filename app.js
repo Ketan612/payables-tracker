@@ -3639,7 +3639,10 @@ function initializeAuth() {
           loadTransactionSettlements()
         ]);
         
+        // Refresh all dashboard sections after all data is loaded.
         render();
+        renderPeople();
+        renderSchedules();
         populatePaymentDropdowns();
       }, 0);
     } else {
