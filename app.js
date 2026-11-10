@@ -1098,7 +1098,7 @@ function openPersonLedger(personId) {
           items.length
             ? items.map(item => `
                 <div class="person-ledger-table-row">
-
+              
                   <div class="person-ledger-transaction">
                     <strong>${safe(item.title)}</strong>
                     <button
@@ -1109,22 +1109,22 @@ function openPersonLedger(personId) {
                       View transaction
                     </button>
                   </div>
-
-                  <div class="person-ledger-amount">
+              
+                  <div class="person-ledger-amount" data-label="Amount">
                     ${fmt(item.original)}
                   </div>
-
-                  <div class="person-ledger-amount">
+              
+                  <div class="person-ledger-amount" data-label="Settled">
                     ${fmt(item.settled)}
                   </div>
-
+              
                   <div class="person-ledger-amount ${
                     item.outstanding > 0.005 ? "pending" : ""
-                  }">
+                  }" data-label="Net outstanding">
                     ${fmt(item.outstanding)}
                   </div>
-
-                  <div class="person-ledger-action">
+              
+                  <div class="person-ledger-action" data-label="Action">
                     <button
                       type="button"
                       class="ledger-action ${item.direction}"
@@ -1134,7 +1134,7 @@ function openPersonLedger(personId) {
                       ${item.actionLabel}
                     </button>
                   </div>
-
+              
                 </div>
               `).join("")
             : `
