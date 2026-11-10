@@ -602,47 +602,7 @@
       </div>
     </form>
   </dialog>
-
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
-  <script>
-  (function () {
-    function showDiagnostic(message) {
-      let box = document.getElementById("htmlDiagnostic");
-  
-      if (!box) {
-        box = document.createElement("div");
-        box.id = "htmlDiagnostic";
-        box.style.cssText =
-          "position:fixed;top:0;left:0;right:0;z-index:999999;" +
-          "background:#7c2d12;color:white;padding:14px;" +
-          "font-size:14px;white-space:pre-wrap;";
-        document.body.appendChild(box);
-      }
-  
-      box.textContent = "HTML DIAGNOSTIC: " + message;
-    }
-  
-    showDiagnostic("Active. Waiting for app.js...");
-  
-    window.addEventListener("error", function (event) {
-      showDiagnostic(
-        "ERROR: " + (event.message || "Script loading failed") +
-        "\nFile: " + (event.filename || "Unknown") +
-        "\nLine: " + (event.lineno || "Unknown")
-      );
-    }, true);
-  
-    document.getElementById("appScript").addEventListener("load", function () {
-      showDiagnostic("app.js resource loaded. Checking execution.");
-    });
-  
-    document.getElementById("appScript").addEventListener("error", function () {
-      showDiagnostic("FAILED: Browser could not load app.js.");
-    });
-  })();
-  </script>
-  
   <script id="appScript" src="app.js"></script>
   </body>
 </html>
