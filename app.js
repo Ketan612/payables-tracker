@@ -1150,6 +1150,7 @@ function openPersonLedger(personId) {
             <strong>${fmt(items.reduce((sum, item) => sum + item.original, 0))}</strong>
             <strong>${fmt(items.reduce((sum, item) => sum + item.settled, 0))}</strong>
             <strong>${fmt(items.reduce((sum, item) => sum + item.outstanding, 0))}</strong>
+          <span></span>
           </div>
         ` : ""}
 
