@@ -1144,25 +1144,14 @@ function openPersonLedger(personId) {
             `
         }
 
-        ${
-          items.length
-            ? `
-              <div class="person-ledger-total">
-                <strong>Total</strong>
-                <strong>${fmt(
-                  items.reduce((sum, item) => sum + item.original, 0)
-                )}</strong>
-                <strong>${fmt(
-                  items.reduce((sum, item) => sum + item.settled, 0)
-                )}</strong>
-                <strong>${fmt(
-                  items.reduce((sum, item) => sum + item.outstanding, 0)
-                )}</strong>
-                <span></span>
-              </div>
-            `
-            : ""
-        }
+        ${items.length ? `
+          <div class="person-ledger-total">
+            <strong>Total</strong>
+            <strong>${fmt(items.reduce((sum, item) => sum + item.original, 0))}</strong>
+            <strong>${fmt(items.reduce((sum, item) => sum + item.settled, 0))}</strong>
+            <strong>${fmt(items.reduce((sum, item) => sum + item.outstanding, 0))}</strong>
+          </div>
+        ` : ""}
 
       </div>
     </div>
