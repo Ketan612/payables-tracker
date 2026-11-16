@@ -1022,7 +1022,12 @@ dialog .actions .secondary { border: 1px solid #e1e9e2; background: #f6f9f6; col
   white-space: nowrap;
 }
 .app-header #logoutBtn {
+  /* Override the legacy absolute-positioned header button rule. */
+  position: static;
+  inset: auto;
+  align-self: center;
   flex: 0 0 auto;
+  margin: 0;
   white-space: nowrap;
 }
 
