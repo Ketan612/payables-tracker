@@ -894,3 +894,110 @@ dialog .actions .secondary { border: 1px solid #e1e9e2; background: #f6f9f6; col
   .auth-story h2 { font-size: 38px; }
   .story-foot { font-size: 7px; }
 }
+
+
+/* ==========================================================
+   RESPONSIVE APP SHELL — DESKTOP + MOBILE
+   ========================================================== */
+.mobile-bottom-nav { display: none; }
+
+@media (max-width: 760px) {
+  html { scroll-padding-top: 76px; }
+  body { padding-bottom: env(safe-area-inset-bottom); }
+  .app-header {
+    position: sticky; min-height: 62px; padding: 9px 14px;
+    box-shadow: 0 3px 14px rgba(22,49,36,.045);
+  }
+  .brand-lockup { gap: 9px; }
+  .brand-mark { width: 35px; height: 35px; font-size: 20px; }
+  .brand-lockup small { font-size: 8px; letter-spacing: 1.2px; }
+  .app-header h1 { font-size: 14px; }
+  .header-user { gap: 7px; }
+  .currency-chip { padding: 5px 7px; font-size: 8px; }
+  .app-header #logoutBtn { min-height: 35px; padding: 7px 10px; font-size: 10px; }
+
+  main { width: calc(100% - 22px); padding: 19px 0 100px; }
+  .dashboard-intro { margin: 2px 2px 16px; }
+  .dashboard-intro h2 { margin-top: 5px; font-size: 25px; }
+  .dashboard-intro p { font-size: 12px; }
+  .dashboard-date { font-size: 8px; }
+  .dashboard-nav { display: none; }
+
+  main > .stats { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; margin-bottom: 12px; }
+  main > .stats > article { min-width: 0; padding: 13px 9px; border-radius: 12px; }
+  main > .stats > article small { min-height: 24px; font-size: 7px; line-height: 1.3; letter-spacing: .45px; }
+  main > .stats > article b { margin-top: 5px; font-size: clamp(13px,4vw,18px); letter-spacing: -.5px; overflow-wrap: anywhere; }
+
+  .panel { padding: 16px 13px; margin-bottom: 12px; border-radius: 14px; }
+  .panel h2 { font-size: 16px; }
+  .panel .hint { font-size: 11px; }
+  .panel .head { align-items: center; gap: 8px; }
+  .panel .head button, .panel button:not(.balance-card):not(.people-simple-open):not(.people-edit-button):not(.ledger-action) {
+    min-height: 38px; padding: 8px 10px; font-size: 10px;
+  }
+  .panel .stats { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+  .balance-card { min-height: 76px; padding: 11px; border-radius: 11px; }
+  .balance-card small { font-size: 7px; line-height: 1.35; letter-spacing: .45px; }
+  .balance-card b { margin-top: 6px; font-size: 16px; }
+
+  .filters { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+  .filters select, .panel select, .panel input:not([type="checkbox"]) {
+    width: 100%; min-width: 0; min-height: 43px; font-size: 13px;
+  }
+  .panel label { font-size: 11px; }
+  #list, #cards, #bankAccounts, #emis, #peopleList,
+  #balanceDetailTransactions, #transactionInfoContent { min-width: 0; max-width: 100%; }
+  #list, #cards, #bankAccounts, #emis { overflow-wrap: anywhere; }
+  .panel table, dialog table { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .panel .grid, dialog .grid { grid-template-columns: 1fr; gap: 8px; }
+
+  .mobile-bottom-nav {
+    position: fixed; z-index: 40; right: 0; bottom: 0; left: 0;
+    display: grid; grid-template-columns: repeat(7,minmax(0,1fr));
+    gap: 0; padding: 7px 4px calc(7px + env(safe-area-inset-bottom));
+    border-top: 1px solid #e4ebe5;
+    background: rgba(255,255,255,.96);
+    box-shadow: 0 -7px 24px rgba(22,49,36,.08);
+    backdrop-filter: blur(18px);
+  }
+  .mobile-bottom-nav a {
+    display: flex; min-width: 0; min-height: 48px; flex-direction: column;
+    align-items: center; justify-content: center; gap: 3px;
+    border-radius: 9px; color: #77867c; text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-bottom-nav a:active, .mobile-bottom-nav a:focus-visible {
+    background: #edf6ef; color: var(--green);
+  }
+  .mobile-bottom-nav a span { font-size: 19px; line-height: 1; }
+  .mobile-bottom-nav a small { font-size: 8px; font-weight: 750; line-height: 1.2; }
+
+  dialog {
+    width: calc(100% - 18px); max-width: none; max-height: 88dvh;
+    margin: auto; padding: 17px; border-radius: 17px;
+  }
+  dialog form { gap: 10px; }
+  dialog h2 { font-size: 18px; }
+  dialog label { font-size: 11px; }
+  dialog input:not([type="checkbox"]), dialog select { min-height: 44px; font-size: 14px; }
+  dialog .actions { position: sticky; bottom: -17px; margin: 8px -17px -17px; padding: 12px 17px calc(12px + env(safe-area-inset-bottom)); background: white; border-top: 1px solid #edf1ed; }
+  dialog .actions button { min-height: 43px; }
+}
+
+@media (max-width: 390px) {
+  .app-header { padding-right: 10px; padding-left: 10px; }
+  .app-header h1 { font-size: 13px; }
+  .header-user { gap: 5px; }
+  main { width: calc(100% - 18px); }
+  main > .stats > article { padding: 11px 7px; }
+  main > .stats > article small { font-size: 6.5px; }
+  main > .stats > article b { font-size: 13px; }
+  .panel { padding: 14px 11px; }
+  .panel .head button { max-width: none; }
+  .mobile-bottom-nav { padding-right: 2px; padding-left: 2px; }
+  .mobile-bottom-nav a small { font-size: 7px; }
+}
+
+@media (min-width: 761px) {
+  .mobile-bottom-nav { display: none !important; }
+}
