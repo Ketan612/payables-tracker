@@ -3307,7 +3307,7 @@ function updateAuthUI(session) {
 
   currentUserId = session?.user?.id || null;
 
-  authPanel.style.display = isLoggedIn ? "none" : "block";
+  authPanel.style.display = isLoggedIn ? "none" : "grid";
 
   document.querySelector("main").style.display =
     isLoggedIn ? "block" : "none";
