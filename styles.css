@@ -703,7 +703,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 .app-header #logoutBtn:hover { border-color: #b9cec1; background: #f5faf6; }
 #authPanel.auth-shell {
-  display: grid !important; grid-template-columns: minmax(0, 1.08fr) minmax(360px, .92fr);
+  display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(360px, .92fr);
   width: min(1080px, calc(100% - 40px)); min-height: 610px; margin: 48px auto 64px;
   padding: 0; overflow: hidden; border: 1px solid #e3eae4; border-radius: 28px;
   background: white; box-shadow: 0 28px 80px rgba(24,55,39,.12);
