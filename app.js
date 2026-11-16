@@ -3336,9 +3336,8 @@ async function signOutAfterInactivity() {
   try {
     const { error } = await supabaseClient.auth.signOut({ scope: "local" });
     if (error) {
-      console.error("Automatic sign out failed:", error);
-      // Retry locally on the next visibility/activity check if the session remains.
-      scheduleIdleLogout();
+      // Local sign-out still clears the browser session; log any server revocation issue.
+      console.error("Automatic sign out returned an error:", error);
     }
   } catch (error) {
     console.error("Automatic sign out failed:", error);
