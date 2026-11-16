@@ -9,19 +9,36 @@
   <title>Payables Tracker</title>
 </head>
 <body>
-  <header>
-    <small>PRIVATE FINANCE</small>
-    <h1>Payables Tracker</h1>
-    <p id="welcomeMessage"></p>
-    <span>INR · IST</span>
-    <button id="logoutBtn" type="button">Log out</button>
+  <header class="app-header">
+    <div class="brand-lockup">
+      <span class="brand-mark">₹</span>
+      <div><small>PERSONAL FINANCE</small><h1>Payables Tracker</h1></div>
+    </div>
+    <div class="header-user">
+      <span class="currency-chip">INR <i></i> IST</span>
+      <p id="welcomeMessage"></p>
+      <button id="logoutBtn" type="button">Log out</button>
+    </div>
   </header>
 
   <!-- Login section -->
-  <section id="authPanel" class="panel">
+  <section id="authPanel" class="auth-shell">
+    <div class="auth-story">
+      <div class="story-topline"><span class="live-dot"></span> YOUR MONEY, IN ONE VIEW</div>
+      <h2>Make every rupee<br><em>count.</em></h2>
+      <p>A clearer picture of what you owe, what you're owed, and what's coming next.</p>
+      <div class="story-chart" aria-hidden="true">
+        <div class="chart-caption"><span>YOUR FINANCIAL FLOW</span><b>↗</b></div>
+        <div class="chart-bars"><i style="height:32%"></i><i style="height:48%"></i><i style="height:40%"></i><i style="height:66%"></i><i style="height:54%"></i><i style="height:82%"></i><i style="height:72%"></i><i style="height:100%"></i></div>
+        <div class="chart-foot"><span>TRACK</span><span>PLAN</span><span>SETTLE</span></div>
+      </div>
+      <div class="story-foot"><span>PRIVATE BY DESIGN</span><span>BUILT FOR CLARITY · ₹</span></div>
+    </div>
+    <div class="auth-form-panel">
     <div id="loginSection">
-      <h2>Sign in to Payables Tracker</h2>
-      <p class="hint">Sign in to access your personal dashboard.</p>  
+      <div class="form-eyebrow">WELCOME BACK</div>
+      <h2>Good to see you.</h2>
+      <p class="hint">Sign in to pick up where you left off.</p>  
       <form id="loginForm">
         <label>Email
           <input id="loginEmail" type="email" required>
@@ -89,10 +106,18 @@
       </form>
     </div>
       <p id="authMessage" class="auth-message" role="status" aria-live="polite"></p>
+    </div>
   </section>
-  <!-- Existing dashboard -->
+  <!-- Finance dashboard -->
   <main>
-    <section class="stats">
+    <div class="dashboard-intro">
+      <div><span class="form-eyebrow">YOUR MONEY, MADE CLEAR</span><h2>Financial overview</h2><p>A live snapshot of your personal finances.</p></div>
+      <div class="dashboard-date"><span class="live-dot"></span> YOUR PRIVATE WORKSPACE</div>
+    </div>
+    <nav class="dashboard-nav" aria-label="Dashboard sections">
+      <a href="#overview">Overview</a><a href="#payables-section">Payables</a><a href="#cards-section">Cards</a><a href="#accounts-section">Accounts</a><a href="#emi-section">EMIs</a><a href="#people-section">People</a><a href="#reminders-section">Reminders</a>
+    </nav>
+    <section class="stats" id="overview">
       <article>
         <small>PERSONAL PENDING</small>
         <b id="p">₹0</b>
@@ -136,7 +161,7 @@
       </section>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="payables-section">
       <div class="head">
         <h2>Payables</h2>
         <button id="add">＋ Add payable</button>
@@ -163,7 +188,7 @@
       <div id="list"></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="cards-section">
       <h2>Credit card cycles</h2>
       <p class="hint">Track statement generation, billing cycle and payment due dates separately from individual purchases.</p>
       <div id="cards"></div>
@@ -171,7 +196,7 @@
     </section>
     
         <!-- Bank accounts -->
-    <section class="panel">
+    <section class="panel" id="accounts-section">
       <div class="head">
         <h2>Bank Accounts</h2>
         <button id="addBankAccount" type="button">
@@ -186,13 +211,13 @@
       <div id="bankAccounts"></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="emi-section">
       <h2>EMI schedules</h2>
       <p class="hint">Set recurring monthly instalments and their next due dates.</p>
       <div id="emis"></div>
       <button id="addEmi">＋ Add EMI schedule</button>
     </section>
-    <section class="panel">
+    <section class="panel" id="people-section">
       <div class="head">
         <h2>People</h2>
         <button id="addPerson" type="button">＋ Add person</button>
@@ -204,7 +229,7 @@
     
       <div id="peopleList"></div>
     </section>
-    <section class="panel">
+    <section class="panel" id="reminders-section">
       <h2>Payment reminders</h2>
       <p class="hint">Choose how early you want reminders. Email delivery requires the cloud backend, a verified email address and an email provider to be configured.</p>
       <label>Reminder email
