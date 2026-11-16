@@ -1001,3 +1001,80 @@ dialog .actions .secondary { border: 1px solid #e1e9e2; background: #f6f9f6; col
 @media (min-width: 761px) {
   .mobile-bottom-nav { display: none !important; }
 }
+
+
+/* ==========================================================
+   RESPONSIVE HEADER + EXPLICIT DESKTOP LAYOUT OVERRIDES
+   ========================================================== */
+.header-user {
+  display: flex;
+  min-width: 0;
+  flex: 0 1 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.header-user #welcomeMessage {
+  min-width: 0;
+  max-width: min(28vw, 260px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-header #logoutBtn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .app-header {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+  .brand-lockup { min-width: 0; flex: 1 1 auto; }
+  .brand-lockup > div { min-width: 0; }
+  .app-header h1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .header-user {
+    min-width: 0;
+    flex: 0 0 auto;
+    gap: 7px;
+  }
+  .header-user #welcomeMessage { display: none !important; }
+  .app-header #logoutBtn { min-height: 36px; padding: 7px 9px; font-size: 10px; }
+}
+
+@media (min-width: 761px) {
+  .app-header { min-height: 76px; padding: 13px max(4vw, 22px); }
+  .brand-mark { width: 42px; height: 42px; }
+  .app-header h1 { font-size: 17px; }
+  .header-user { flex-direction: row; gap: 16px; }
+  .header-user #welcomeMessage {
+    display: block !important;
+    max-width: min(28vw, 260px);
+    margin: 0;
+  }
+  .dashboard-intro {
+    align-items: flex-end;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  .dashboard-nav { display: flex !important; }
+  main {
+    width: min(1240px, calc(100% - 48px));
+    padding: 34px 0 80px;
+  }
+  main > .stats { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .panel .stats { grid-template-columns: repeat(4,minmax(0,1fr)); }
+  .mobile-bottom-nav { display: none !important; }
+  .filters { display: flex; flex-direction: row; }
+  .filters select { flex: 0 1 auto; min-width: 145px; }
+  .panel .grid, dialog .grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+
+@media (min-width: 1100px) {
+  main { width: min(1240px, calc(100% - 80px)); }
+  .panel { padding: 24px 25px; }
+}
