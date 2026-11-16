@@ -3302,10 +3302,146 @@ const authMessage = document.getElementById("authMessage");
 
 let currentUserId = null;
 
+// Sign out after 30 minutes without user activity.
+// The timestamp is shared across tabs and survives browser restarts.
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+const LAST_ACTIVITY_KEY = "payables-tracker:last-activity";
+let idleLogoutTimer = null;
+let lastActivityAt = 0;
+let trackedSessionUserId = null;
+let lastActivityWriteAt = 0;
+
+function clearIdleLogoutTimer() {
+  if (idleLogoutTimer) {
+    clearTimeout(idleLogoutTimer);
+    idleLogoutTimer = null;
+  }
+}
+
+function stopInactivityTracking() {
+  clearIdleLogoutTimer();
+  lastActivityAt = 0;
+  trackedSessionUserId = null;
+  lastActivityWriteAt = 0;
+  try {
+    localStorage.removeItem(LAST_ACTIVITY_KEY);
+  } catch (error) {
+    console.warn("Unable to clear inactivity timestamp:", error);
+  }
+}
+
+async function signOutAfterInactivity() {
+  if (!currentUserId) return;
+  clearIdleLogoutTimer();
+  try {
+    const { error } = await supabaseClient.auth.signOut({ scope: "local" });
+    if (error) {
+      console.error("Automatic sign out failed:", error);
+      // Retry locally on the next visibility/activity check if the session remains.
+      scheduleIdleLogout();
+    }
+  } catch (error) {
+    console.error("Automatic sign out failed:", error);
+  }
+}
+
+function scheduleIdleLogout() {
+  clearIdleLogoutTimer();
+  if (!currentUserId || !lastActivityAt) return;
+
+  const remaining = IDLE_TIMEOUT_MS - (Date.now() - lastActivityAt);
+  if (remaining <= 0) {
+    signOutAfterInactivity();
+    return;
+  }
+
+  idleLogoutTimer = setTimeout(signOutAfterInactivity, remaining);
+}
+
+function recordUserActivity() {
+  if (!currentUserId) return;
+
+  const now = Date.now();
+  if (lastActivityAt && now - lastActivityAt >= IDLE_TIMEOUT_MS) {
+    signOutAfterInactivity();
+    return;
+  }
+
+  lastActivityAt = now;
+  // Avoid writing to localStorage for every scroll or pointer event.
+  if (now - lastActivityWriteAt >= 2000) {
+    try {
+      localStorage.setItem(LAST_ACTIVITY_KEY, String(now));
+      lastActivityWriteAt = now;
+    } catch (error) {
+      console.warn("Unable to save inactivity timestamp:", error);
+    }
+  }
+  scheduleIdleLogout();
+}
+
+function startInactivityTracking() {
+  if (!currentUserId) return;
+
+  if (trackedSessionUserId !== currentUserId) {
+    clearIdleLogoutTimer();
+    let storedActivity = 0;
+    try {
+      storedActivity = Number(localStorage.getItem(LAST_ACTIVITY_KEY)) || 0;
+    } catch (error) {
+      console.warn("Unable to read inactivity timestamp:", error);
+    }
+
+    const now = Date.now();
+    if (storedActivity && now - storedActivity >= IDLE_TIMEOUT_MS) {
+      lastActivityAt = storedActivity;
+      trackedSessionUserId = currentUserId;
+      signOutAfterInactivity();
+      return;
+    }
+
+    lastActivityAt = storedActivity || now;
+    lastActivityWriteAt = storedActivity ? now : 0;
+    trackedSessionUserId = currentUserId;
+    if (!storedActivity) recordUserActivity();
+  }
+
+  scheduleIdleLogout();
+}
+
+// Activity in another open tab keeps this session alive too.
+window.addEventListener("storage", (event) => {
+  if (event.key !== LAST_ACTIVITY_KEY || !currentUserId || !event.newValue) return;
+  const timestamp = Number(event.newValue);
+  if (!Number.isFinite(timestamp)) return;
+  lastActivityAt = timestamp;
+  scheduleIdleLogout();
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && currentUserId) {
+    if (Date.now() - lastActivityAt >= IDLE_TIMEOUT_MS) {
+      signOutAfterInactivity();
+    } else {
+      scheduleIdleLogout();
+    }
+  }
+});
+
+["pointerdown", "keydown", "touchstart", "scroll", "wheel", "click", "input"].forEach((eventName) => {
+  window.addEventListener(eventName, recordUserActivity, { passive: true });
+});
+
 function updateAuthUI(session) {
   const isLoggedIn = !!session;
 
   currentUserId = session?.user?.id || null;
+
+  if (isLoggedIn) {
+    startInactivityTracking();
+  } else {
+    stopInactivityTracking();
+  }
 
   authPanel.style.display = isLoggedIn ? "none" : "grid";
 
@@ -3617,7 +3753,7 @@ function initializeAuth() {
   });
 }
 $("#logoutBtn").onclick = async () => {
-  const { error } = await supabaseClient.auth.signOut();
+  const { error } = await supabaseClient.auth.signOut({ scope: "local" });
 
   if (error) {
     alert("Logout failed: " + error.message);
