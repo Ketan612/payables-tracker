@@ -1301,3 +1301,45 @@ dialog .actions .secondary { border: 1px solid #e1e9e2; background: #f6f9f6; col
 #cardPaymentAllocationHint.allocation-valid{color:var(--green,#16834a)}
 #cardPaymentAmount:read-only{background:var(--panel,#f5f6f7);opacity:.8}
 @media(max-width:480px){.card-allocation-row{grid-template-columns:minmax(0,1fr) 112px;gap:7px}.card-allocation-amount{font-size:10px}}
+
+
+/* Native touch target for credit-card passbook navigation. */
+.credit-card-item {
+  cursor: default;
+}
+.credit-card-open {
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  font-weight: 400;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
+}
+.credit-card-open:focus-visible {
+  outline: 2px solid rgba(48, 112, 88, .65);
+  outline-offset: 5px;
+  border-radius: 8px;
+}
+.credit-card-open .credit-card-main {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.credit-card-open .credit-card-outstanding {
+  font-size: 1rem;
+}
+.credit-card-item > .right {
+  flex: 0 0 auto;
+}
