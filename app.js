@@ -3288,8 +3288,12 @@ function resolveCardMaster(item, cardId) {
 }
 
 function showCardTransactions(cardId, tab = activeCardPassbookTab) {
-  const card = cards.find(x => x.id === cardId);
-  if (!card) return;
+  const card = cards.find(x => String(x.id) === String(cardId));
+  if (!card) {
+    console.warn("Credit card passbook could not find card:", cardId);
+    return;
+  }
+  cardId = String(card.id);
   activeCardDetailId = cardId;
   activeCardPassbookTab = tab;
 
@@ -3361,17 +3365,27 @@ function showCardTransactions(cardId, tab = activeCardPassbookTab) {
     : `<section class="card-passbook-section"><div class="passbook-section-heading"><h3>Pending transactions</h3><span>${openItems.length} purchases</span></div>${transactionHtml}</section>`;
 }
 
+// Use capture-phase delegation so card navigation still works if a child
+// control or another bubbling listener stops the click. The Remove control
+// remains independent and must never open the passbook.
 $("#cards").addEventListener("click", event => {
-  if (event.target.closest("[data-card]")) return;
-  const cardRow = event.target.closest("[data-card-view]");
-  if (cardRow) showCardTransactions(cardRow.dataset.cardView);
-});
+  const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+  if (!target) return;
+  if (target.closest("[data-card]")) return;
+  const cardRow = target.closest("[data-card-view]");
+  if (!cardRow || !$("#cards").contains(cardRow)) return;
+  event.preventDefault();
+  showCardTransactions(String(cardRow.dataset.cardView || ""));
+}, true);
+
 $("#cards").addEventListener("keydown", event => {
   if (event.key !== "Enter" && event.key !== " ") return;
-  const cardRow = event.target.closest("[data-card-view]");
-  if (!cardRow || event.target.closest("[data-card]")) return;
+  const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+  if (!target || target.closest("[data-card]")) return;
+  const cardRow = target.closest("[data-card-view]");
+  if (!cardRow || !$("#cards").contains(cardRow)) return;
   event.preventDefault();
-  showCardTransactions(cardRow.dataset.cardView);
+  showCardTransactions(String(cardRow.dataset.cardView || ""));
 });
 $("#balanceDetailHeaderActions").addEventListener("click", event => {
   if (event.target.closest("#payWholeCard") && activeCardDetailId) openCardPaymentDialog(activeCardDetailId,null);
