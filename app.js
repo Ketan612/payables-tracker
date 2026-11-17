@@ -1869,6 +1869,14 @@ $("#balanceDetailTransactions").innerHTML = `
 
 // Open individual transaction when clicked.
 $("#balanceDetailTransactions").addEventListener("click", event => {
+  const cardPayButton = event.target.closest("[data-card-payable]");
+  if (cardPayButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    openCardPaymentDialog(cardPayButton.dataset.cardId, cardPayButton.dataset.cardPayable);
+    return;
+  }
+
   const settleButton = event.target.closest("[data-settle-type]");
 
   if (settleButton) {
