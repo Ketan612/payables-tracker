@@ -602,6 +602,30 @@ small {
 #closeBalanceDetail { min-width: 76px; min-height: 40px; border-radius: 9px; }
 
 @media (max-width: 650px) {
+  /* Keep long transaction names and their action button on separate rows. */
+  .balance-detail-header {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+  .balance-detail-header h2 {
+    width: 100%;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+  #balanceDetailHeaderActions {
+    width: 100%;
+    flex: 0 0 auto;
+  }
+  #balanceDetailHeaderActions button {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    white-space: normal;
+  }
+
   #balanceDetailDlg {
     width: calc(100vw - 20px); max-width: none; max-height: 88dvh;
     margin: auto; padding: 16px; border-radius: 17px;
