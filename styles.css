@@ -1195,3 +1195,42 @@ dialog .actions .secondary { border: 1px solid #e1e9e2; background: #f6f9f6; col
   .credit-card-item { padding: 17px 15px; }
   #balanceDetailTransactions .card-passbook-entry { padding: 14px 10px; }
 }
+
+
+/* Expanded transaction information */
+#transactionInfoDlg { width: min(720px, calc(100% - 24px)); max-width: 720px; }
+#transactionInfoDlg > div { min-width: 0; }
+#transactionInfoContent { display: grid; gap: 13px; max-height: 70vh; overflow-y: auto; padding-right: 2px; }
+.transaction-info-hero {
+  display: grid; gap: 5px; padding: 18px; border-radius: 14px;
+  background: linear-gradient(135deg, #edf7ef, #f8fbf8);
+}
+.transaction-info-hero small { color: #718276; font-size: 9px; font-weight: 850; letter-spacing: 1.2px; }
+.transaction-info-hero strong { color: var(--green); font-size: 28px; letter-spacing: -.8px; }
+.transaction-info-hero span { color: var(--ink); font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
+.transaction-info-section { padding: 14px; border: 1px solid #e7ede8; border-radius: 13px; }
+.transaction-info-section h3 { margin: 0 0 10px; color: var(--ink); font-size: 12px; font-weight: 850; }
+.transaction-info-row {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+  padding: 9px 0; border-bottom: 1px solid #eff2ef;
+}
+.transaction-info-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.transaction-info-row small { color: #78867d; font-size: 11px; }
+.transaction-info-row b { max-width: 62%; color: var(--ink); font-size: 11px; text-align: right; overflow-wrap: anywhere; }
+.transaction-info-history-item {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid #eff2ef;
+}
+.transaction-info-history-item:last-child { border-bottom: 0; }
+.transaction-info-history-item > div { display: grid; gap: 4px; min-width: 0; }
+.transaction-info-history-item b { font-size: 11px; }
+.transaction-info-history-item small, .transaction-info-empty { color: #7d8981; font-size: 10px; overflow-wrap: anywhere; }
+.transaction-info-history-item strong { white-space: nowrap; font-size: 12px; }
+.transaction-info-notes { margin: 0; color: #59695f; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  #transactionInfoDlg { padding: 14px; }
+  #transactionInfoContent { max-height: 68vh; }
+  .transaction-info-section { padding: 12px; }
+  .transaction-info-row { gap: 10px; }
+  .transaction-info-row b { max-width: 58%; }
+}
