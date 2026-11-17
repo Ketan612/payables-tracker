@@ -3129,6 +3129,7 @@ function showCardTransactions(cardId) {
 }
 
 $("#cards").addEventListener("click", event => {
+  if (event.target.closest("[data-card]")) return;
   const button = event.target.closest("[data-card-view]");
   if (button) showCardTransactions(button.dataset.cardView);
 });
@@ -3138,7 +3139,7 @@ $("#balanceDetailHeaderActions").addEventListener("click", event => {
 $("#balanceDetailTransactions").addEventListener("click", event => {
   const button = event.target.closest("[data-card-payable]");
   if (button) {
-    event.stopPropagation();
+    event.stopImmediatePropagation();
     openCardPaymentDialog(button.dataset.cardId,button.dataset.cardPayable);
   }
 });
