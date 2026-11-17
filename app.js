@@ -3365,20 +3365,7 @@ function showCardTransactions(cardId, tab = activeCardPassbookTab) {
     : `<section class="card-passbook-section"><div class="passbook-section-heading"><h3>Pending transactions</h3><span>${openItems.length} purchases</span></div>${transactionHtml}</section>`;
 }
 
-// Card row navigation. Keep this as a normal delegated click listener;
-// the passbook was previously working with this bubbling event path.
-$("#cards").addEventListener("click", event => {
-  const cardRow = event.target.closest("[data-card-view]");
-  if (!cardRow || event.target.closest("[data-card]")) return;
-  showCardTransactions(cardRow.dataset.cardView);
-});
-$("#cards").addEventListener("keydown", event => {
-  if (event.key !== "Enter" && event.key !== " ") return;
-  const cardRow = event.target.closest("[data-card-view]");
-  if (!cardRow || event.target.closest("[data-card]")) return;
-  event.preventDefault();
-  showCardTransactions(cardRow.dataset.cardView);
-});
+// Each credit-card passbook button gets its own click handler when rendered.
 $("#balanceDetailHeaderActions").addEventListener("click", event => {
   if (event.target.closest("#payWholeCard") && activeCardDetailId) openCardPaymentDialog(activeCardDetailId,null);
   if (event.target.closest("#showCardPaymentHistory") && activeCardDetailId) showCardTransactions(activeCardDetailId,"history");
@@ -3408,17 +3395,25 @@ function renderSchedules() {
   $("#cards").innerHTML = cards.length
     ? cards.map(c => {
         const outstanding = getCardPayables(c.id).reduce((sum,item) => sum + item.outstanding,0);
-        return '<div class="item credit-card-item" role="button" tabindex="0" data-card-view="' + safe(c.id) + '">' +
-          '<div class="credit-card-main"><b>' + safe(c.name) +
+        return '<div class="item credit-card-item">' +
+          '<button type="button" class="credit-card-open" data-card-view="' + safe(c.id) + '">' +
+          '<span class="credit-card-main"><b>' + safe(c.name) +
           '</b><small class="credit-card-outstanding">Outstanding <strong>' + fmt(outstanding) +
           '</strong></small><small>Cycle ' + safe(c.start ?? "—") + '–' +
           safe(c.end ?? "—") + ' · Statement day ' + safe(c.statement ?? "—") +
           '</small><small>Payment due: ' + safe(c.dueDate || "Not specified") +
-          '</small></div><div class="right"><button type="button" class="edit" data-card="' +
+          '</small></span></button><div class="right"><button type="button" class="edit" data-card="' +
           safe(c.id) + '">Remove</button></div></div>';
       }).join("")
     : '<p class="hint">No cards added yet.</p>';
 
+  // Bind directly to native buttons rather than relying on delegated clicks
+  // from a role=button div. This is more reliable for touch interaction.
+  $("#cards").querySelectorAll(".credit-card-open[data-card-view]").forEach(button => {
+    button.addEventListener("click", () => {
+      showCardTransactions(button.dataset.cardView, "pending");
+    });
+  });
 
   $("#emis").innerHTML = emis.length
     ? emis.map((x, i) => `
