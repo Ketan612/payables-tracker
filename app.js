@@ -2973,12 +2973,12 @@ async function loadCards() {
 }
 // ==========================================
 
-function getCardPayables(cardId) {
+function getCardPayables(cardId, includeSettled = false) {
   return rows.filter(x =>
     x.transactionKind === "payable" &&
     x.payableToType === "credit_card" &&
     x.payableToCardId === cardId &&
-    getPayableOutstanding(x) > 0.005
+    (includeSettled || getPayableOutstanding(x) > 0.005)
   ).map(payable => ({
     payable,
     outstanding: getPayableOutstanding(payable),
@@ -3101,11 +3101,11 @@ function showCardTransactions(cardId) {
   const card = cards.find(x => x.id === cardId);
   if (!card) return;
   activeCardDetailId = cardId;
-  const items = getCardPayables(cardId).map(item => ({
+  const items = getCardPayables(cardId, true).map(item => ({
     transactionId:item.master.id,
     payableId:item.payable.id,
     title:item.master.desc,
-    subtitle:"Original: "+fmt(item.payable.amt)+" · Paid: "+fmt(item.settled)+" · Remaining: "+fmt(item.outstanding),
+    subtitle:"Original: "+fmt(item.payable.amt)+" · Paid: "+fmt(item.settled)+" · Remaining: "+fmt(item.outstanding)+(item.outstanding <= 0.005 ? " · Fully paid" : ""),
     amount:item.outstanding
   }));
   const total = items.reduce((sum,x)=>sum+x.amount,0);
@@ -3116,7 +3116,7 @@ function showCardTransactions(cardId) {
     : '<span class="hint">No outstanding balance</span>';
   $("#balanceDetailTransactions").querySelectorAll("[data-item-index]").forEach((node,index) => {
     const item = items[index];
-    if (!item || !item.payableId) return;
+    if (!item || !item.payableId || item.amount <= 0.005) return;
     const area = node.querySelector(".right");
     const pay = document.createElement("button");
     pay.type = "button";
