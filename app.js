@@ -686,7 +686,13 @@ rows = (data || []).map(x => ({
 function render() {
   const m = $("#monthF").value;
   const t = $("#typeF").value;
-  const s = "Pending";
+  const selectedStatus = $("#statusF").value;
+  // "Pending" is the outstanding-work view: include both unpaid and
+  // partially-paid records. "All statuses" removes the status restriction.
+  const matchesStatus = x =>
+    selectedStatus === "all" ||
+    (selectedStatus === "Pending" && pending(x)) ||
+    (selectedStatus !== "Pending" && x.st === selectedStatus);
 
   const linkedExpenseIds = new Set(
     rows
@@ -704,8 +710,7 @@ function render() {
     ) &&
     (m === "all" || monthLabel(x) === m) &&
     (t === "all" || x.typ === t) &&
-    pending(x) &&
-    (s === "all" || x.st === s)
+    matchesStatus(x)
   );
   
   $("#list").innerHTML = a.length
