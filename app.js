@@ -2972,6 +2972,177 @@ async function loadCards() {
   }
 }
 // ==========================================
+
+function getCardPayables(cardId) {
+  return rows.filter(x =>
+    x.transactionKind === "payable" &&
+    x.payableToType === "credit_card" &&
+    x.payableToCardId === cardId &&
+    getPayableOutstanding(x) > 0.005
+  ).map(payable => ({
+    payable,
+    outstanding: getPayableOutstanding(payable),
+    settled: getPayableSettled(payable.id),
+    master: rows.find(x => x.id === payable.relatedTransactionId) || payable
+  })).sort((a,b) =>
+    String(a.payable.transactionDate || "").localeCompare(String(b.payable.transactionDate || ""))
+  );
+}
+
+let activeCardDetailId = null;
+
+function openCardPaymentDialog(cardId, payableId) {
+  const card = cards.find(x => x.id === cardId);
+  if (!card) return alert("Credit card could not be found.");
+  const all = getCardPayables(cardId);
+  const selected = payableId ? all.filter(x => x.payable.id === payableId) : all;
+  const outstanding = selected.reduce((sum,x) => sum + x.outstanding, 0);
+  if (!selected.length || outstanding <= 0.005) return alert("There is no outstanding balance to pay.");
+
+  $("#cardPaymentCardId").value = cardId;
+  $("#cardPaymentPayableId").value = payableId || "";
+  $("#cardPaymentTitle").textContent = payableId ? "Record transaction payment" : "Record credit card payment";
+  $("#cardPaymentOutstanding").textContent = card.name + " · Outstanding: " + fmt(outstanding);
+  $("#cardPaymentAmount").value = outstanding.toFixed(2);
+  $("#cardPaymentAmount").max = outstanding.toFixed(2);
+  $("#cardPaymentDate").value = todayDate();
+  $("#cardPaymentMethod").value = "bank";
+  $("#cardPaymentReference").value = "";
+
+  const select = $("#cardPaymentAccount");
+  select.innerHTML = '<option value="">Select bank account</option>';
+  accounts.filter(x => x.account_type === "bank").forEach(account => {
+    const option = document.createElement("option");
+    option.value = account.id;
+    option.textContent = account.account_name;
+    select.appendChild(option);
+  });
+  $("#cardPaymentAccountField").hidden = false;
+  select.required = true;
+  $("#cardPaymentDlg").showModal();
+}
+
+$("#cardPaymentMethod").addEventListener("change", () => {
+  const bank = $("#cardPaymentMethod").value === "bank";
+  $("#cardPaymentAccountField").hidden = !bank;
+  $("#cardPaymentAccount").required = bank;
+});
+$("#cancelCardPayment").addEventListener("click", () => $("#cardPaymentDlg").close());
+
+$("#cardPaymentForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const userId = currentUserId;
+  if (!userId) return alert("Please log in before recording a card payment.");
+  const cardId = $("#cardPaymentCardId").value;
+  const payableId = $("#cardPaymentPayableId").value || null;
+  const amount = Number($("#cardPaymentAmount").value);
+  const paymentDate = $("#cardPaymentDate").value;
+  const method = $("#cardPaymentMethod").value;
+  const accountId = method === "bank" ? $("#cardPaymentAccount").value : null;
+  const note = $("#cardPaymentReference").value.trim();
+
+  if (!Number.isFinite(amount) || amount <= 0 || Math.round(amount*100) !== amount*100) return alert("Enter a valid amount with up to two decimal places.");
+  if (!paymentDate) return alert("Select the payment date.");
+  if (method === "bank" && !accountId) return alert("Select the bank account used for this payment.");
+
+  const open = getCardPayables(cardId);
+  let allocations = [];
+  if (payableId) {
+    const item = open.find(x => x.payable.id === payableId);
+    if (!item) return alert("This transaction has no outstanding balance. Refresh and try again.");
+    if (amount > item.outstanding + 0.005) return alert("Payment exceeds this transaction's outstanding amount of " + fmt(item.outstanding) + ".");
+    allocations = [{ payable_transaction_id: payableId, amount: amount }];
+  } else {
+    const total = open.reduce((sum,x) => sum+x.outstanding,0);
+    if (amount > total + 0.005) return alert("Payment exceeds the card outstanding amount of " + fmt(total) + ".");
+    let remaining = Math.round(amount*100);
+    for (const item of open) {
+      if (remaining <= 0) break;
+      const part = Math.min(remaining, Math.round(item.outstanding*100));
+      if (part > 0) {
+        allocations.push({ payable_transaction_id:item.payable.id, amount:part/100 });
+        remaining -= part;
+      }
+    }
+    if (remaining !== 0) return alert("Unable to allocate the full payment. Refresh and try again.");
+  }
+  const button = $("#cardPaymentForm").querySelector('button[type="submit"]');
+  button.disabled = true;
+  button.textContent = "Recording...";
+  try {
+    const result = await supabaseClient.rpc("record_card_payment", {
+      p_payment_card_id:cardId,
+      p_amount:amount,
+      p_payment_date:paymentDate,
+      p_payment_method:method,
+      p_payment_account_id:accountId,
+      p_allocations:allocations,
+      p_reference_note:note || null
+    });
+    if (currentUserId !== userId) return;
+    if (result.error) throw result.error;
+    $("#cardPaymentDlg").close();
+    await Promise.all([loadTransactions(),loadTransactionSettlements(),loadCards()]);
+    if (currentUserId !== userId) return;
+    render();
+    renderSchedules();
+    if (activeCardDetailId === cardId) showCardTransactions(cardId);
+    alert("Card payment recorded. Linked transaction balances have been updated.");
+  } catch (error) {
+    console.error("Card payment failed:",error);
+    alert("Could not record card payment: " + (error.message || "Please try again."));
+  } finally {
+    button.disabled = false;
+    button.textContent = "Record payment";
+  }
+});
+
+function showCardTransactions(cardId) {
+  const card = cards.find(x => x.id === cardId);
+  if (!card) return;
+  activeCardDetailId = cardId;
+  const items = getCardPayables(cardId).map(item => ({
+    transactionId:item.master.id,
+    payableId:item.payable.id,
+    title:item.master.desc,
+    subtitle:"Original: "+fmt(item.payable.amt)+" · Paid: "+fmt(item.settled)+" · Remaining: "+fmt(item.outstanding),
+    amount:item.outstanding
+  }));
+  const total = items.reduce((sum,x)=>sum+x.amount,0);
+  showBalanceDetails(card.name+" · Transactions",items,
+    "Outstanding balance: "+fmt(total)+". Select a transaction for full details or record a payment.");
+  $("#balanceDetailHeaderActions").innerHTML = total > 0.005
+    ? '<button type="button" class="secondary" id="payWholeCard">Record payment</button>'
+    : '<span class="hint">No outstanding balance</span>';
+  $("#balanceDetailTransactions").querySelectorAll("[data-item-index]").forEach((node,index) => {
+    const item = items[index];
+    if (!item || !item.payableId) return;
+    const area = node.querySelector(".right");
+    const pay = document.createElement("button");
+    pay.type = "button";
+    pay.className = "paid";
+    pay.textContent = "Record payment";
+    pay.dataset.cardPayable = item.payableId;
+    pay.dataset.cardId = cardId;
+    area.appendChild(pay);
+  });
+}
+
+$("#cards").addEventListener("click", event => {
+  const button = event.target.closest("[data-card-view]");
+  if (button) showCardTransactions(button.dataset.cardView);
+});
+$("#balanceDetailHeaderActions").addEventListener("click", event => {
+  if (event.target.closest("#payWholeCard") && activeCardDetailId) openCardPaymentDialog(activeCardDetailId,null);
+});
+$("#balanceDetailTransactions").addEventListener("click", event => {
+  const button = event.target.closest("[data-card-payable]");
+  if (button) {
+    event.stopPropagation();
+    openCardPaymentDialog(button.dataset.cardId,button.dataset.cardPayable);
+  }
+});
+
 // Save EMI schedules (temporary local)
 // ==========================================
 
@@ -2987,24 +3158,17 @@ function saveEmis() {
 function renderSchedules() {
 
   $("#cards").innerHTML = cards.length
-    ? cards.map(c => `
-        <div class="item">
-          <div>
-            <b>${safe(c.name)}</b>
-            <small>
-              Cycle ${safe(c.start ?? "—")}–${safe(c.end ?? "—")}
-              · Statement day ${safe(c.statement ?? "—")}
-            </small>
-            <small>
-              Payment due: ${safe(c.dueDate || "Not specified")}
-            </small>
-          </div>
-
-          <div class="right">
-            <button class="edit" data-card="${safe(c.id)}">Remove</button>
-          </div>
-        </div>
-      `).join("")
+    ? cards.map(c => {
+        const outstanding = getCardPayables(c.id).reduce((sum,item) => sum + item.outstanding,0);
+        return '<div class="item credit-card-item"><div><b>' + safe(c.name) +
+          '</b><small>Outstanding: <strong>' + fmt(outstanding) +
+          '</strong></small><small>Cycle ' + safe(c.start ?? "—") + '–' +
+          safe(c.end ?? "—") + ' · Statement day ' + safe(c.statement ?? "—") +
+          '</small><small>Payment due: ' + safe(c.dueDate || "Not specified") +
+          '</small><button type="button" class="secondary" data-card-view="' +
+          safe(c.id) + '">View transactions</button></div><div class="right">' +
+          '<button class="edit" data-card="' + safe(c.id) + '">Remove</button></div></div>';
+      }).join("")
     : '<p class="hint">No cards added yet.</p>';
 
 
