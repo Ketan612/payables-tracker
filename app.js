@@ -3083,23 +3083,76 @@ function getCardPayables(cardId, includeSettled = false) {
 
 let activeCardDetailId = null;
 
+let cardPaymentItems = [];
+let cardPaymentTargetId = null;
+let cardPaymentFullMode = true;
+
+function renderCardPaymentAllocations() {
+  const container = $("#cardPaymentAllocations");
+  if (!container) return;
+  if (cardPaymentFullMode) {
+    container.hidden = true;
+    $("#cardPaymentAllocationTotal").textContent = "";
+    return;
+  }
+  container.hidden = false;
+  container.innerHTML = `
+    <div class="card-allocation-heading"><b>Choose purchases to cover</b><small>Enter how much of each purchase this payment should cover.</small></div>
+    ${cardPaymentItems.map(item => `
+      <div class="card-allocation-row" data-allocation-row="${safe(item.payable.id)}">
+        <label class="card-allocation-choice">
+          <input type="checkbox" data-allocation-select="${safe(item.payable.id)}" checked>
+          <span><b>${safe(item.payable.desc || "Card purchase")}</b><small>Outstanding: ${fmt(item.outstanding)}</small></span>
+        </label>
+        <label class="card-allocation-amount">Pay now (₹)
+          <input type="number" min="0.01" step="0.01" max="${Number(item.outstanding).toFixed(2)}" value="${Number(item.outstanding).toFixed(2)}" data-allocation-amount="${safe(item.payable.id)}">
+        </label>
+      </div>`).join("")}
+    <div class="card-allocation-total"><span>Allocated amount</span><b id="cardPaymentAllocationTotal">₹0.00</b></div>
+    <p class="hint" id="cardPaymentAllocationHint">Allocation total must equal the payment amount.</p>`;
+  updateCardPaymentAllocationTotal();
+}
+
+function updateCardPaymentAllocationTotal() {
+  const total = [...document.querySelectorAll("[data-allocation-select]:checked")]
+    .reduce((sum, checkbox) => {
+      const field = document.querySelector('[data-allocation-amount="' + checkbox.dataset.allocationSelect + '"]');
+      return sum + Math.round(Number(field?.value || 0) * 100);
+    }, 0) / 100;
+  const totalEl = $("#cardPaymentAllocationTotal");
+  if (totalEl) totalEl.textContent = fmt(total);
+  const amount = Number($("#cardPaymentAmount").value || 0);
+  const hint = $("#cardPaymentAllocationHint");
+  if (hint) {
+    const matches = Math.abs(Math.round(total * 100) - Math.round(amount * 100)) === 0;
+    hint.textContent = matches ? "Allocation matches the payment amount." : "Remaining to allocate: " + fmt(Math.max(0, amount-total)) + (total > amount ? " · Reduce allocations by " + fmt(total-amount) : "");
+    hint.classList.toggle("allocation-valid", matches);
+  }
+}
+
 function openCardPaymentDialog(cardId, payableId) {
   const card = cards.find(x => x.id === cardId);
   if (!card) return alert("Credit card could not be found.");
   const all = getCardPayables(cardId);
-  const selected = payableId ? all.filter(x => x.payable.id === payableId) : all;
-  const outstanding = selected.reduce((sum,x) => sum + x.outstanding, 0);
-  if (!selected.length || outstanding <= 0.005) return alert("There is no outstanding balance to pay.");
+  cardPaymentTargetId = payableId || null;
+  cardPaymentItems = payableId ? all.filter(x => x.payable.id === payableId) : all;
+  const outstanding = cardPaymentItems.reduce((sum,x) => sum + x.outstanding, 0);
+  if (!cardPaymentItems.length || outstanding <= 0.005) return alert("There is no outstanding balance to pay.");
 
   $("#cardPaymentCardId").value = cardId;
   $("#cardPaymentPayableId").value = payableId || "";
-  $("#cardPaymentTitle").textContent = payableId ? "Record transaction payment" : "Record credit card payment";
-  $("#cardPaymentOutstanding").textContent = card.name + " · Outstanding: " + fmt(outstanding);
+  $("#cardPaymentTitle").textContent = payableId ? "Pay this purchase" : "Record credit card payment";
+  $("#cardPaymentOutstanding").textContent = card.name + " · " + (payableId ? "Purchase outstanding: " : "Card outstanding: ") + fmt(outstanding);
   $("#cardPaymentAmount").value = outstanding.toFixed(2);
   $("#cardPaymentAmount").max = outstanding.toFixed(2);
   $("#cardPaymentDate").value = todayDate();
   $("#cardPaymentMethod").value = "bank";
   $("#cardPaymentReference").value = "";
+  cardPaymentFullMode = true;
+  $("#cardPaymentFullMode").checked = true;
+  $("#cardPaymentFullModeLabel").textContent = payableId ? "Pay this purchase in full" : "Pay full card outstanding";
+  $("#cardPaymentAmount").readOnly = true;
+  renderCardPaymentAllocations();
 
   const select = $("#cardPaymentAccount");
   select.innerHTML = '<option value="">Select bank account</option>';
@@ -3114,6 +3167,29 @@ function openCardPaymentDialog(cardId, payableId) {
   $("#cardPaymentDlg").showModal();
 }
 
+$("#cardPaymentFullMode").addEventListener("change", () => {
+  cardPaymentFullMode = $("#cardPaymentFullMode").checked;
+  const total = cardPaymentItems.reduce((sum,x) => sum + x.outstanding,0);
+  $("#cardPaymentAmount").readOnly = cardPaymentFullMode;
+  if (cardPaymentFullMode) {
+    $("#cardPaymentAmount").value = total.toFixed(2);
+  } else {
+    $("#cardPaymentAmount").value = "";
+    $("#cardPaymentAmount").focus();
+  }
+  renderCardPaymentAllocations();
+});
+$("#cardPaymentAmount").addEventListener("input", updateCardPaymentAllocationTotal);
+$("#cardPaymentAllocations").addEventListener("input", event => {
+  if (event.target.matches("[data-allocation-amount]")) updateCardPaymentAllocationTotal();
+});
+$("#cardPaymentAllocations").addEventListener("change", event => {
+  if (event.target.matches("[data-allocation-select]")) {
+    const field = document.querySelector('[data-allocation-amount="' + event.target.dataset.allocationSelect + '"]');
+    if (field) field.disabled = !event.target.checked;
+  }
+  updateCardPaymentAllocationTotal();
+});
 $("#cardPaymentMethod").addEventListener("change", () => {
   const bank = $("#cardPaymentMethod").value === "bank";
   $("#cardPaymentAccountField").hidden = !bank;
@@ -3126,7 +3202,6 @@ $("#cardPaymentForm").addEventListener("submit", async event => {
   const userId = currentUserId;
   if (!userId) return alert("Please log in before recording a card payment.");
   const cardId = $("#cardPaymentCardId").value;
-  const payableId = $("#cardPaymentPayableId").value || null;
   const amount = Number($("#cardPaymentAmount").value);
   const paymentDate = $("#cardPaymentDate").value;
   const method = $("#cardPaymentMethod").value;
@@ -3139,25 +3214,29 @@ $("#cardPaymentForm").addEventListener("submit", async event => {
 
   const open = getCardPayables(cardId);
   let allocations = [];
-  if (payableId) {
-    const item = open.find(x => x.payable.id === payableId);
-    if (!item) return alert("This transaction has no outstanding balance. Refresh and try again.");
-    if (amount > item.outstanding + 0.005) return alert("Payment exceeds this transaction's outstanding amount of " + fmt(item.outstanding) + ".");
-    allocations = [{ payable_transaction_id: payableId, amount: amount }];
+  if (cardPaymentFullMode) {
+    const eligible = cardPaymentTargetId ? open.filter(x => x.payable.id === cardPaymentTargetId) : open;
+    const total = eligible.reduce((sum,x) => sum+x.outstanding,0);
+    if (Math.abs(Math.round(total*100)-Math.round(amount*100)) !== 0) return alert("The outstanding balance changed. Please reopen the payment dialog.");
+    allocations = eligible.filter(x => x.outstanding > 0.005).map(x => ({
+      payable_transaction_id:x.payable.id, amount:Math.round(x.outstanding*100)/100
+    }));
   } else {
-    const total = open.reduce((sum,x) => sum+x.outstanding,0);
-    if (amount > total + 0.005) return alert("Payment exceeds the card outstanding amount of " + fmt(total) + ".");
-    let remaining = Math.round(amount*100);
-    for (const item of open) {
-      if (remaining <= 0) break;
-      const part = Math.min(remaining, Math.round(item.outstanding*100));
-      if (part > 0) {
-        allocations.push({ payable_transaction_id:item.payable.id, amount:part/100 });
-        remaining -= part;
-      }
+    allocations = [...document.querySelectorAll("[data-allocation-select]:checked")].map(checkbox => {
+      const id = checkbox.dataset.allocationSelect;
+      const field = document.querySelector('[data-allocation-amount="' + id + '"]');
+      return { payable_transaction_id:id, amount:Number(field?.value || 0) };
+    });
+    const invalid = allocations.some(x => !Number.isFinite(x.amount) || x.amount <= 0 || Math.round(x.amount*100)!==x.amount*100);
+    if (!allocations.length || invalid) return alert("Select at least one purchase and enter a valid amount for each.");
+    const allocated = allocations.reduce((sum,x)=>sum+Math.round(x.amount*100),0);
+    if (allocated !== Math.round(amount*100)) return alert("The selected transaction amounts must add up exactly to the payment amount.");
+    for (const allocation of allocations) {
+      const item = open.find(x=>x.payable.id===allocation.payable_transaction_id);
+      if (!item || allocation.amount > item.outstanding + 0.005) return alert("An allocation exceeds the selected purchase's remaining balance. Refresh and try again.");
     }
-    if (remaining !== 0) return alert("Unable to allocate the full payment. Refresh and try again.");
   }
+
   const button = $("#cardPaymentForm").querySelector('button[type="submit"]');
   button.disabled = true;
   button.textContent = "Recording...";
@@ -3179,7 +3258,7 @@ $("#cardPaymentForm").addEventListener("submit", async event => {
     render();
     renderSchedules();
     if (activeCardDetailId === cardId) showCardTransactions(cardId, "pending");
-    alert("Card payment recorded. Linked transaction balances have been updated.");
+    alert("Card payment recorded. Selected purchase balances have been updated.");
   } catch (error) {
     console.error("Card payment failed:",error);
     alert("Could not record card payment: " + (error.message || "Please try again."));
