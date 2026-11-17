@@ -1107,3 +1107,35 @@ dialog .actions .secondary { border: 1px solid #e1e9e2; background: #f6f9f6; col
   main { width: min(1240px, calc(100% - 80px)); }
   .panel { padding: 24px 25px; }
 }
+
+
+/* Credit cards: make the complete card row the navigation surface. */
+.credit-card-item {
+  cursor: pointer;
+  align-items: center;
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.credit-card-item:hover,
+.credit-card-item:focus-visible {
+  border-color: rgba(48, 112, 88, .42);
+  box-shadow: 0 8px 24px rgba(27, 66, 51, .08);
+  outline: none;
+}
+.credit-card-item .credit-card-main {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+.credit-card-item .credit-card-outstanding {
+  color: var(--ink);
+  font-weight: 700;
+}
+.credit-card-item .right {
+  flex-shrink: 0;
+}
+#balanceDetailTransactions .item[data-item-index] {
+  cursor: pointer;
+}
+#balanceDetailTransactions .item[data-item-index]:hover {
+  background: rgba(48, 112, 88, .035);
+}
