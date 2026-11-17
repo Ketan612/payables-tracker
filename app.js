@@ -3178,7 +3178,7 @@ $("#cardPaymentForm").addEventListener("submit", async event => {
     if (currentUserId !== userId) return;
     render();
     renderSchedules();
-    if (activeCardDetailId === cardId) showCardTransactions(cardId);
+    if (activeCardDetailId === cardId) showCardTransactions(cardId, "pending");
     alert("Card payment recorded. Linked transaction balances have been updated.");
   } catch (error) {
     console.error("Card payment failed:",error);
@@ -3189,16 +3189,37 @@ $("#cardPaymentForm").addEventListener("submit", async event => {
   }
 });
 
-function showCardTransactions(cardId) {
+let activeCardPassbookTab = "pending";
+
+function resolveCardMaster(item, cardId) {
+  const linked = item.payable.relatedTransactionId
+    ? rows.find(x => x.id === item.payable.relatedTransactionId)
+    : null;
+  if (linked) return linked;
+
+  // Older records may lack related_transaction_id. Only use a safe,
+  // unambiguous match on card, amount and purchase date.
+  const candidates = rows.filter(x =>
+    x.transactionKind !== "payable" &&
+    x.paymentCardId === cardId &&
+    Number(x.amt) === Number(item.payable.amt) &&
+    String(x.transactionDate || "") === String(item.payable.transactionDate || "")
+  );
+  return candidates.length === 1 ? candidates[0] : null;
+}
+
+function showCardTransactions(cardId, tab = activeCardPassbookTab) {
   const card = cards.find(x => x.id === cardId);
   if (!card) return;
   activeCardDetailId = cardId;
+  activeCardPassbookTab = tab;
 
   const allItems = getCardPayables(cardId, true);
   const openItems = allItems.filter(x => x.outstanding > 0.005);
   const total = openItems.reduce((sum,x) => sum + x.outstanding,0);
   const history = transactionSettlements
-    .filter(x => x.settlement_type === "payable" && allItems.some(item => item.payable.id === x.payable_transaction_id))
+    .filter(x => x.settlement_type === "payable" &&
+      allItems.some(item => item.payable.id === x.payable_transaction_id))
     .sort((a,b) => String(b.settlement_date || "").localeCompare(String(a.settlement_date || "")));
 
   $("#balanceDetailTitle").textContent = card.name + " · Passbook";
@@ -3207,51 +3228,58 @@ function showCardTransactions(cardId) {
       <div class="modal-dashboard-hero">
         <span class="modal-eyebrow">CURRENT CARD OUTSTANDING</span>
         <strong>${fmt(total)}</strong>
-        <small>${openItems.length} unpaid / partially paid purchase${openItems.length === 1 ? "" : "s"}</small>
+        <small>${openItems.length} pending / partially paid purchase${openItems.length === 1 ? "" : "s"}</small>
       </div>
       <div class="modal-dashboard-metrics">
         <div><span>To be paid</span><b>${fmt(total)}</b></div>
         <div><span>Pending purchases</span><b>${openItems.length}</b></div>
       </div>
     </div>`;
-  $("#balanceDetailHeaderActions").innerHTML = total > 0.005
-    ? '<button type="button" class="secondary" id="payWholeCard">Record payment</button>'
-    : '<span class="hint">No outstanding balance</span>';
+  $("#balanceDetailHeaderActions").innerHTML = `
+    <button type="button" class="secondary passbook-action" id="showCardPaymentHistory" aria-pressed="${tab === "history"}">Payment history</button>
+    <button type="button" class="passbook-action passbook-primary" id="payWholeCard" ${total <= 0.005 ? "disabled" : ""}>Record payment</button>`;
 
-  const transactionHtml = openItems.length ? openItems.map((item,index) => {
-    const master = item.master || item.payable;
-    const masterId = master.id || item.payable.id;
+  const transactionHtml = openItems.length ? openItems.map(item => {
+    const master = resolveCardMaster(item, cardId);
+    const displayRecord = master || item.payable;
+    const masterId = master?.id || "";
     return `
-      <div class="item card-passbook-entry">
-        <button type="button" class="card-passbook-linked" data-card-master="${safe(masterId)}">
-          <b>${safe(master.desc || "Card purchase")}</b>
-          <small>Purchase date: ${safe(master.transactionDate || item.payable.transactionDate || "Date not recorded")}</small>
-          <small>Charged ${fmt(item.payable.amt)} · Paid ${fmt(item.settled)}</small>
+      <article class="item card-passbook-entry">
+        <button type="button" class="card-passbook-linked" ${masterId ? `data-card-master="${safe(masterId)}"` : "disabled"}>
+          <b>${safe(displayRecord.desc || "Card purchase")}</b>
+          <small>Purchase date: ${safe(displayRecord.transactionDate || item.payable.transactionDate || "Date not recorded")}</small>
+          <small>Original expense: ${fmt(master?.amt ?? item.payable.amt)}</small>
+          ${master ? '<small class="linked-record-label">Linked original expense · View details</small>' : '<small class="linked-record-warning">Original expense link not found · Showing payable record</small>'}
+          <small>Card bill paid: ${fmt(item.settled)} · Remaining: ${fmt(item.outstanding)}</small>
         </button>
         <div class="right">
           <strong>${fmt(item.outstanding)}</strong>
-          <small class="card-passbook-balance">Remaining</small>
+          <small class="card-passbook-balance">To be paid</small>
           <button type="button" class="card-passbook-pay" data-card-payable="${safe(item.payable.id)}" data-card-id="${safe(cardId)}">Pay</button>
         </div>
-      </div>`;
-  }).join("") : '<p class="hint">No pending purchases on this card.</p>';
+      </article>`;
+  }).join("") : '<p class="hint passbook-empty">No pending purchases on this card.</p>';
 
   const historyHtml = history.length ? history.map(payment => {
     const item = allItems.find(x => x.payable.id === payment.payable_transaction_id);
-    const master = item?.master || item?.payable;
+    const master = item ? resolveCardMaster(item, cardId) : null;
+    const paymentNote = String(payment.notes || "");
+    const paymentId = paymentNote.startsWith("CARD_PAYMENT:") ? paymentNote.slice("CARD_PAYMENT:".length) : "";
     return `
-      <div class="item card-payment-history-entry">
-        <div><b>${safe(master?.desc || "Card payment")}</b>
+      <article class="item card-payment-history-entry">
+        <div>
+          <b>${safe(master?.desc || item?.payable.desc || "Card payment")}</b>
           <small>Paid on ${safe(payment.settlement_date || "Date not recorded")}</small>
-          ${payment.notes ? `<small>${safe(payment.notes)}</small>` : ""}
+          <small>${safe(paymentNote.startsWith("CARD_PAYMENT:") ? "Credit card bill payment" : paymentNote || "Payment recorded")}</small>
+          <small>Linked purchase: ${safe(master?.desc || "Original expense link unavailable")}</small>
         </div>
-        <div class="right"><strong>${fmt(payment.amount)}</strong><small>Payment</small></div>
-      </div>`;
-  }).join("") : '<p class="hint">No payment history recorded for this card yet.</p>';
+        <div class="right"><strong>${fmt(payment.amount)}</strong><small>Paid</small></div>
+      </article>`;
+  }).join("") : '<p class="hint passbook-empty">No payment history recorded for this card yet.</p>';
 
-  $("#balanceDetailTransactions").innerHTML = `
-    <section class="card-passbook-section"><h3>Pending transactions</h3>${transactionHtml}</section>
-    <section class="card-passbook-section"><h3>Payment history</h3>${historyHtml}</section>`;
+  $("#balanceDetailTransactions").innerHTML = tab === "history"
+    ? `<section class="card-passbook-section"><div class="passbook-section-heading"><h3>Past payments</h3><span>${history.length} payment entries</span></div>${historyHtml}</section>`
+    : `<section class="card-passbook-section"><div class="passbook-section-heading"><h3>Pending transactions</h3><span>${openItems.length} purchases</span></div>${transactionHtml}</section>`;
 }
 
 $("#cards").addEventListener("click", event => {
@@ -3268,6 +3296,7 @@ $("#cards").addEventListener("keydown", event => {
 });
 $("#balanceDetailHeaderActions").addEventListener("click", event => {
   if (event.target.closest("#payWholeCard") && activeCardDetailId) openCardPaymentDialog(activeCardDetailId,null);
+  if (event.target.closest("#showCardPaymentHistory") && activeCardDetailId) showCardTransactions(activeCardDetailId,"history");
 });
 $("#balanceDetailTransactions").addEventListener("click", event => {
   const button = event.target.closest("[data-card-payable]");
