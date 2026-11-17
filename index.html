@@ -548,7 +548,9 @@
       <p id="cardPaymentOutstanding" class="hint"></p>
       <input id="cardPaymentCardId" type="hidden">
       <input id="cardPaymentPayableId" type="hidden">
+      <label class="card-payment-full-toggle" id="cardPaymentFullModeLabelWrap"><input id="cardPaymentFullMode" type="checkbox" checked> <span id="cardPaymentFullModeLabel">Pay full card outstanding</span></label>
       <label>Payment amount (₹)<input id="cardPaymentAmount" type="number" min="0.01" step="0.01" required></label>
+      <div id="cardPaymentAllocations" class="card-payment-allocations" hidden></div>
       <label>Payment date<input id="cardPaymentDate" type="date" required></label>
       <label>Paid using
         <select id="cardPaymentMethod">
