@@ -3092,7 +3092,8 @@ function renderCardPaymentAllocations() {
   if (!container) return;
   if (cardPaymentFullMode) {
     container.hidden = true;
-    $("#cardPaymentAllocationTotal").textContent = "";
+    const totalEl = $("#cardPaymentAllocationTotal");
+    if (totalEl) totalEl.textContent = "";
     return;
   }
   container.hidden = false;
