@@ -1943,34 +1943,17 @@ $("#balanceDetailTransactions").addEventListener("click", event => {
 
 // Return to the original balance transaction list.
 function openActiveTransactionInfo() {
-  const transaction = rows.find(
-    x => x.id === activeDetailsTransactionId
-  );
-
+  const transaction = rows.find(x => x.id === activeDetailsTransactionId);
   if (!transaction) {
     alert("Transaction information could not be found.");
     return;
   }
 
-  const paymentAccount = accounts.find(
-    x => x.id === transaction.paymentAccountId
-  );
-
-  const paymentCard = cards.find(
-    x => x.id === transaction.paymentCardId
-  );
-
-  const payablePerson = people.find(
-    x => x.id === transaction.payableToPersonId
-  );
-
-  const payableAccount = accounts.find(
-    x => x.id === transaction.payableToAccountId
-  );
-
-  const payableCard = cards.find(
-    x => x.id === transaction.payableToCardId
-  );
+  const paymentAccount = accounts.find(x => x.id === transaction.paymentAccountId);
+  const paymentCard = cards.find(x => x.id === transaction.paymentCardId);
+  const payablePerson = people.find(x => x.id === transaction.payableToPersonId);
+  const payableAccount = accounts.find(x => x.id === transaction.payableToAccountId);
+  const payableCard = cards.find(x => x.id === transaction.payableToCardId);
 
   const paymentSource = {
     bank: paymentAccount?.account_name || "Bank account",
@@ -1978,43 +1961,125 @@ function openActiveTransactionInfo() {
     wallet: paymentAccount?.account_name || "Wallet",
     credit_card: paymentCard?.name || "Credit card",
     friend_card: "Friend's card",
-    unpaid: "Unpaid",
+    unpaid: "Unpaid / not paid yet",
     other: "Other"
-  }[transaction.paymentMethod] || "Not specified";
+  }[transaction.paymentMethod] || "Not recorded";
 
-  let payableDestination = "Not specified";
+  let payableDestination = "Not applicable";
+  if (transaction.payableToType === "person") payableDestination = payablePerson?.name || "Person";
+  else if (transaction.payableToType === "account") payableDestination = payableAccount?.account_name || "Account / fund";
+  else if (transaction.payableToType === "credit_card") payableDestination = payableCard?.name || "Credit card";
 
-  if (transaction.payableToType === "person") {
-    payableDestination = payablePerson?.name || "Person";
-  } else if (transaction.payableToType === "account") {
-    payableDestination = payableAccount?.account_name || "Account";
-  } else if (transaction.payableToType === "credit_card") {
-    payableDestination = payableCard?.name || "Credit card";
+  const linkedPayables = rows.filter(x =>
+    x.transactionKind === "payable" &&
+    (x.relatedTransactionId === transaction.id || x.id === transaction.id)
+  );
+  const payableRows = transaction.transactionKind === "payable"
+    ? [transaction]
+    : linkedPayables;
+  const payableOriginal = payableRows.reduce((sum, x) => sum + Number(x.amt || 0), 0);
+  const payablePaid = payableRows.reduce((sum, x) => sum + getPayableSettled(x.id), 0);
+  const payableOutstanding = Math.max(0, payableOriginal - payablePaid);
+
+  const ownSplits = transactionSplits.filter(x => x.transaction_id === transaction.id);
+  const splitOriginal = ownSplits.reduce((sum, x) => sum + Number(x.share_amount || 0), 0);
+  const splitPaid = ownSplits.reduce((sum, x) => sum + Number(x.amount_settled || 0), 0);
+
+  const allHistory = [
+    ...transactionSettlements
+      .filter(x => x.transaction_id === transaction.id || payableRows.some(p => p.id === x.payable_transaction_id))
+      .map(x => ({
+        date: x.settlement_date,
+        amount: Number(x.amount || 0),
+        direction: x.settlement_type === "receivable" ? "Received" : "Paid",
+        method: x.notes || (x.is_opening_balance ? "Opening balance" : "Legacy settlement"),
+        created: x.created_at || ""
+      })),
+    ...settlements
+      .filter(x => x.transaction_id === transaction.id || payableRows.some(p => p.id === x.transaction_id))
+      .filter(x => !x.legacy_transaction_settlement_id || !transactionSettlements.some(oldItem => oldItem.id === x.legacy_transaction_settlement_id))
+      .map(x => ({
+        date: x.settlement_date,
+        amount: Number(x.amount || 0),
+        direction: x.direction === "received_by_user" ? "Received" : "Paid",
+        method: [x.payment_method, accounts.find(a => a.id === x.account_id)?.account_name, x.reference_note].filter(Boolean).join(" · ") || "Settlement",
+        created: x.created_at || ""
+      }))
+  ].sort((a,b) => String(b.date || "").localeCompare(String(a.date || "")) || String(b.created || "").localeCompare(String(a.created || "")));
+
+  const linkedRecords = [];
+  if (transaction.relatedTransactionId) {
+    const master = rows.find(x => x.id === transaction.relatedTransactionId);
+    if (master) linkedRecords.push(["Master transaction", master.desc]);
+  }
+  linkedPayables.forEach(x => linkedRecords.push(["Linked payable", x.desc + " · " + fmt(x.amt)]));
+  if (transaction.payableToType && transaction.payableToType !== "none") {
+    linkedRecords.push(["Payable destination", payableDestination]);
+  }
+  ownSplits.forEach(split => {
+    const person = people.find(p => p.id === split.person_id);
+    linkedRecords.push([
+      split.balance_direction === "person_owes_user" ? "Receivable share" : "Payable share",
+      (person?.name || split.participant_label || "Participant") + " · " + fmt(split.share_amount)
+    ]);
+  });
+
+  const value = v => safe(String(v ?? "Not recorded"));
+  const section = (title, body) => `<section class="transaction-info-section"><h3>${title}</h3>${body}</section>`;
+  const row = (label, val) => `<div class="transaction-info-row"><small>${value(label)}</small><b>${value(val)}</b></div>`;
+  const historyHtml = allHistory.length
+    ? allHistory.map(item => `
+        <div class="transaction-info-history-item">
+          <div><b>${value(item.direction)} · ${value(item.date || "Date not recorded")}</b><small>${value(item.method)}</small></div>
+          <strong>${fmt(item.amount)}</strong>
+        </div>`).join("")
+    : '<p class="transaction-info-empty">No payment or settlement history is recorded for this transaction.</p>';
+  const linkedHtml = linkedRecords.length
+    ? linkedRecords.map(([label,val]) => row(label,val)).join("")
+    : '<p class="transaction-info-empty">No linked records are recorded.</p>';
+
+  const financialRows = [];
+  if (payableRows.length) {
+    financialRows.push(row("Original payable", fmt(payableOriginal)));
+    financialRows.push(row("Paid / settled", fmt(payablePaid)));
+    financialRows.push(row("Remaining outstanding", fmt(payableOutstanding)));
+  }
+  if (ownSplits.length) {
+    financialRows.push(row("Total split shares", fmt(splitOriginal)));
+    financialRows.push(row("Split amount settled", fmt(splitPaid)));
+    financialRows.push(row("Split amount remaining", fmt(Math.max(0, splitOriginal - splitPaid))));
+  }
+  if (!financialRows.length) {
+    financialRows.push(row("Recorded transaction amount", fmt(transaction.amt)));
+    financialRows.push(row("Payment state", transaction.st || "Not recorded"));
+    financialRows.push(row("Payment source", paymentSource));
   }
 
-  const fields = [
-    ["Amount", fmt(transaction.amt)],
-    ["Transaction date", transaction.transactionDate || "Not specified"],
-    ["Due date", transaction.due || "Not specified"],
-    ["Type", transaction.typ || "Not specified"],
-    ["Category", transaction.cat || "Not specified"],
-    ["Status", transaction.st || "Not specified"],
-    ["Payment source", paymentSource],
-    ["Payable destination", payableDestination],
-    ["Description / Notes", transaction.note || "None"]
-  ];
-
-  $("#transactionInfoContent").innerHTML = fields.map(([label, value]) => `
-    <div class="item">
-      <div>
-        <small>${safe(label)}</small>
-        <b>${safe(String(value))}</b>
-      </div>
+  $("#transactionInfoContent").innerHTML = `
+    <div class="transaction-info-hero">
+      <small>TRANSACTION AMOUNT</small>
+      <strong>${fmt(transaction.amt)}</strong>
+      <span>${value(transaction.desc || "Untitled transaction")}</span>
     </div>
-  `).join("");
+    ${section("Transaction details", [
+      row("Transaction ID", transaction.id),
+      row("Date", transaction.transactionDate || "Not recorded"),
+      row("Due date", transaction.due || "Not set"),
+      row("Type", transaction.typ || "Not recorded"),
+      row("Category", transaction.cat || "Not recorded"),
+      row("Status", transaction.st || "Not recorded")
+    ].join(""))}
+    ${section("Payment & outstanding", [
+      row("Payment source", paymentSource),
+      row("Paid from card", paymentCard?.name || "Not applicable"),
+      ...financialRows
+    ].join(""))}
+    ${section("Linked records", linkedHtml)}
+    ${section("Payment history", historyHtml)}
+    ${section("Notes", `<p class="transaction-info-notes">${value(transaction.note || "No notes recorded.")}</p>`)}
+  `;
 
   $("#transactionInfoDlg").showModal();
-  return;
 }
 
 
