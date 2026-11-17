@@ -3363,6 +3363,10 @@ function showCardTransactions(cardId, tab = activeCardPassbookTab) {
   $("#balanceDetailTransactions").innerHTML = tab === "history"
     ? `<section class="card-passbook-section"><div class="passbook-section-heading"><h3>Past payments</h3><span>${history.length} payment entries</span></div>${historyHtml}</section>`
     : `<section class="card-passbook-section"><div class="passbook-section-heading"><h3>Pending transactions</h3><span>${openItems.length} purchases</span></div>${transactionHtml}</section>`;
+
+  // Populate the passbook first, then explicitly open its dialog.
+  const passbookDialog = $("#balanceDetailDlg");
+  if (!passbookDialog.open) passbookDialog.showModal();
 }
 
 // Each credit-card passbook button gets its own click handler when rendered.
