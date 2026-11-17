@@ -3105,7 +3105,7 @@ function showCardTransactions(cardId) {
     transactionId:item.master.id,
     payableId:item.payable.id,
     title:item.master.desc,
-    subtitle:"Original: "+fmt(item.payable.amt)+" · Paid: "+fmt(item.settled)+" · Remaining: "+fmt(item.outstanding)+(item.outstanding <= 0.005 ? " · Fully paid" : ""),
+    subtitle:(item.master.transactionDate || item.payable.transactionDate || "Date not set")+" · Charged: "+fmt(item.payable.amt)+" · Paid: "+fmt(item.settled)+" · Remaining: "+fmt(item.outstanding)+(item.outstanding <= 0.005 ? " · Fully paid" : " · Outstanding"),
     amount:item.outstanding
   }));
   const total = items.reduce((sum,x)=>sum+x.amount,0);
@@ -3130,8 +3130,15 @@ function showCardTransactions(cardId) {
 
 $("#cards").addEventListener("click", event => {
   if (event.target.closest("[data-card]")) return;
-  const button = event.target.closest("[data-card-view]");
-  if (button) showCardTransactions(button.dataset.cardView);
+  const cardRow = event.target.closest("[data-card-view]");
+  if (cardRow) showCardTransactions(cardRow.dataset.cardView);
+});
+$("#cards").addEventListener("keydown", event => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  const cardRow = event.target.closest("[data-card-view]");
+  if (!cardRow || event.target.closest("[data-card]")) return;
+  event.preventDefault();
+  showCardTransactions(cardRow.dataset.cardView);
 });
 $("#balanceDetailHeaderActions").addEventListener("click", event => {
   if (event.target.closest("#payWholeCard") && activeCardDetailId) openCardPaymentDialog(activeCardDetailId,null);
@@ -3161,14 +3168,14 @@ function renderSchedules() {
   $("#cards").innerHTML = cards.length
     ? cards.map(c => {
         const outstanding = getCardPayables(c.id).reduce((sum,item) => sum + item.outstanding,0);
-        return '<div class="item credit-card-item"><div><b>' + safe(c.name) +
-          '</b><small>Outstanding: <strong>' + fmt(outstanding) +
+        return '<div class="item credit-card-item" role="button" tabindex="0" data-card-view="' + safe(c.id) + '">' +
+          '<div class="credit-card-main"><b>' + safe(c.name) +
+          '</b><small class="credit-card-outstanding">Outstanding <strong>' + fmt(outstanding) +
           '</strong></small><small>Cycle ' + safe(c.start ?? "—") + '–' +
           safe(c.end ?? "—") + ' · Statement day ' + safe(c.statement ?? "—") +
           '</small><small>Payment due: ' + safe(c.dueDate || "Not specified") +
-          '</small><button type="button" class="secondary" data-card-view="' +
-          safe(c.id) + '">View transactions</button></div><div class="right">' +
-          '<button class="edit" data-card="' + safe(c.id) + '">Remove</button></div></div>';
+          '</small></div><div class="right"><button type="button" class="edit" data-card="' +
+          safe(c.id) + '">Remove</button></div></div>';
       }).join("")
     : '<p class="hint">No cards added yet.</p>';
 
