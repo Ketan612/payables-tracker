@@ -3146,7 +3146,7 @@ function openCardPaymentDialog(cardId, payableId) {
   $("#cardPaymentAmount").value = outstanding.toFixed(2);
   $("#cardPaymentAmount").max = outstanding.toFixed(2);
   $("#cardPaymentDate").value = todayDate();
-  $("#cardPaymentMethod").value = "bank";
+  $("#cardPaymentMethod").value = "cash";
   $("#cardPaymentReference").value = "";
   cardPaymentFullMode = true;
   $("#cardPaymentFullMode").checked = true;
@@ -3162,8 +3162,8 @@ function openCardPaymentDialog(cardId, payableId) {
     option.textContent = account.account_name;
     select.appendChild(option);
   });
-  $("#cardPaymentAccountField").hidden = false;
-  select.required = true;
+  $("#cardPaymentAccountField").hidden = true;
+  select.required = false;
   $("#cardPaymentDlg").showModal();
 }
 
@@ -3193,7 +3193,7 @@ $("#cardPaymentAllocations").addEventListener("change", event => {
 $("#cardPaymentMethod").addEventListener("change", () => {
   const bank = $("#cardPaymentMethod").value === "bank";
   $("#cardPaymentAccountField").hidden = !bank;
-  $("#cardPaymentAccount").required = bank;
+  $("#cardPaymentAccount").required = false;
 });
 $("#cancelCardPayment").addEventListener("click", () => $("#cardPaymentDlg").close());
 
@@ -3210,7 +3210,7 @@ $("#cardPaymentForm").addEventListener("submit", async event => {
 
   if (!Number.isFinite(amount) || amount <= 0 || Math.round(amount*100) !== amount*100) return alert("Enter a valid amount with up to two decimal places.");
   if (!paymentDate) return alert("Select the payment date.");
-  if (method === "bank" && !accountId) return alert("Select the bank account used for this payment.");
+  
 
   const open = getCardPayables(cardId);
   let allocations = [];
