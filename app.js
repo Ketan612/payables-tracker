@@ -880,6 +880,7 @@ function showBalanceDetails(title, items, summary) {
 // Stores the currently displayed balance list for the Back action.
 let balanceDetailView = null;
 let activeDetailsTransactionId = null;
+let activeDetailsReturnCardId = null;
 let activeDetailsHideBackButton = false;
 
 function getReceivableOutstanding(split) {
@@ -1489,6 +1490,7 @@ $("#settlementForm").addEventListener("submit", async event => {
 function showTransactionDetails(transaction, extra = {}) {
   if (!transaction) return;
   activeDetailsTransactionId = transaction.id;
+  activeDetailsReturnCardId = extra.returnToCardId || null;
   activeDetailsHideBackButton = !!extra.hideBackButton;
 
   const paymentAccount = accounts.find(
@@ -1882,7 +1884,7 @@ $("#balanceDetailTransactions").addEventListener("click", event => {
   if (linked) {
     event.preventDefault();
     const tx = rows.find(x => x.id === linked.dataset.cardMaster);
-    if (tx) showTransactionDetails(tx);
+    if (tx) showTransactionDetails(tx, { returnToCardId: linked.dataset.cardId });
     else alert("The linked purchase record could not be found.");
     return;
   }
@@ -2095,8 +2097,17 @@ function openActiveTransactionInfo() {
 
 $("#balanceDetailSummary").addEventListener("click", event => {
   if (event.target.id !== "backToBalanceList") return;
-  if (!balanceDetailView) return;
 
+  // A transaction opened from a credit-card passbook must return to that
+  // passbook, not the dashboard balance list.
+  if (activeDetailsReturnCardId) {
+    const cardId = activeDetailsReturnCardId;
+    activeDetailsReturnCardId = null;
+    showCardTransactions(cardId, "pending");
+    return;
+  }
+
+  if (!balanceDetailView) return;
   showBalanceDetails(
     balanceDetailView.title,
     balanceDetailView.items,
@@ -3329,7 +3340,7 @@ function showCardTransactions(cardId, tab = activeCardPassbookTab) {
     const masterId = master?.id || "";
     return `
       <article class="item card-passbook-entry">
-        <button type="button" class="card-passbook-linked" ${masterId ? `data-card-master="${safe(masterId)}"` : "disabled"}>
+        <button type="button" class="card-passbook-linked" ${masterId ? `data-card-master="${safe(masterId)}" data-card-id="${safe(cardId)}"` : "disabled"}>
           <b>${safe(displayRecord.desc || "Card purchase")}</b>
           <small>Purchase date: ${safe(displayRecord.transactionDate || item.payable.transactionDate || "Date not recorded")}</small>
           <small>Original expense: ${fmt(master?.amt ?? item.payable.amt)}</small>
