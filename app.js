@@ -1934,7 +1934,7 @@ $("#balanceDetailTransactions").addEventListener("click", event => {
 });
 
 // Return to the original balance transaction list.
-$("#balanceDetailSummary").addEventListener("click", event => {
+$("#balanceDetailHeaderActions").addEventListener("click", event => {
   if (event.target.closest("#showTransactionInfo")) {
     const transaction = rows.find(
       x => x.id === activeDetailsTransactionId
@@ -2009,7 +2009,9 @@ $("#balanceDetailSummary").addEventListener("click", event => {
     $("#transactionInfoDlg").showModal();
     return;
   }
+});
 
+$("#balanceDetailSummary").addEventListener("click", event => {
   if (event.target.id !== "backToBalanceList") return;
   if (!balanceDetailView) return;
 
