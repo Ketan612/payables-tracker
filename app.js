@@ -3718,7 +3718,10 @@ function initializeAuth() {
     
     if (session) {
       setTimeout(async () => {
-        await Promise.all([
+        // Load each dashboard dataset independently. A failure in an unrelated
+        // section (for example EMIs or cards) must not prevent balances and people
+        // from refreshing after transactions and participant splits have loaded.
+        const loadResults = await Promise.allSettled([
           loadTransactions(),
           loadEmis(),
           loadCards(),
@@ -3727,8 +3730,14 @@ function initializeAuth() {
           loadTransactionSplits(),
           loadTransactionSettlements()
         ]);
-        
-        // Refresh all dashboard sections after all data is loaded.
+
+        loadResults.forEach((result, index) => {
+          if (result.status === "rejected") {
+            console.error("Dashboard data loader failed:", index, result.reason);
+          }
+        });
+
+        // Always recalculate totals after the independent data loads settle.
         render();
         renderPeople();
         renderSchedules();
