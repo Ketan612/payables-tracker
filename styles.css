@@ -1281,3 +1281,23 @@ dialog .actions .secondary { border: 1px solid #e1e9e2; background: #f6f9f6; col
  #balanceDetailHeaderActions .passbook-action{width:100%;margin:0;font-size:12px}
  #balanceDetailTransactions .card-passbook-entry{align-items:flex-start}
 }
+
+
+/* Explicit credit-card payment allocations */
+.card-payment-full-toggle{display:flex!important;align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--line,#e5e7eb);border-radius:10px;background:var(--panel,#fff)}
+.card-payment-full-toggle input{width:18px;height:18px;flex:0 0 auto}
+.card-payment-allocations{display:grid;gap:10px;padding:13px;border:1px solid var(--line,#e5e7eb);border-radius:12px;background:var(--panel,#fff)}
+.card-allocation-heading{display:grid;gap:4px}
+.card-allocation-heading small,.card-allocation-choice small{color:var(--muted,#718096);font-size:12px}
+.card-allocation-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(115px,145px);gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line,#e5e7eb)}
+.card-allocation-choice{display:flex!important;align-items:flex-start;gap:9px;min-width:0}
+.card-allocation-choice input{width:17px;height:17px;flex:0 0 auto;margin-top:2px}
+.card-allocation-choice span{display:grid;gap:3px;min-width:0}
+.card-allocation-choice b{font-size:13px;overflow-wrap:anywhere}
+.card-allocation-amount{font-size:11px}
+.card-allocation-amount input{width:100%;min-width:0;margin-top:4px}
+.card-allocation-total{display:flex;justify-content:space-between;gap:10px;padding-top:10px;border-top:1px solid var(--line,#e5e7eb);font-size:13px}
+#cardPaymentAllocationHint{margin:0;font-size:11px}
+#cardPaymentAllocationHint.allocation-valid{color:var(--green,#16834a)}
+#cardPaymentAmount:read-only{background:var(--panel,#f5f6f7);opacity:.8}
+@media(max-width:480px){.card-allocation-row{grid-template-columns:minmax(0,1fr) 112px;gap:7px}.card-allocation-amount{font-size:10px}}
