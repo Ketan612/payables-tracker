@@ -1262,3 +1262,22 @@ dialog .actions .secondary { border: 1px solid #e1e9e2; background: #f6f9f6; col
 .card-passbook-entry{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .card-passbook-entry .right,.card-payment-history-entry .right{display:flex;align-items:flex-end;flex-direction:column;gap:5px;flex:0 0 auto}
 .card-payment-history-entry{display:flex;justify-content:space-between;align-items:center;gap:12px}
+
+/* Credit-card passbook dashboard actions and readable ledger */
+#balanceDetailHeaderActions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+#balanceDetailHeaderActions .passbook-action{min-height:38px;padding:8px 12px;border-radius:10px;font-size:12px;white-space:nowrap}
+#balanceDetailHeaderActions .passbook-primary{background:#1e40af;color:#fff;border:1px solid #1e40af}
+#balanceDetailHeaderActions button:disabled{opacity:.45;cursor:not-allowed}
+.passbook-section-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0 12px}
+.passbook-section-heading h3{margin:0!important}
+.passbook-section-heading span{font-size:11px;color:var(--muted,#718096)}
+.linked-record-label{color:#166534!important;font-weight:700}
+.linked-record-warning{color:#a16207!important;font-weight:700}
+.card-passbook-linked:disabled{opacity:1;cursor:default}
+.passbook-empty{padding:18px;border:1px dashed var(--line,#dce2eb);border-radius:12px;text-align:center}
+@media(max-width:520px){
+ #balanceDetailDlg .balance-detail-header{align-items:flex-start;flex-direction:column}
+ #balanceDetailHeaderActions{width:100%;display:grid;grid-template-columns:1fr 1fr}
+ #balanceDetailHeaderActions .passbook-action{width:100%;margin:0;font-size:12px}
+ #balanceDetailTransactions .card-passbook-entry{align-items:flex-start}
+}
