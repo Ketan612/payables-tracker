@@ -1253,3 +1253,12 @@ dialog .actions .secondary { border: 1px solid #e1e9e2; background: #f6f9f6; col
 #balanceDetailTransactions .item{border-radius:13px;margin:8px 0;padding:14px}
 #balanceDetailTransactions .card-passbook-entry .right{min-width:112px}
 @media(max-width:520px){#balanceDetailDlg{width:calc(100vw - 16px);max-height:90vh;border-radius:18px}#balanceDetailDlg>div{padding:16px}.modal-dashboard-hero{padding:18px}}
+
+.card-passbook-section{margin:18px 0}
+.card-passbook-section h3{font-size:16px;margin:0 0 10px}
+.card-passbook-linked{display:grid;gap:5px;text-align:left;flex:1;min-width:0;padding:0;margin:0;border:0;background:transparent;box-shadow:none;color:inherit;white-space:normal}
+.card-passbook-linked:hover{background:transparent;box-shadow:none}
+.card-passbook-linked small,.card-payment-history-entry small{display:block;color:var(--muted,#718096);font-size:12px}
+.card-passbook-entry{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.card-passbook-entry .right,.card-payment-history-entry .right{display:flex;align-items:flex-end;flex-direction:column;gap:5px;flex:0 0 auto}
+.card-payment-history-entry{display:flex;justify-content:space-between;align-items:center;gap:12px}
