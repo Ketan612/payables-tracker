@@ -686,7 +686,7 @@ rows = (data || []).map(x => ({
 function render() {
   const m = $("#monthF").value;
   const t = $("#typeF").value;
-  const s = $("#statusF").value;
+  const s = "Pending";
 
   const linkedExpenseIds = new Set(
     rows
@@ -704,6 +704,7 @@ function render() {
     ) &&
     (m === "all" || monthLabel(x) === m) &&
     (t === "all" || x.typ === t) &&
+    pending(x) &&
     (s === "all" || x.st === s)
   );
   
@@ -3183,7 +3184,7 @@ function showCardTransactions(cardId) {
   const card = cards.find(x => x.id === cardId);
   if (!card) return;
   activeCardDetailId = cardId;
-  const items = getCardPayables(cardId, true).map(item => ({
+  const items = getCardPayables(cardId).map(item => ({
     transactionId:item.master.id,
     payableId:item.payable.id,
     title:item.master.desc,
@@ -3194,8 +3195,14 @@ function showCardTransactions(cardId) {
     outstanding:item.outstanding
   }));
   const total = items.reduce((sum,x)=>sum+x.amount,0);
-  showBalanceDetails(card.name+" · Passbook",items,
-    "Current outstanding "+fmt(total)+" · "+items.length+" card transaction(s). Tap any entry to see its details.");
+  showBalanceDetails(card.name+" · Outstanding",items,
+    "Only unpaid and partially paid purchases are shown here.");
+  $("#balanceDetailSummary").innerHTML = `
+    <div class="modal-dashboard">
+      <div class="modal-dashboard-hero"><span class="modal-eyebrow">CREDIT CARD OUTSTANDING</span><strong>${fmt(total)}</strong><small>${items.length} pending transaction${items.length === 1 ? "" : "s"}</small></div>
+      <div class="modal-dashboard-metrics"><div><span>To be paid</span><b>${fmt(total)}</b></div><div><span>Pending purchases</span><b>${items.length}</b></div></div>
+      <p class="modal-dashboard-hint">Select a purchase to view details or record a partial/full payment.</p>
+    </div>`;
   $("#balanceDetailHeaderActions").innerHTML = total > 0.005
     ? '<button type="button" class="secondary" id="payWholeCard">Record payment</button>'
     : '<span class="hint">No outstanding balance</span>';
