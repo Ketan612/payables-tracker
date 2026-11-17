@@ -3365,27 +3365,19 @@ function showCardTransactions(cardId, tab = activeCardPassbookTab) {
     : `<section class="card-passbook-section"><div class="passbook-section-heading"><h3>Pending transactions</h3><span>${openItems.length} purchases</span></div>${transactionHtml}</section>`;
 }
 
-// Use capture-phase delegation so card navigation still works if a child
-// control or another bubbling listener stops the click. The Remove control
-// remains independent and must never open the passbook.
+// Card row navigation. Keep this as a normal delegated click listener;
+// the passbook was previously working with this bubbling event path.
 $("#cards").addEventListener("click", event => {
-  const target = event.target instanceof Element ? event.target : event.target?.parentElement;
-  if (!target) return;
-  if (target.closest("[data-card]")) return;
-  const cardRow = target.closest("[data-card-view]");
-  if (!cardRow || !$("#cards").contains(cardRow)) return;
-  event.preventDefault();
-  showCardTransactions(String(cardRow.dataset.cardView || ""));
-}, true);
-
+  const cardRow = event.target.closest("[data-card-view]");
+  if (!cardRow || event.target.closest("[data-card]")) return;
+  showCardTransactions(cardRow.dataset.cardView);
+});
 $("#cards").addEventListener("keydown", event => {
   if (event.key !== "Enter" && event.key !== " ") return;
-  const target = event.target instanceof Element ? event.target : event.target?.parentElement;
-  if (!target || target.closest("[data-card]")) return;
-  const cardRow = target.closest("[data-card-view]");
-  if (!cardRow || !$("#cards").contains(cardRow)) return;
+  const cardRow = event.target.closest("[data-card-view]");
+  if (!cardRow || event.target.closest("[data-card]")) return;
   event.preventDefault();
-  showCardTransactions(String(cardRow.dataset.cardView || ""));
+  showCardTransactions(cardRow.dataset.cardView);
 });
 $("#balanceDetailHeaderActions").addEventListener("click", event => {
   if (event.target.closest("#payWholeCard") && activeCardDetailId) openCardPaymentDialog(activeCardDetailId,null);
