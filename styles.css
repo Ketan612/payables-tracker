@@ -1234,3 +1234,22 @@ dialog .actions .secondary { border: 1px solid #e1e9e2; background: #f6f9f6; col
   .transaction-info-row { gap: 10px; }
   .transaction-info-row b { max-width: 58%; }
 }
+
+/* Outstanding-only dashboard modal */
+#balanceDetailDlg{width:min(680px,calc(100vw - 28px));max-width:680px;max-height:min(88vh,820px);padding:0;border:0;border-radius:22px;overflow:auto;box-shadow:0 24px 80px rgba(15,23,42,.28)}
+#balanceDetailDlg>div{padding:22px}
+#balanceDetailDlg .balance-detail-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+#balanceDetailDlg .balance-detail-header h2{margin:0}
+.modal-dashboard{display:grid;gap:12px;margin:12px 0 20px}
+.modal-dashboard-hero{display:grid;gap:7px;padding:22px;border-radius:18px;color:#fff;background:linear-gradient(135deg,#172554,#1e40af)}
+.modal-dashboard-hero strong{font-size:clamp(30px,7vw,42px);line-height:1.1}
+.modal-dashboard-hero small,.modal-eyebrow{color:rgba(255,255,255,.78)}
+.modal-eyebrow{font-size:10px;font-weight:800;letter-spacing:.13em}
+.modal-dashboard-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.modal-dashboard-metrics>div{display:grid;gap:6px;padding:15px;border:1px solid var(--border,#e5e7eb);border-radius:14px;background:var(--panel,#fff)}
+.modal-dashboard-metrics span{color:var(--muted,#64748b);font-size:12px}
+.modal-dashboard-metrics b{font-size:18px}
+.modal-dashboard-hint{margin:0;color:var(--muted,#64748b);font-size:13px}
+#balanceDetailTransactions .item{border-radius:13px;margin:8px 0;padding:14px}
+#balanceDetailTransactions .card-passbook-entry .right{min-width:112px}
+@media(max-width:520px){#balanceDetailDlg{width:calc(100vw - 16px);max-height:90vh;border-radius:18px}#balanceDetailDlg>div{padding:16px}.modal-dashboard-hero{padding:18px}}
