@@ -1463,3 +1463,7 @@ dialog .actions .secondary { border: 1px solid #e1e9e2; background: #f6f9f6; col
 #balanceDetailTransactions .card-passbook-linked small{display:block!important;color:var(--muted,#718096)!important;font-size:11px;white-space:normal;overflow-wrap:anywhere}
 #balanceDetailTransactions .card-passbook-entry>.right{display:flex!important;flex:0 0 auto!important;align-items:flex-end!important;flex-direction:column!important;gap:6px}
 @media(max-width:520px){#balanceDetailTransactions .card-passbook-entry{align-items:stretch!important;flex-direction:column!important}#balanceDetailTransactions .card-passbook-entry>.right{width:100%;align-items:center!important;flex-direction:row!important;justify-content:space-between!important}}
+
+
+/* Hide the allocation panel completely during full-payment mode. */
+.card-payment-allocations[hidden] { display: none !important; }
