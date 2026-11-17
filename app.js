@@ -3105,26 +3105,42 @@ function showCardTransactions(cardId) {
     transactionId:item.master.id,
     payableId:item.payable.id,
     title:item.master.desc,
-    subtitle:(item.master.transactionDate || item.payable.transactionDate || "Date not set")+" · Charged: "+fmt(item.payable.amt)+" · Paid: "+fmt(item.settled)+" · Remaining: "+fmt(item.outstanding)+(item.outstanding <= 0.005 ? " · Fully paid" : " · Outstanding"),
-    amount:item.outstanding
+    subtitle:(item.master.transactionDate || item.payable.transactionDate || "Date not set")+" · Charged "+fmt(item.payable.amt)+" · Paid "+fmt(item.settled)+" · "+(item.outstanding <= 0.005 ? "Fully paid" : "Outstanding "+fmt(item.outstanding)),
+    amount:item.outstanding,
+    charged:item.payable.amt,
+    settled:item.settled,
+    outstanding:item.outstanding
   }));
   const total = items.reduce((sum,x)=>sum+x.amount,0);
-  showBalanceDetails(card.name+" · Transactions",items,
-    "Outstanding balance: "+fmt(total)+". Select a transaction for full details or record a payment.");
+  showBalanceDetails(card.name+" · Passbook",items,
+    "Current outstanding "+fmt(total)+" · "+items.length+" card transaction(s). Tap any entry to see its details.");
   $("#balanceDetailHeaderActions").innerHTML = total > 0.005
     ? '<button type="button" class="secondary" id="payWholeCard">Record payment</button>'
     : '<span class="hint">No outstanding balance</span>';
   $("#balanceDetailTransactions").querySelectorAll("[data-item-index]").forEach((node,index) => {
     const item = items[index];
-    if (!item || !item.payableId || item.amount <= 0.005) return;
-    const area = node.querySelector(".right");
-    const pay = document.createElement("button");
-    pay.type = "button";
-    pay.className = "paid";
-    pay.textContent = "Record payment";
-    pay.dataset.cardPayable = item.payableId;
-    pay.dataset.cardId = cardId;
-    area.appendChild(pay);
+    if (!item) return;
+    node.classList.add("card-passbook-entry");
+    const amount = node.querySelector(".right strong");
+    if (amount) {
+      amount.textContent = fmt(item.charged);
+      amount.setAttribute("aria-label","Original transaction amount");
+    }
+    const meta = document.createElement("small");
+    meta.className = "card-passbook-balance";
+    meta.textContent = item.outstanding <= 0.005
+      ? "Paid in full"
+      : "Remaining "+fmt(item.outstanding);
+    node.querySelector(".right").appendChild(meta);
+    if (item.payableId && item.outstanding > 0.005) {
+      const pay = document.createElement("button");
+      pay.type = "button";
+      pay.className = "card-passbook-pay";
+      pay.textContent = "Pay";
+      pay.dataset.cardPayable = item.payableId;
+      pay.dataset.cardId = cardId;
+      node.querySelector(".right").appendChild(pay);
+    }
   });
 }
 
