@@ -1447,3 +1447,19 @@ dialog .actions .secondary { border: 1px solid #e1e9e2; background: #f6f9f6; col
   }
   #cardPaymentForm .actions button { min-width: 0; padding: 10px 8px; font-size: 13px; }
 }
+
+
+/* Final component-level overrides: neutralise global button styling in ledgers */
+#cards .credit-card-item{display:flex!important;align-items:center!important;gap:14px!important;width:100%;box-sizing:border-box}
+#cards .credit-card-item>.credit-card-open{display:block!important;flex:1 1 0!important;width:auto!important;min-width:0!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;border-radius:0!important;background:transparent!important;color:var(--ink)!important;box-shadow:none!important;text-align:left!important;white-space:normal!important;font:inherit!important;line-height:1.45}
+#cards .credit-card-open .credit-card-main{display:grid!important;width:100%;gap:7px}
+#cards .credit-card-open .credit-card-main b{color:var(--ink)!important;overflow-wrap:anywhere}
+#cards .credit-card-open .credit-card-main small{color:var(--muted,#718096)!important;overflow-wrap:anywhere}
+#cards .credit-card-open .credit-card-outstanding,#cards .credit-card-open .credit-card-outstanding strong{color:var(--ink)!important}
+#cards .credit-card-item>.right{flex:0 0 auto!important;width:auto!important}
+#balanceDetailTransactions .card-passbook-entry{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:14px!important}
+#balanceDetailTransactions .card-passbook-entry>.card-passbook-linked{display:grid!important;flex:1 1 0!important;width:auto!important;min-width:0!important;padding:0!important;margin:0!important;border:0!important;border-radius:0!important;background:transparent!important;color:var(--ink)!important;box-shadow:none!important;text-align:left!important;white-space:normal!important;font:inherit!important;line-height:1.45;gap:5px}
+#balanceDetailTransactions .card-passbook-linked b{display:block!important;color:var(--ink)!important;font-size:14px;overflow-wrap:anywhere}
+#balanceDetailTransactions .card-passbook-linked small{display:block!important;color:var(--muted,#718096)!important;font-size:11px;white-space:normal;overflow-wrap:anywhere}
+#balanceDetailTransactions .card-passbook-entry>.right{display:flex!important;flex:0 0 auto!important;align-items:flex-end!important;flex-direction:column!important;gap:6px}
+@media(max-width:520px){#balanceDetailTransactions .card-passbook-entry{align-items:stretch!important;flex-direction:column!important}#balanceDetailTransactions .card-passbook-entry>.right{width:100%;align-items:center!important;flex-direction:row!important;justify-content:space-between!important}}
