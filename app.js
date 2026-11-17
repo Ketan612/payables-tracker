@@ -2933,7 +2933,12 @@ $("#list").onclick = async e => {
 };
 
 ["monthF", "typeF", "statusF"].forEach(id => {
-  $("#" + id).onchange = render;
+  $("#" + id).onchange = () => {
+    // Keep the credit-card summary in sync with the current in-memory
+    // transaction and settlement data whenever the user changes list filters.
+    render();
+    renderSchedules();
+  };
 });
 
 render();
