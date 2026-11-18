@@ -50,6 +50,7 @@ Parser behavior for formats not covered by a passing regression test must remain
 - [ ] Approve creates exactly one movement with the selected account, parsed date, direction, amount, description, and reference.
 - [ ] Retry approval on the same inbox item does not create another movement.
 - [ ] Re-forward the same SMS/reference and confirm the duplicate is blocked or flagged.
+- [ ] If two pending inbox rows share a reference, reject one and verify the remaining `needs_review` row can still be approved. An `ignored` row must not permanently block the valid transaction.
 - [ ] Force a duplicate-check query error and confirm the item is restored to review with no movement created.
 - [ ] Force Cash Book insert failure and confirm inbox returns to review.
 - [ ] Force the inbox update after insert to fail and confirm rollback is attempted; check for orphan movement if rollback also fails.
