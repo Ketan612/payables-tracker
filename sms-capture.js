@@ -15,7 +15,23 @@ async function loadAccounts(){
  status.className=accounts.length?"status success":"status error";
 }
 
-async function loadTokens(){const {data,error}=await sb.from("sms_capture_tokens").select("id,label,is_active,created_at").eq("user_id",user.id).order("created_at",{ascending:false});if(error)throw error;$("tokens").innerHTML=(data||[]).map(t=>'<div class="item"><b>'+esc(t.label)+' · '+(t.is_active?"Active":"Revoked")+'</b><small>'+new Date(t.created_at).toLocaleString()+'</small>'+(t.is_active?'<button data-revoke="'+t.id+'">Revoke token</button>':'')+'</div>').join("")||'<p class="muted">No tokens yet.</p>';document.querySelectorAll("[data-revoke]").forEach(b=>b.onclick=async()=>{if(!confirm("Revoke this capture token?"))return;let r=await sb.from("sms_capture_tokens").update({is_active:false}).eq("id",b.dataset.revoke).eq("user_id",user.id);if(r.error)alert(r.error.message);else loadTokens()})}
+async function loadTokens(){
+ const {data,error}=await sb.from("sms_capture_tokens").select("id,label,is_active,created_at").eq("user_id",user.id).order("created_at",{ascending:false});
+ if(error)throw error;
+ $("tokens").innerHTML=(data||[]).map(t=>'<div class="item"><b>'+esc(t.label)+' · '+(t.is_active?"Active":"Revoked")+'</b><small>'+new Date(t.created_at).toLocaleString()+'</small>'+(t.is_active?'<button data-revoke="'+t.id+'">Revoke token</button>':'')+'</div>').join("")||'<p class="muted">No tokens yet.</p>';
+ document.querySelectorAll("[data-revoke]").forEach(button=>button.onclick=async()=>{
+  if(!confirm("Revoke this capture token?"))return;
+  button.disabled=true;button.textContent="Revoking…";
+  try{
+   const {data:revoked,error:revokeError}=await sb.from("sms_capture_tokens").update({is_active:false}).eq("id",button.dataset.revoke).eq("user_id",user.id).eq("is_active",true).select("id,is_active").maybeSingle();
+   if(revokeError)throw revokeError;
+   if(!revoked||revoked.is_active!==false)throw new Error("No active token was changed. Refresh the token list and try again.");
+   const status=$("tokenStatus");
+   try{await loadTokens();status.textContent="Token revoked successfully.";status.className="status success"}
+   catch(refreshError){status.textContent="Token was revoked, but the token list could not refresh: "+(refreshError?.message||String(refreshError));status.className="status error"}
+  }catch(e){button.disabled=false;button.textContent="Revoke token";alert("Token revocation failed: "+(e?.message||String(e)))}
+ });
+}
 async function loadMappings(){
  const {data,error}=await sb.from("sms_capture_account_rules").select("id,account_identifier,account_id,sender").eq("user_id",user.id).order("created_at");
  if(error)throw error;
