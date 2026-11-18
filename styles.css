@@ -1467,3 +1467,14 @@ dialog .actions .secondary { border: 1px solid #e1e9e2; background: #f6f9f6; col
 
 /* Hide the allocation panel completely during full-payment mode. */
 .card-payment-allocations[hidden] { display: none !important; }
+
+#cashbook-section .cashbook-month-label{max-width:220px}
+.cashbook-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}
+.cashbook-metric{border:1px solid var(--border,#e2e8f0);border-radius:14px;padding:14px;min-width:0}
+.cashbook-metric small{display:block;color:var(--muted,#718096);margin-bottom:6px}.cashbook-metric b{font-size:18px;overflow-wrap:anywhere}
+.cashbook-metric.credit b,.cashbook-row .credit{color:#168044}.cashbook-metric.debit b,.cashbook-row .debit{color:#b42318}
+.cashbook-row{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid var(--border,#e2e8f0);padding:14px 2px}
+.cashbook-part,.cashbook-values{display:flex;flex-direction:column;gap:5px;min-width:0}.cashbook-part b{overflow-wrap:anywhere}.cashbook-part small,.cashbook-values small{color:var(--muted,#718096);font-size:12px}.cashbook-values{text-align:right;white-space:nowrap}
+#cashBookDlg form{display:grid;gap:14px;padding:16px}#cashBookDlg{max-width:560px;width:calc(100% - 24px);border:0;border-radius:20px}#cashBookDlg::backdrop{background:#172b2bcc}
+.cashbook-form-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+@media(max-width:500px){.cashbook-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.cashbook-row{align-items:flex-start}.cashbook-values strong{font-size:14px}}
