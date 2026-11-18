@@ -693,6 +693,7 @@
       </div>
     </form>
   </dialog>
+
 <dialog id="cashBookAccountDlg" class="cashbook-account-dialog"><form id="cashBookAccountForm"><header><h2>Add Cash Book account</h2><p>Ledger only — no bank balance tracking</p></header><label>Account name<input id="cashBookNewAccountName" type="text" maxlength="60" placeholder="e.g. Cash, ICICI, UPI" required></label><label>Account category<select id="cashBookNewAccountType"><option value="cash">Cash</option><option value="bank">Bank</option><option value="wallet">Wallet / UPI</option><option value="other">Other</option></select></label><footer><button type="button" class="secondary" id="cashBookAccountCancel">Cancel</button><button type="submit">Create account</button></footer></form></dialog>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script id="appScript" src="app.js?v=cashbook-account-create-fix-20261118-1"></script>
