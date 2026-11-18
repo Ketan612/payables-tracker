@@ -81,7 +81,7 @@ Parser behavior for formats not covered by a passing regression test must remain
 | Parser regression cases | Prior local result reported; not rerun here | |
 | Reference dedupe sequential | Not verified in this environment | |
 | Reference dedupe concurrent / atomic | Blocked until DB/server-side protection verified | |
-| Production deployment | READY | 2026-11-19: commit `456e8d2263cf3cad4ba0c6b81655b7e44f5540ae`; aliases assigned to `payables-tracker-ten.vercel.app`, `payables-tracker-ketan-soni.vercel.app`, and `payables-tracker-git-main-ketan-soni.vercel.app`. |
-| Production page browser access | Blocked | 2026-11-19: production `sms-capture.html` could not be opened from this environment (web access reported URL inaccessible). |
+| Production deployment | READY | 2026-11-19: deployed commit `945e23e0fc3af80826e517c4ee165297162fcf19` in deployment `dpl_GMCwU1EhrfUFvgBZvgKFs7KcdDgP`; build events report `Build Completed` and `Deployment completed`; all three production aliases assigned. This QA-only edit follows that code deployment. |
+| Production page browser access | Blocked | 2026-11-19: production alias and deployment hostname could not be opened unauthenticated; Vercel project reports SSO protection enabled for all except custom domains, and the tested hosts are Vercel aliases. No live UI interaction was performed. |
 
 Never mark the module ready from static UI checks or a Vercel `READY` deployment alone. A release-ready report must include live endpoint results and the concurrent duplicate test evidence.
