@@ -191,7 +191,7 @@
       <div id="list"></div>
     </section>
 
-    <section class="panel cashbook-launch-panel" id="cashbook-section"><div class="head"><h2>Cash Book</h2><button type="button" id="cashBookOpen">Open Cash Book</button></div><p class="hint">Monthly cash movements for daily expenses, separate from all other financial modules.</p></section>
+    <section class="panel cashbook-launch-panel" id="cashbook-section"><div class="head"><h2>Cash Book</h2><a class="button-link" href="cashbook.html">Open Cash Book</a></div><p class="hint">Monthly cash movements for daily expenses, separate from all other financial modules.</p></section>
 <section class="panel" id="cards-section">
       <h2>Credit cards</h2>
       <p class="hint">Tap anywhere on a card to open its passbook, review purchases and record payments.</p>
@@ -263,28 +263,7 @@
     </nav>
   </main>
 
-  <dialog id="cashBookLedgerDlg" class="cashbook-ledger-dialog">
-  <div class="cashbook-modal-head">
-    <div><h2>Cash Book</h2><p class="hint">Independent account ledger</p></div>
-    <button type="button" class="secondary cashbook-close" id="cashBookClose">Close</button>
-  </div>
-  <div class="cashbook-account-row">
-    <label class="cashbook-account-label">Account
-      <select id="cashBookAccount"><option value="">Choose an account</option></select>
-    </label>
-    <button type="button" class="secondary cashbook-add-account" id="cashBookAddAccount">＋ Add account</button>
-  </div>
-  <div class="cashbook-controls-grid">
-    <label>Month<input type="month" id="cashBookMonth"></label>
-    <label>Opening balance (₹)<input type="number" id="cashBookOpening" step="0.01"></label>
-  </div>
-  <div class="cashbook-current-balance"><div><small>Closing balance</small><strong id="cashBookCurrent">₹0.00</strong></div><span class="cashbook-balance-caption">Selected account · selected month</span></div>
-  <div class="cashbook-totals"><div><small>Money in</small><b id="cashBookCredit">+₹0.00</b></div><div><small>Money out</small><b id="cashBookDebit">−₹0.00</b></div></div>
-  <section class="cashbook-entries"><h3>Transactions</h3>
-    <div class="cashbook-table-wrap"><table class="cashbook-table"><thead><tr><th>Date</th><th>Description</th><th>Credit</th><th>Debit</th><th>Balance</th></tr></thead><tbody id="cashBookLedger"></tbody></table></div>
-  </section>
-  <div class="cashbook-modal-footer"><button type="button" id="cashBookAdd">＋ Add transaction</button></div>
-</dialog><dialog id="cashBookDlg"><form id="cashBookForm"><h2>Add cash movement</h2><label>Type<select id="cashBookDirection"><option value="out">Debit / Expense</option><option value="in">Credit / Received</option></select></label><label>Description<input id="cashBookDescription" required placeholder="e.g. Groceries, Petrol, Cash received"></label><label>Amount (₹)<input id="cashBookAmount" type="number" min="0.01" step="0.01" required></label><p class="hint">Date is recorded automatically when you save.</p><div class="cashbook-form-actions"><button type="button" class="secondary" id="cashBookCancel">Cancel</button><button type="submit">Save entry</button></div></form></dialog>
+  <dialog id="cashBookDlg"><form id="cashBookForm"><h2>Add cash movement</h2><label>Type<select id="cashBookDirection"><option value="out">Debit / Expense</option><option value="in">Credit / Received</option></select></label><label>Description<input id="cashBookDescription" required placeholder="e.g. Groceries, Petrol, Cash received"></label><label>Amount (₹)<input id="cashBookAmount" type="number" min="0.01" step="0.01" required></label><p class="hint">Date is recorded automatically when you save.</p><div class="cashbook-form-actions"><button type="button" class="secondary" id="cashBookCancel">Cancel</button><button type="submit">Save entry</button></div></form></dialog>
 <!-- Add/edit payable dialog -->
   <dialog id="dlg">
     <form id="form">
@@ -694,7 +673,7 @@
     </form>
   </dialog>
 
-<dialog id="cashBookAccountDlg" class="cashbook-account-dialog"><form id="cashBookAccountForm"><header><h2>Add Cash Book account</h2><p>Ledger only — no bank balance tracking</p></header><label>Account name<input id="cashBookNewAccountName" type="text" maxlength="60" placeholder="e.g. Cash, ICICI, UPI" required></label><label>Account category<select id="cashBookNewAccountType"><option value="cash">Cash</option><option value="bank">Bank</option><option value="wallet">Wallet / UPI</option><option value="other">Other</option></select></label><footer><button type="button" class="secondary" id="cashBookAccountCancel">Cancel</button><button type="submit">Create account</button></footer></form></dialog>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script id="appScript" src="app.js?v=cashbook-account-create-fix-20261118-1"></script>
   
