@@ -191,7 +191,11 @@
       <div id="list"></div>
     </section>
 
-    <section class="panel" id="cards-section">
+    <section class="panel" id="cashbook-section">
+<div class="head"><h2>Cash Book</h2><button type="button" id="cashBookAdd">＋ Add entry</button></div>
+<p class="hint">Monthly credit and debit ledger with running balance.</p>
+<label class="cashbook-month-label">Month<input type="month" id="cashBookMonth"></label>
+<div class="cashbook-summary" id="cashBookSummary"></div><div class="cashbook-ledger" id="cashBookLedger"></div></section>\n<section class="panel" id="cards-section">
       <h2>Credit cards</h2>
       <p class="hint">Tap anywhere on a card to open its passbook, review purchases and record payments.</p>
       <div id="cards"></div>
@@ -261,7 +265,14 @@
     </nav>
   </main>
 
-  <!-- Add/edit payable dialog -->
+  <dialog id="cashBookDlg"><form id="cashBookForm"><h2>Add cash book entry</h2>
+<label>Entry type<select id="cashBookDirection"><option value="out">Debit / Expense</option><option value="in">Credit / Received</option></select></label>
+<label>Particulars<input id="cashBookDescription" required placeholder="e.g. Petrol, cash added"></label>
+<label>Amount (₹)<input id="cashBookAmount" type="number" min="0.01" step="0.01" required></label>
+<label>Date<input id="cashBookDate" type="date" required></label>
+<label>Account (optional)<select id="cashBookAccount"><option value="">No account selected</option></select></label>
+<label>Notes<input id="cashBookNote"></label><div class="cashbook-form-actions"><button type="button" class="secondary" id="cashBookCancel">Cancel</button><button type="submit">Save entry</button></div></form></dialog>
+<!-- Add/edit payable dialog -->
   <dialog id="dlg">
     <form id="form">
       <h2 id="ft">Add payable</h2>
