@@ -47,6 +47,7 @@ Parser behavior for formats not covered by a passing regression test must remain
 
 - [ ] Uncertain SMS appears in `needs_review` with extracted fields and account selector.
 - [ ] Reject changes the inbox status to `ignored` and does not create a Cash Book movement.
+- [ ] Simulate a network rejection from approve/reject; the UI must show an uncertainty warning, re-enable the action, and tell the user to check Cash Book before retrying.
 - [ ] Approve creates exactly one movement with the selected account, parsed date, direction, amount, description, and reference.
 - [ ] Retry approval on the same inbox item does not create another movement.
 - [ ] Re-forward the same SMS/reference and confirm the duplicate is blocked or flagged.
@@ -71,7 +72,7 @@ Parser behavior for formats not covered by a passing regression test must remain
 
 | Check | Result | Evidence / date |
 |---|---|---|
-| Static HTML/JS checks | PASS | 2026-11-19: V8 syntax compilation; 16 unique HTML IDs; all JavaScript `$()` ID references resolve; both inbox duplicate queries filter to `needs_review` / `posted`; Cash Book LIKE metacharacter escaping for `%`, `_`, and `\\` passes direct helper tests; post-insert inbox update now requires a returned row and rolls back on error or zero-row result. |
+| Static HTML/JS checks | PASS | 2026-11-19: V8 syntax compilation; 16 unique HTML IDs; all JavaScript `$()` ID references resolve; both inbox duplicate queries filter to `needs_review` / `posted`; Cash Book LIKE metacharacter escaping for `%`, `_`, and `\\` passes direct helper tests; post-insert inbox update requires a returned row and rolls back on error or zero-row result; approve/reject promise failures are caught and buttons are disabled while requests run. |
 | Token create / revoke | Not verified in this environment | |
 | Identifier mapping persistence | Not verified in this environment | |
 | Sender/default mapping persistence | Not verified in this environment | |
