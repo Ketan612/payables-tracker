@@ -191,11 +191,7 @@
       <div id="list"></div>
     </section>
 
-    <section class="panel" id="cashbook-section">
-<div class="head"><h2>Cash Book</h2><button type="button" id="cashBookAdd">＋ Add entry</button></div>
-<p class="hint">Monthly credit and debit ledger with running balance.</p>
-<label class="cashbook-month-label">Month<input type="month" id="cashBookMonth"></label>
-<div class="cashbook-summary" id="cashBookSummary"></div><div class="cashbook-ledger" id="cashBookLedger"></div></section>\n<section class="panel" id="cards-section">
+    <section class="panel cashbook-launch-panel" id="cashbook-section"><div class="head"><h2>Cash Book</h2><button type="button" id="cashBookOpen">Open Cash Book</button></div><p class="hint">Monthly cash movements for daily expenses, separate from all other financial modules.</p></section>\n<section class="panel" id="cards-section">
       <h2>Credit cards</h2>
       <p class="hint">Tap anywhere on a card to open its passbook, review purchases and record payments.</p>
       <div id="cards"></div>
@@ -266,13 +262,7 @@
     </nav>
   </main>
 
-  <dialog id="cashBookDlg"><form id="cashBookForm"><h2>Add cash book entry</h2>
-<label>Entry type<select id="cashBookDirection"><option value="out">Debit / Expense</option><option value="in">Credit / Received</option></select></label>
-<label>Particulars<input id="cashBookDescription" required placeholder="e.g. Petrol, cash added"></label>
-<label>Amount (₹)<input id="cashBookAmount" type="number" min="0.01" step="0.01" required></label>
-<p class="hint">Entry date will be recorded automatically when you save.</p>
-<label>Account (optional)<select id="cashBookAccount"><option value="">No account selected</option></select></label>
-<label>Notes<input id="cashBookNote"></label><div class="cashbook-form-actions"><button type="button" class="secondary" id="cashBookCancel">Cancel</button><button type="submit">Save entry</button></div></form></dialog>
+  <dialog id="cashBookLedgerDlg" class="cashbook-ledger-dialog"><div class="cashbook-modal-head"><div><h2>Cash Book</h2><p class="hint">Monthly cash movements</p></div><button type="button" class="secondary" id="cashBookClose">Close</button></div><div class="cashbook-modal-controls"><label>Month<input type="month" id="cashBookMonth"></label><label>Opening Balance (₹)<input type="number" id="cashBookOpening" step="0.01"></label></div><div class="cashbook-current-balance"><span>Current Balance</span><strong id="cashBookCurrent">₹0.00</strong></div><div class="cashbook-totals"><div><small>Credit</small><b id="cashBookCredit">+₹0.00</b></div><div><small>Debit</small><b id="cashBookDebit">−₹0.00</b></div></div><div class="cashbook-table-wrap"><table class="cashbook-table"><thead><tr><th>Date</th><th>Description</th><th>Credit</th><th>Debit</th><th>Running Balance</th></tr></thead><tbody id="cashBookLedger"></tbody></table></div><div class="cashbook-modal-footer"><button type="button" id="cashBookAdd">＋ Add entry</button></div></div></dialog><dialog id="cashBookDlg"><form id="cashBookForm"><h2>Add cash movement</h2><label>Type<select id="cashBookDirection"><option value="out">Debit / Expense</option><option value="in">Credit / Received</option></select></label><label>Description<input id="cashBookDescription" required placeholder="e.g. Groceries, Petrol, Cash received"></label><label>Amount (₹)<input id="cashBookAmount" type="number" min="0.01" step="0.01" required></label><p class="hint">Date is recorded automatically when you save.</p><div class="cashbook-form-actions"><button type="button" class="secondary" id="cashBookCancel">Cancel</button><button type="submit">Save entry</button></div></form></dialog>
 <!-- Add/edit payable dialog -->
   <dialog id="dlg">
     <form id="form">
