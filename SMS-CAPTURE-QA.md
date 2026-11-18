@@ -69,7 +69,7 @@ Parser behavior for formats not covered by a passing regression test must remain
 
 | Check | Result | Evidence / date |
 |---|---|---|
-| Static HTML/JS checks | Pending live/reproducible test run | |
+| Static HTML/JS checks | PASS | 2026-11-19: V8 syntax compilation; 16 unique HTML IDs; all JavaScript `$()` ID references resolve; both inbox duplicate queries filter to `needs_review` / `posted`. |
 | Token create / revoke | Not verified in this environment | |
 | Identifier mapping persistence | Not verified in this environment | |
 | Sender/default mapping persistence | Not verified in this environment | |
@@ -78,6 +78,7 @@ Parser behavior for formats not covered by a passing regression test must remain
 | Parser regression cases | Prior local result reported; not rerun here | |
 | Reference dedupe sequential | Not verified in this environment | |
 | Reference dedupe concurrent / atomic | Blocked until DB/server-side protection verified | |
-| Production page browser access | DNS/network restrictions blocked access in this environment | |
+| Production deployment | READY | 2026-11-19: commit `456e8d2263cf3cad4ba0c6b81655b7e44f5540ae`; aliases assigned to `payables-tracker-ten.vercel.app`, `payables-tracker-ketan-soni.vercel.app`, and `payables-tracker-git-main-ketan-soni.vercel.app`. |
+| Production page browser access | Blocked | 2026-11-19: production `sms-capture.html` could not be opened from this environment (web access reported URL inaccessible). |
 
 Never mark the module ready from static UI checks or a Vercel `READY` deployment alone. A release-ready report must include live endpoint results and the concurrent duplicate test evidence.
