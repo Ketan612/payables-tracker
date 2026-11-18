@@ -54,6 +54,8 @@ Parser behavior for formats not covered by a passing regression test must remain
 - [ ] Force a duplicate-check query error and confirm the item is restored to review with no movement created.
 - [ ] Force Cash Book insert failure and confirm inbox returns to review.
 - [ ] Force the inbox update after insert to fail and confirm rollback is attempted and its deleted row is verified. If rollback cannot be confirmed, the inbox item must remain `posted` / locked (not reappear as approvable); inspect Cash Book before manual recovery.
+- [ ] Force the post-insert inbox update to affect zero rows without a database error; confirm the UI treats this as failure and verifies the Cash Book movement rollback.
+- [ ] Test reference values containing `%`, `_`, and `\\` in the Cash Book duplicate lookup; these characters must be treated literally, not as SQL `LIKE` wildcards.
 - [ ] Approve two separate inbox rows with the same reference at nearly the same time. This is a required concurrency test and must be protected by a database uniqueness constraint/server-side atomic operation before release.
 
 ## iPhone Shortcuts
@@ -69,7 +71,7 @@ Parser behavior for formats not covered by a passing regression test must remain
 
 | Check | Result | Evidence / date |
 |---|---|---|
-| Static HTML/JS checks | PASS | 2026-11-19: V8 syntax compilation; 16 unique HTML IDs; all JavaScript `$()` ID references resolve; both inbox duplicate queries filter to `needs_review` / `posted`. |
+| Static HTML/JS checks | PASS | 2026-11-19: V8 syntax compilation; 16 unique HTML IDs; all JavaScript `$()` ID references resolve; both inbox duplicate queries filter to `needs_review` / `posted`; Cash Book LIKE metacharacter escaping for `%`, `_`, and `\\` passes direct helper tests; post-insert inbox update now requires a returned row and rolls back on error or zero-row result. |
 | Token create / revoke | Not verified in this environment | |
 | Identifier mapping persistence | Not verified in this environment | |
 | Sender/default mapping persistence | Not verified in this environment | |
