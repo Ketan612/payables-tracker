@@ -1535,3 +1535,4 @@ dialog .actions .secondary { border: 1px solid #e1e9e2; background: #f6f9f6; col
  .cashbook-totals>div{padding:12px}
  .cashbook-modal-footer button{width:100%}
 }
+.cashbook-account-dialog{width:min(440px,calc(100vw - 20px));max-width:440px;padding:0;border:0;border-radius:18px;max-height:90dvh;overflow:auto}.cashbook-account-dialog form{display:grid;gap:14px;padding:20px}.cashbook-account-dialog header h2{margin:0;font-size:1.15rem}.cashbook-account-dialog header p{margin:4px 0;color:var(--muted,#718096);font-size:.82rem}.cashbook-account-dialog label{display:grid;gap:6px;min-width:0}.cashbook-account-dialog input,.cashbook-account-dialog select{box-sizing:border-box;width:100%;min-width:0;height:44px;padding:0 12px;border:1px solid var(--border,#dce3e8);border-radius:12px;background:transparent;color:inherit;font:inherit}.cashbook-account-dialog footer{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}.cashbook-account-dialog footer button{flex:1}
