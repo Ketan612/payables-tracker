@@ -53,7 +53,7 @@ Parser behavior for formats not covered by a passing regression test must remain
 - [ ] If two pending inbox rows share a reference, reject one and verify the remaining `needs_review` row can still be approved. An `ignored` row must not permanently block the valid transaction.
 - [ ] Force a duplicate-check query error and confirm the item is restored to review with no movement created.
 - [ ] Force Cash Book insert failure and confirm inbox returns to review.
-- [ ] Force the inbox update after insert to fail and confirm rollback is attempted; check for orphan movement if rollback also fails.
+- [ ] Force the inbox update after insert to fail and confirm rollback is attempted and its deleted row is verified. If rollback cannot be confirmed, the inbox item must remain `posted` / locked (not reappear as approvable); inspect Cash Book before manual recovery.
 - [ ] Approve two separate inbox rows with the same reference at nearly the same time. This is a required concurrency test and must be protected by a database uniqueness constraint/server-side atomic operation before release.
 
 ## iPhone Shortcuts
