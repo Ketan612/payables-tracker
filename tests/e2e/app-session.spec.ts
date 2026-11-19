@@ -104,6 +104,8 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.locator("#amount").fill("125");
  await page.locator("#txnForm button[type=submit]").click();
  await expect(page.locator("#transactions")).toContainText(marker+" Cash credit");
+ await expect(page.locator("#closing")).toContainText("2,650");
+ await expect(page.locator("#transactions .ledger-table tbody tr")).toHaveCount(2);
 
  // Personal expense with a bank payment and a person-linked payable.
  await page.goto("/");
@@ -267,6 +269,8 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await expect(rejectedItem).toContainText("Needs review");
  await rejectedItem.locator("[data-reject]").click();
  await expect(page.locator("#inbox article.item").filter({hasText:rejectedReference})).toContainText("Rejected");
+ await page.locator("#tokens [data-revoke]").first().click();
+ await expect(page.locator("#tokenStatus")).toContainText("Token revoked successfully");
  await page.goto("/sms-admin.html");
  await expect(page.getByRole("heading",{name:"Access denied"})).toBeVisible();
 });
