@@ -183,7 +183,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  const partialPayableDialogStart=dialogMessages.length;
  await page.locator("#settlementForm button[type=submit]").click();
  await expect(page.locator("#settlementDlg")).not.toBeVisible();
- expect(dialogMessages.slice(partialPayableDialogStart).some(x=>x.message.includes("Settlement recorded successfully")), "Partial payable settlement should succeed").toBeTruthy();
+ await expect.poll(()=>dialogMessages.slice(partialPayableDialogStart).some(x=>x.message.includes("Settlement recorded successfully"))).toBeTruthy();
  await payableRow.locator('[data-settle-type="payable"]').click();
  await expect(page.locator("#settlementOutstanding")).toContainText("150");
  await page.locator("#settlementAmount").fill("150");
@@ -191,7 +191,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  const finalPayableDialogStart=dialogMessages.length;
  await page.locator("#settlementForm button[type=submit]").click();
  await expect(page.locator("#settlementDlg")).not.toBeVisible();
- expect(dialogMessages.slice(finalPayableDialogStart).some(x=>x.message.includes("Settlement recorded successfully")), "Final payable settlement should succeed").toBeTruthy();
+ await expect.poll(()=>dialogMessages.slice(finalPayableDialogStart).some(x=>x.message.includes("Settlement recorded successfully"))).toBeTruthy();
  await expect(payableRow.locator('[data-settle-type="payable"]')).toHaveCount(0);
 
  // Credit-card purchase automatically creates a linked card payable.
@@ -218,7 +218,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  const partialCardDialogStart=dialogMessages.length;
  await page.locator("#cardPaymentForm button[type=submit]").click();
  await expect(page.locator("#cardPaymentDlg")).not.toBeVisible();
- expect(dialogMessages.slice(partialCardDialogStart).some(x=>x.message.includes("Card payment recorded")), "Partial card repayment should succeed").toBeTruthy();
+ await expect.poll(()=>dialogMessages.slice(partialCardDialogStart).some(x=>x.message.includes("Card payment recorded"))).toBeTruthy();
  await expect(page.locator("#balanceDetailSummary")).toContainText("300");
  await page.locator("#balanceDetailDlg [data-card-payable]").click();
  await expect(page.locator("#cardPaymentDlg")).toBeVisible();
@@ -226,7 +226,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  const finalCardDialogStart=dialogMessages.length;
  await page.locator("#cardPaymentForm button[type=submit]").click();
  await expect(page.locator("#cardPaymentDlg")).not.toBeVisible();
- expect(dialogMessages.slice(finalCardDialogStart).some(x=>x.message.includes("Card payment recorded")), "Final card repayment should succeed").toBeTruthy();
+ await expect.poll(()=>dialogMessages.slice(finalCardDialogStart).some(x=>x.message.includes("Card payment recorded"))).toBeTruthy();
  await expect(page.locator("#balanceDetailSummary")).toContainText("0.00");
  await page.locator("#showCardPaymentHistory").click();
  await expect(page.locator("#balanceDetailDlg .card-payment-history-entry")).toHaveCount(2);
