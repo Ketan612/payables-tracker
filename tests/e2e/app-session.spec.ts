@@ -148,6 +148,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  let cashAccountSaveError="";
  page.once("dialog",async dialog=>{cashAccountSaveError=dialog.message();await dialog.accept();});
  await page.locator("#accountForm button[type=submit]").click();
+ await expect(page.locator("#accountDialog")).not.toBeVisible({timeout:20000}).catch(()=>{});
  expect(cashAccountSaveError, "Cash Book account save should not raise an application error").toBe("");
  await expect(page.locator("#accountDialog")).not.toBeVisible();
  await expect(page.locator("#accountSelect")).toContainText(cashName);
