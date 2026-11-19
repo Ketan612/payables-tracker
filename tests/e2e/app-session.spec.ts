@@ -83,3 +83,17 @@ test("SMS administrator monitor rejects a non-administrator test account",async(
  await expect(page.getByRole("heading",{name:"Access denied"})).toBeVisible();
  await expect(page.getByText(/restricted to the configured administrator/i)).toBeVisible();
 });
+test("Cash Book seeded account supports opening balance and debit/credit entries",async({page})=>{
+ await signIn(page);await page.goto("/cashbook.html");
+ await expect(page.locator("#signedInEmail")).toContainText(email);
+ await page.locator("#accountSelect").selectOption({label:"E2E Cash Wallet"});
+ await page.locator("#editOpening").click();
+ await page.locator("#opening").fill("2600");
+ await page.locator("#saveOpening").click();
+ await expect(page.locator("#openingDisplay")).toContainText("2,600");
+ await page.locator("#addTxn").click();await expect(page.locator("#txnDialog")).toBeVisible();
+ await page.locator("#direction").selectOption("out");await page.locator("#description").fill("E2E UI debit");await page.locator("#amount").fill("75");
+ await page.locator("#txnForm button[type=submit]").click();await expect(page.locator("#transactions")).toContainText("E2E UI debit");
+ await page.locator("#addTxn").click();await page.locator("#direction").selectOption("in");await page.locator("#description").fill("E2E UI credit");await page.locator("#amount").fill("125");
+ await page.locator("#txnForm button[type=submit]").click();await expect(page.locator("#transactions")).toContainText("E2E UI credit");
+});
