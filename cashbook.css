@@ -94,3 +94,28 @@
  .ledger-table tr{display:table-row!important}
  .ledger-table th,.ledger-table td{display:table-cell!important}
 }
+
+/* FINAL MOBILE OVERRIDE: preserve the passbook ledger table; never turn rows into cards */
+@media(max-width:760px){
+ .transactions-list{overflow:visible!important;max-width:100%!important}
+ .txn-table.ledger-table{display:table!important;width:100%!important;min-width:0!important;max-width:100%!important;table-layout:fixed!important;border-collapse:collapse!important}
+ .txn-table.ledger-table thead{display:table-header-group!important}
+ .txn-table.ledger-table tbody{display:table-row-group!important}
+ .txn-table.ledger-table tr{display:table-row!important;position:static!important;padding:0!important;margin:0!important;border:0!important;border-radius:0!important;background:transparent!important}
+ .txn-table.ledger-table th,.txn-table.ledger-table td,
+ .txn-table.ledger-table td:nth-child(2),.txn-table.ledger-table td:nth-child(3){display:table-cell!important;position:static!important;float:none!important;grid-column:auto!important;align-items:initial!important;justify-content:initial!important;gap:0!important;width:auto!important;min-width:0!important;max-width:none!important;padding:8px 2px!important;border:0!important;border-bottom:1px solid #e5eaf0!important;text-align:left!important;vertical-align:middle!important;overflow:visible!important;white-space:normal!important}
+ .txn-table.ledger-table td:before{content:none!important;display:none!important}
+ .txn-table.ledger-table th{background:#f3f6fa!important;font-size:9px!important;line-height:1.15!important;white-space:nowrap!important;color:#536276!important}
+ .txn-table.ledger-table th:nth-child(1),.txn-table.ledger-table td:nth-child(1){width:46px!important}
+ .txn-table.ledger-table th:nth-child(2),.txn-table.ledger-table td:nth-child(2){width:auto!important}
+ .txn-table.ledger-table th:nth-child(3),.txn-table.ledger-table td:nth-child(3){width:57px!important}
+ .txn-table.ledger-table th:nth-child(4),.txn-table.ledger-table td:nth-child(4){width:57px!important}
+ .txn-table.ledger-table th:nth-child(5),.txn-table.ledger-table td:nth-child(5){width:70px!important}
+ .txn-table.ledger-table th:nth-child(6),.txn-table.ledger-table td:nth-child(6){width:40px!important}
+ .txn-table.ledger-table td.ledger-date{font-size:9px!important;line-height:1.2!important;color:#536276!important;overflow-wrap:anywhere!important}
+ .txn-table.ledger-table td.ledger-particular{font-size:10px!important;line-height:1.25!important;font-weight:600!important;overflow-wrap:anywhere!important}
+ .txn-table.ledger-table td.num{font-size:9px!important;line-height:1.2!important;letter-spacing:-.03em!important;text-align:right!important;white-space:nowrap!important;font-variant-numeric:tabular-nums!important}
+ .txn-table.ledger-table td.ledger-actions{width:40px!important;text-align:center!important;white-space:nowrap!important}
+ .txn-table.ledger-table td.ledger-actions .icon-action{display:inline-flex!important;box-sizing:border-box!important;width:18px!important;min-width:18px!important;max-width:18px!important;height:24px!important;min-height:24px!important;margin:0!important;padding:0!important;border:0!important;border-radius:4px!important;background:transparent!important;align-items:center!important;justify-content:center!important;font-size:15px!important;line-height:1!important}
+ .txn-table.ledger-table td.ledger-actions .delete-action{font-size:19px!important;color:#b84949!important}
+}
