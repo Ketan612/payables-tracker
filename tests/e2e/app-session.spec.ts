@@ -214,7 +214,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.locator("#addSplitPerson").click();
  await page.locator(".participant-person").selectOption({label:personName});
  await page.locator(".participant-share").fill("40");
- await page.locator("#form button[type=submit]").click();
+ await page.locator("#form").getByRole("button",{name:"Save",exact:true}).click();
  await expect(page.locator("#dlg")).not.toBeVisible();
  await expect(page.locator("#list")).toContainText(marker+" Shared expense");
 });
