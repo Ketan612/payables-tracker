@@ -2518,7 +2518,10 @@ $("#typ").addEventListener("change", async () => {
     $("#yourShare").value = "";
     updateSplitTotal();
 
-    await loadPeople();
+    // The dashboard already loads the user's people list after authentication.
+    // Avoid a redundant request on every Shared toggle; it can race with the
+    // user's split entry on slower mobile connections.
+    if (!people.length) await loadPeople();
   }
   });
 
