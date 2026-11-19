@@ -1,3 +1,7 @@
+function loginRedirectForCurrentPage() {
+ const requested = location.pathname.split("/").filter(Boolean).pop() + location.search + location.hash;
+ location.replace("index.html?returnTo=" + encodeURIComponent(requested));
+}
 const $=id=>document.getElementById(id);let user,accounts=[],latestToken="";const SUPABASE_URL="https://magxbczgrxeypryjborr.supabase.co",SUPABASE_KEY="sb_publishable_o3SjG1KCygJ99RuamTJdsQ_RIkHJ-gX";if(!window.supabase?.createClient){const el=$("signedInEmail");if(el)el.textContent="Supabase SDK failed to load. Check connection and refresh.";throw new Error("Supabase JavaScript SDK unavailable");}const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{storageKey:"sb-magxbczgrxeypryjborr-auth-token",persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const esc=s=>String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmt=v=>"₹"+Number(v||0).toLocaleString("en-IN",{minimumFractionDigits:2});
@@ -16,7 +20,7 @@ async function auth(){
   const {data,error}=await timeout(sb.auth.getSession(),"Session restoration");
   if(error)throw error;
   let session=data?.session||null;
-  if(!session?.access_token){setStatus("No active session. Returning to login…","error");location.replace("index.html");return false;}
+  if(!session?.access_token){setStatus("No active session. Returning to login…","error");loginRedirectForCurrentPage();return false;}
   setStatus("Verifying signed-in user…");
   let verified;
   try{
@@ -38,7 +42,7 @@ async function auth(){
   sb.auth.onAuthStateChange((event,nextSession)=>{
    if(event==="SIGNED_OUT"||!nextSession||nextSession.user?.id!==user.id){
     setStatus("Session ended. Returning to login…","error");
-    location.replace("index.html");
+    loginRedirectForCurrentPage();
    }
   });
   return true;

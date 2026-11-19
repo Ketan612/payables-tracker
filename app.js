@@ -3864,6 +3864,35 @@ document.addEventListener("visibilitychange", () => {
   window.addEventListener(eventName, recordUserActivity, { passive: true });
 });
 
+// Restore the page the user originally requested after authentication.
+function getSafeReturnTarget() {
+  const raw = new URLSearchParams(window.location.search).get("returnTo");
+  if (!raw) return null;
+  try {
+    const target = new URL(raw, window.location.origin);
+    const allowed = new Set(["index.html", "cashbook.html", "sms-capture.html", "sms-admin.html"]);
+    const file = target.pathname.split("/").filter(Boolean).pop() || "index.html";
+    if (target.origin !== window.location.origin || !allowed.has(file)) return null;
+    return target.pathname + target.search + target.hash;
+  } catch (_) { return null; }
+}
+let returnNavigationHandled = false;
+function restoreRequestedPage(session) {
+  if (!session || returnNavigationHandled) return;
+  const target = getSafeReturnTarget();
+  if (!target) return;
+  returnNavigationHandled = true;
+  const targetUrl = new URL(target, window.location.origin);
+  const currentFile = window.location.pathname.split("/").filter(Boolean).pop() || "index.html";
+  const targetFile = targetUrl.pathname.split("/").filter(Boolean).pop() || "index.html";
+  if (targetFile === currentFile) {
+    if (targetUrl.hash) window.location.hash = targetUrl.hash;
+    window.history.replaceState({}, "", window.location.pathname + window.location.hash);
+    return;
+  }
+  window.location.replace(target);
+}
+
 function updateAuthUI(session) {
   const isLoggedIn = !!session;
   const adminTools = document.getElementById("administrator-tools");
@@ -3922,6 +3951,7 @@ loginForm.addEventListener("submit", async (event) => {
     }
 
     updateAuthUI(data.session);
+    restoreRequestedPage(data.session);
     loginForm.reset();
     setAuthMessage("", "");
   } catch (error) {
@@ -4140,6 +4170,7 @@ function initializeAuth() {
     const previousUserId = currentUserId;
     
     updateAuthUI(session);
+    if (event === "INITIAL_SESSION" && session) restoreRequestedPage(session);
     
     // Clear previous account data when the logged-in user changes.
     if (previousUserId !== currentUserId) {
