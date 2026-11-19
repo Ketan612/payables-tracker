@@ -28,7 +28,29 @@ test("dashboard modules and primary dialogs are reachable",async({page})=>{
  expect(errors).toEqual([]);
 });
 
-test("dashboard reminder preferences save locally without creating financial records",async({page})=>{
+test("seeded finance data populates payment and payable destination dropdowns",async({page})=>{
+ await signIn(page);
+ await page.locator("#add").click();
+ await expect(page.locator("#dlg")).toBeVisible();
+ await page.locator("#paymentMethod").selectOption("bank");
+ await expect(page.locator("#paymentAccount option")).toHaveCount(2);
+ await page.locator("#paymentMethod").selectOption("cash");
+ await expect(page.locator("#paymentAccount option")).toHaveCount(2);
+ await page.locator("#paymentMethod").selectOption("wallet");
+ await expect(page.locator("#paymentAccount option")).toHaveCount(2);
+ await page.locator("#paymentMethod").selectOption("credit_card");
+ await expect(page.locator("#paymentCard option")).toHaveCount(2);
+ await page.locator("#paymentMethod").selectOption("bank");
+ await page.locator("#createPayable").check();
+ await page.locator("#payableType").selectOption("person");
+ await expect(page.locator("#payablePerson option")).toHaveCount(2);
+ await page.locator("#payableType").selectOption("account");
+ await expect(page.locator("#payableAccount option")).toHaveCount(4);
+ await page.locator("#payableType").selectOption("credit_card");
+ await expect(page.locator("#payableCard option")).toHaveCount(2);
+ await page.locator("#cancel").click();
+});
+\ntest("dashboard reminder preferences save locally without creating financial records",async({page})=>{
  await signIn(page);
  await page.locator("#reminderEmail").fill("e2e-reminder@example.invalid");
  await page.locator("#reminderDays").selectOption("5");
