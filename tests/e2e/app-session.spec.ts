@@ -145,7 +145,11 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.locator("#addAccount").click();
  await page.locator("#accountName").fill(cashName);
  await page.locator("#accountType").selectOption({label:"Cash"});
+ let cashAccountSaveError="";
+ page.once("dialog",async dialog=>{cashAccountSaveError=dialog.message();await dialog.accept();});
  await page.locator("#accountForm button[type=submit]").click();
+ await expect(page.locator("#accountDialog")).not.toBeVisible();
+ expect(cashAccountSaveError).toBe("");
  await expect(page.locator("#accountSelect")).toContainText(cashName);
  await page.locator("#editOpening").click();
  await page.locator("#opening").fill("2600");
