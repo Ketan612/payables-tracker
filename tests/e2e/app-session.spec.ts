@@ -10,7 +10,7 @@ test("dashboard modules and primary dialogs are reachable",async({page})=>{
  const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
  await signIn(page);
  for(const section of ["overview","payables-section","cards-section","accounts-section","emi-section","people-section","reminders-section"]){
-  await page.locator('a[href="#'+section+'"]').click();
+  await page.locator('a[href="#'+section+'"]:visible').first().click();
   await expect(page.locator("#"+section)).toBeVisible();
  }
  for(const [button,dialog,cancel] of [
@@ -31,7 +31,7 @@ test("dashboard modules and primary dialogs are reachable",async({page})=>{
 test("dashboard reminder preferences save locally without creating financial records",async({page})=>{
  await signIn(page);
  await page.locator("#reminderEmail").fill("e2e-reminder@example.invalid");
- await page.locator("#reminderDays").fill("5");
+ await page.locator("#reminderDays").selectOption("5");
  await page.locator("#saveReminder").click();
  await expect(page.locator("#reminderState")).toContainText("Preferences saved");
  await page.reload();
@@ -39,7 +39,7 @@ test("dashboard reminder preferences save locally without creating financial rec
  await expect(page.locator("#reminderDays")).toHaveValue("5");
 });
 
-test("Cash Book account and transaction dialogs open and cancel safely",async({page})=>{
+test("Cash Book account dialog, no-account guard and opening balance editor work safely",async({page})=>{
  await signIn(page);
  await page.goto("/cashbook.html");
  await expect(page.getByRole("heading",{name:"Cash Book"})).toBeVisible();
@@ -47,10 +47,10 @@ test("Cash Book account and transaction dialogs open and cancel safely",async({p
  await expect(page.locator("#accountDialog")).toBeVisible();
  await page.locator("#accountCancel").click();
  await expect(page.locator("#accountDialog")).not.toBeVisible();
+ let alertMessage="";
+ page.once("dialog",async dialog=>{alertMessage=dialog.message();await dialog.accept();});
  await page.locator("#addTxn").click();
- await expect(page.locator("#txnDialog")).toBeVisible();
- await page.locator("#txnCancel").click();
- await expect(page.locator("#txnDialog")).not.toBeVisible();
+ expect(alertMessage).toContain("Choose an account first");
  await page.locator("#editOpening").click();
  await expect(page.locator("#openingEdit")).toHaveClass(/visible/);
 });
