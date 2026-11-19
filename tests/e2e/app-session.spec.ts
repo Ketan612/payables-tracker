@@ -5,3 +5,59 @@ test.beforeAll(()=>{if(!email||!password)throw new Error("TEST_USER_EMAIL and TE
 test("login session survives navigation and refresh across app pages",async({page})=>{await signIn(page);await page.goto("/cashbook.html");await expect(page.locator("#signedInEmail")).toContainText(email);await page.reload();await expect(page.locator("#signedInEmail")).toContainText(email);await page.goto("/sms-capture.html");await expect(page.locator("#signedInEmail")).toContainText(email);await expect(page.locator("#emailReminderEnabled")).toBeVisible();await page.reload();await expect(page.locator("#signedInEmail")).toContainText(email);await expect(page.locator("#emailReminderEnabled")).toBeVisible();await page.goto("/");await expect(page.locator("#welcomeMessage")).toContainText(/.+/);});
 test("Cash Book and SMS Capture render without browser errors",async({page})=>{const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));await signIn(page);await page.goto("/cashbook.html");await expect(page.getByRole("heading",{name:"Cash Book"})).toBeVisible();await page.goto("/sms-capture.html");await expect(page.getByRole("heading",{name:"SMS Capture"})).toBeVisible();await expect(page.getByRole("heading",{name:"SMS review inbox"})).toBeVisible();expect(errors).toEqual([]);});
 test("mobile SMS Capture has no horizontal page overflow",async({page})=>{await signIn(page);await page.goto("/sms-capture.html");await expect(page.locator("#signedInEmail")).toContainText(email);const d=await page.evaluate(()=>({viewport:document.documentElement.clientWidth,content:document.documentElement.scrollWidth}));expect(d.content).toBeLessThanOrEqual(d.viewport+1);});
+
+test("dashboard modules and primary dialogs are reachable",async({page})=>{
+ const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
+ await signIn(page);
+ for(const section of ["overview","payables-section","cards-section","accounts-section","emi-section","people-section","reminders-section"]){
+  await page.locator('a[href="#'+section+'"]').click();
+  await expect(page.locator("#"+section)).toBeVisible();
+ }
+ for(const [button,dialog,cancel] of [
+  ["#add","#dlg","#cancel"],
+  ["#addCard","#cardDlg","#cancelCard"],
+  ["#addPerson","#personDlg","#cancelPerson"],
+  ["#addBankAccount","#bankAccountDlg","#cancelBankAccount"],
+  ["#addEmi","#emiDlg","#cancelEmi"]
+ ] as const){
+  await page.locator(button).click();
+  await expect(page.locator(dialog)).toBeVisible();
+  await page.locator(cancel).click();
+  await expect(page.locator(dialog)).not.toBeVisible();
+ }
+ expect(errors).toEqual([]);
+});
+
+test("dashboard reminder preferences save locally without creating financial records",async({page})=>{
+ await signIn(page);
+ await page.locator("#reminderEmail").fill("e2e-reminder@example.invalid");
+ await page.locator("#reminderDays").fill("5");
+ await page.locator("#saveReminder").click();
+ await expect(page.locator("#reminderState")).toContainText("Preferences saved");
+ await page.reload();
+ await expect(page.locator("#reminderEmail")).toHaveValue("e2e-reminder@example.invalid");
+ await expect(page.locator("#reminderDays")).toHaveValue("5");
+});
+
+test("Cash Book account and transaction dialogs open and cancel safely",async({page})=>{
+ await signIn(page);
+ await page.goto("/cashbook.html");
+ await expect(page.getByRole("heading",{name:"Cash Book"})).toBeVisible();
+ await page.locator("#addAccount").click();
+ await expect(page.locator("#accountDialog")).toBeVisible();
+ await page.locator("#accountCancel").click();
+ await expect(page.locator("#accountDialog")).not.toBeVisible();
+ await page.locator("#addTxn").click();
+ await expect(page.locator("#txnDialog")).toBeVisible();
+ await page.locator("#txnCancel").click();
+ await expect(page.locator("#txnDialog")).not.toBeVisible();
+ await page.locator("#editOpening").click();
+ await expect(page.locator("#openingEdit")).toHaveClass(/visible/);
+});
+
+test("SMS administrator monitor rejects a non-administrator test account",async({page})=>{
+ await signIn(page);
+ await page.goto("/sms-admin.html");
+ await expect(page.getByRole("heading",{name:"Access denied"})).toBeVisible();
+ await expect(page.getByText(/restricted to the configured administrator/i)).toBeVisible();
+});
