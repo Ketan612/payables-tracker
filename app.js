@@ -521,6 +521,49 @@ $("#personForm").addEventListener("submit", async event => {
   }
 });
 
+
+// Bank account dialog CRUD (the markup existed but had no event handlers).
+$("#addBankAccount").addEventListener("click", () => {
+  if (!currentUserId) return alert("Please log in before adding a bank account.");
+  $("#bankAccountFormTitle").textContent = "Add bank account";
+  $("#bankAccountId").value = "";
+  $("#bankAccountForm").reset();
+  $("#bankAccountType").value = "bank";
+  $("#bankAccountDlg").showModal();
+});
+$("#cancelBankAccount").addEventListener("click", () => $("#bankAccountDlg").close());
+$("#bankAccountForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const userId = currentUserId;
+  if (!userId) return alert("Please log in before saving a bank account.");
+  const name = $("#bankAccountName").value.trim();
+  const lastFour = $("#bankLastFour").value.trim();
+  if (!name) return alert("Please enter an account name.");
+  if (lastFour && !/^\\d{4}$/.test(lastFour)) return alert("Last four digits must contain exactly four numbers.");
+  const payload = {
+    account_name: name,
+    institution_name: $("#bankInstitution").value.trim() || null,
+    account_type: $("#bankAccountType").value || "bank",
+    last_four: lastFour || null,
+    notes: $("#bankAccountNotes").value.trim() || null,
+    is_active: true
+  };
+  try {
+    const result = $("#bankAccountId").value
+      ? await supabaseClient.from("bank_accounts").update(payload).eq("id", $("#bankAccountId").value).eq("user_id", userId).select("id").single()
+      : await supabaseClient.from("bank_accounts").insert({ ...payload, user_id: userId }).select("id").single();
+    if (currentUserId !== userId) return;
+    if (result.error) return alert("Could not save bank account: " + result.error.message);
+    $("#bankAccountDlg").close();
+    $("#bankAccountForm").reset();
+    await loadAccounts();
+    populatePaymentDropdowns();
+  } catch (error) {
+    console.error("Unexpected bank account save error:", error);
+    alert("Unable to save bank account. Please try again.");
+  }
+});
+
 $("#paymentMethod").addEventListener("change", () => {
   populatePaymentDropdowns();
   updatePaymentFields();
