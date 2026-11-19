@@ -10,7 +10,7 @@ async function auth(){
  $("signedInEmail").textContent=user.email||"Authenticated user";
  $("smsLogout").onclick=async()=>{const {error}=await sb.auth.signOut({scope:"local"});if(error)alert("Logout failed: "+error.message);else location.replace("index.html")};
  sb.auth.onAuthStateChange((event,nextSession)=>{
-  if(event==="SIGNED_OUT"||!nextSession)location.replace("index.html");
+  if(event==="SIGNED_OUT"||!nextSession)location.replace("index.html");else if(nextSession.user?.id!==user.id)location.replace("index.html");
  });
  return true;
 }
