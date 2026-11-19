@@ -53,6 +53,7 @@ Parser behavior for formats not covered by a passing regression test must remain
 - [ ] Re-forward the same SMS/reference and confirm the duplicate is blocked or flagged.
 - [ ] If two pending inbox rows share a reference, reject one and verify the remaining `needs_review` row can still be approved. An `ignored` row must not permanently block the valid transaction.
 - [ ] Force a duplicate-check query error and confirm the item is restored to review with no movement created.
+- [ ] Simulate a Cash Book insert `23505` without a matching `sms_reference_number` or legacy `reference_note`; confirm the inbox item is not labelled duplicate and remains locked with an uncertain-outcome warning. Only classify it as duplicate after the follow-up reference lookup confirms an existing movement.
 - [ ] Force claim restoration to affect zero rows and confirm the UI reports that restoration was not confirmed; the still-locked row must remain visible and must not be approvable.
 - [ ] Force a Cash Book insert error and confirm the inbox item stays locked (`posted`) with an explicit uncertain-outcome warning. The review inbox must show locked rows with no movement ID and disable approve/reject. Do not blindly restore an uncertain insert to ordinary review: a network error can occur after the database committed the insert. Check Cash Book and inbox before any manual recovery.
 - [ ] Force the inbox update after insert to fail and confirm rollback is attempted and its deleted row is verified. If rollback cannot be confirmed, the inbox item must remain `posted` / locked (not reappear as approvable); inspect Cash Book before manual recovery.
@@ -90,6 +91,7 @@ Parser behavior for formats not covered by a passing regression test must remain
 - `sms-admin.html`: 11 unique IDs; all 18 JavaScript element references resolve.
 - SMS Cash Book duplicate lookup checks both exact `sms_reference_number` and the escaped `reference_note` fallback; simulated tests verified both query paths run, matches from either path are detected, wildcard characters are escaped, and query errors fail closed.
 - SMS claim restoration now treats a zero-row update as unconfirmed rather than assuming the item returned to review.
+- A Cash Book insert `23505` is now classified as duplicate only after a follow-up query confirms the matching SMS reference or legacy reference note; if the query fails or no match is found, the claimed inbox item stays locked as an uncertain outcome.
 - Admin monitor escapes event-controlled table values before rendering; a simulated `<img src=x onerror=alert(1)>` value is rendered as escaped text. The 500-row display cap is labelled in the UI. Database RLS remains the authorization boundary and has not been verified in this environment.
 - Review inbox loads pending, locked, and duplicate inbox rows without querying the administrator-only `sms_capture_events` table; duplicate rows have no approve/reject actions.
 - Cache-busting query versions were refreshed for both SMS Capture and the admin monitor scripts.
@@ -99,7 +101,7 @@ Parser behavior for formats not covered by a passing regression test must remain
 
 | Check | Result | Evidence / date |
 |---|---|---|
-| Static HTML/JS checks | PASS | 2026-11-19: JavaScript delimiter scan balanced; 16 unique HTML IDs and all 16 JavaScript `$()` references resolve; locked `posted` rows with null `movement_id` are fetched into the inbox and approve/reject controls are disabled; uncertain Cash Book insert errors retain the claim, refresh the inbox, and warn the user to check Cash Book before retrying; duplicate checks, token revocation row checks, and both SBI reference expectations remain present in the source/QA checklist. |
+| Static HTML/JS checks | PASS | 2026-11-19: V8 compilation passed for `sms-capture.js` and `sms-admin.js`; `sms-capture.html` has 18 unique IDs and all 32 JavaScript element references resolve; `sms-admin.html` has 11 unique IDs and all 18 references resolve. The Cash Book `23505` branch now marks an inbox row duplicate only after a follow-up query confirms the matching reference; a failed/no-match confirmation keeps the claimed row locked and warns the user. |
 | Token create / revoke | Not verified in this environment | |
 | Identifier mapping persistence | Not verified in this environment | |
 | Sender/default mapping persistence | Not verified in this environment | |
@@ -108,7 +110,7 @@ Parser behavior for formats not covered by a passing regression test must remain
 | Parser regression cases | Prior local result reported; not rerun here | |
 | Reference dedupe sequential | Not verified in this environment | |
 | Reference dedupe concurrent / atomic | Blocked until DB/server-side protection verified | |
-| Production deployment | READY | 2026-11-19: application code through commit `9aeec7ad90be770adea16578f9aaa77924680ae2` is deployed as `dpl_5yv2ZnFdsVnPhvErQMcg9AFULQez` (READY); production aliases `payables-tracker-ten.vercel.app`, `payables-tracker-ketan-soni.vercel.app`, and `payables-tracker-git-main-ketan-soni.vercel.app` are assigned. Build events show `Build Completed`; the deployment reports `READY` with no alias error. |
-| Production page browser access | Blocked | 2026-11-19: production alias and deployment hostname could not be opened unauthenticated; Vercel project reports SSO protection enabled for all except custom domains, and the tested hosts are Vercel aliases. No live UI interaction was performed. |
+| Production deployment | READY | 2026-11-19: SMS Capture logic commit `d3491b5e99dba829b42f022cd08633959ce1698f` is included in production deployment `dpl_2FXzoevWKLHRQwKduWqu7gdo8cMw` via cache-bust commit `de947dea7c0bf3b0aab8e6b718f5ed1c33a1690b`. Vercel reports `READY`, `Build Completed`, no alias error, and all three production aliases assigned. |
+| Production static resource fetch | PASS (HTTP 200) | 2026-11-19: authenticated Vercel fetch returned HTTP 200 for `sms-capture.html`, `sms-capture.js`, and `sms-capture.css` from the production alias. The HTML references cache version `sms-capture-20261119c`; the served JavaScript contains the confirmed-reference `23505` guard. This verifies deployed static resources only, not a signed-in Supabase session or live UI actions. |
 
 Never mark the module ready from static UI checks or a Vercel `READY` deployment alone. A release-ready report must include live endpoint results and the concurrent duplicate test evidence.
