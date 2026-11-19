@@ -219,6 +219,17 @@ async function loadTransactionSettlements() {
 
   transactionSettlements = legacyResult.data || [];
   settlements = ledgerResult.data || [];
+
+  // Refresh an open transaction detail view when settlement history arrives late.
+  if (activeDetailsTransactionId && $("#balanceDetailDlg")?.open) {
+    const activeTransaction = rows.find(row => row.id === activeDetailsTransactionId);
+    if (activeTransaction) {
+      showTransactionDetails(activeTransaction, {
+        returnToCardId: activeDetailsReturnCardId,
+        hideBackButton: activeDetailsHideBackButton
+      });
+    }
+  }
 }
 async function loadAccounts() {
   const userId = currentUserId;
