@@ -92,6 +92,13 @@ test("SMS administrator monitor rejects a non-administrator test account",async(
 });
 
 test("creates finance fixtures and verifies workflows entirely through the UI",async({page})=>{
+ const dialogMessages:{type:string;message:string}[]=[];
+ // One dialog listener for this test prevents competing handlers from accepting
+ // the same browser dialog more than once. Assertions below inspect captured alerts.
+ page.on("dialog",async dialog=>{
+  dialogMessages.push({type:dialog.type(),message:dialog.message()});
+  await dialog.accept();
+ });
  await signIn(page);
  const marker="E2E-"+Date.now();
  const bankName=marker+" Bank";
@@ -145,7 +152,6 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.locator("#addAccount").click();
  await page.locator("#accountName").fill(cashName);
  await page.locator("#accountType").selectOption({label:"Cash"});
- let cashAccountSaveError="";
  const cashDiagnostics:{submitEvents:number;requests:string[];responses:string[];pageErrors:string[];consoleErrors:string[]}={submitEvents:0,requests:[],responses:[],pageErrors:[],consoleErrors:[]};
  page.on("pageerror",error=>cashDiagnostics.pageErrors.push(error.stack||error.message));
  page.on("console",message=>{if(message.type()==="error")cashDiagnostics.consoleErrors.push(message.text())});
@@ -153,13 +159,13 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  page.on("requestfailed",request=>{if(request.url().includes("/rest/v1/bank_accounts"))cashDiagnostics.requests.push("FAILED "+request.method()+" "+request.url()+" "+request.failure()?.errorText)});
  page.on("response",async response=>{if(response.url().includes("/rest/v1/bank_accounts")){let body="";try{body=await response.text()}catch{}cashDiagnostics.responses.push(response.status()+" "+body)}});
  await page.locator("#accountForm").evaluate(form=>form.addEventListener("submit",()=>{(window as any).__cashAccountSubmitCount=((window as any).__cashAccountSubmitCount||0)+1},{capture:true}));
- page.once("dialog",async dialog=>{cashAccountSaveError=dialog.message();await dialog.accept();});
+ const cashDialogStart=dialogMessages.length;
  await page.locator("#accountForm button[type=submit]").click();
  await page.waitForTimeout(3000);
  cashDiagnostics.submitEvents=await page.evaluate(()=>Number((window as any).__cashAccountSubmitCount||0));
  const cashFormState=await page.locator("#accountForm").evaluate(form=>({valid:(form as HTMLFormElement).checkValidity(),name:(form.querySelector("#accountName") as HTMLInputElement)?.value,buttonDisabled:(form.querySelector('button[type="submit"]') as HTMLButtonElement)?.disabled,dialogOpen:(form.closest("dialog") as HTMLDialogElement)?.open}));
- if(cashFormState.dialogOpen)throw new Error("Cash Book account save diagnostics: "+JSON.stringify({cashFormState,cashAccountSaveError,cashDiagnostics}));
- expect(cashAccountSaveError, "Cash Book account save should not raise an application error").toBe("");
+ if(cashFormState.dialogOpen)throw new Error("Cash Book account save diagnostics: "+JSON.stringify({cashFormState,dialogs:dialogMessages.slice(cashDialogStart),cashDiagnostics}));
+ expect(dialogMessages.slice(cashDialogStart), "Cash Book account save should not raise an application error").toEqual([]);
  await expect(page.locator("#accountSelect")).toContainText(cashName);
  await expect(page.locator("#accountSelect")).toContainText(cashName);
  await page.locator("#editOpening").click();
@@ -195,10 +201,10 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.locator("#payableAmount").fill("250");
  await page.locator("#payableDueDate").fill(future);
  await page.locator("#payableNotes").fill(marker);
- let payableSaveAlert="";
- page.once("dialog",async dialog=>{payableSaveAlert=dialog.message();await dialog.accept();});
+ const payableDialogStart=dialogMessages.length;
  await page.getByRole("button",{name:"Save",exact:true}).click();
- expect(payableSaveAlert,"Payable transaction save should not raise a validation or database error").toBe("");
+ await expect(page.locator("#dlg")).not.toBeVisible();
+ expect(dialogMessages.slice(payableDialogStart),"Payable transaction save should not raise a validation or database error").toEqual([]);
  await expect(page.locator("#dlg")).not.toBeVisible();
  // Bank-funded expenses are recorded as paid, so include every status when verifying the saved record.
  await page.locator("#statusF").selectOption("all");
@@ -214,8 +220,10 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.locator("#addSplitPerson").click();
  await page.locator(".participant-person").selectOption({label:personName});
  await page.locator(".participant-share").fill("40");
+ const sharedDialogStart=dialogMessages.length;
  await page.locator("#form").getByRole("button",{name:"Save",exact:true}).click();
  await expect(page.locator("#dlg")).not.toBeVisible();
+ expect(dialogMessages.slice(sharedDialogStart),"Shared expense save should not raise a validation or database error").toEqual([]);
  await expect(page.locator("#list")).toContainText(marker+" Shared expense");
 });
 
@@ -225,6 +233,15 @@ test("signup validates inputs and completes the public registration flow",async(
  test.skip(testInfo.project.name!=="chromium","Public signup creates one disposable account per CI run.");
  const signupEmail=process.env.TEST_SIGNUP_EMAIL;
  if(!signupEmail)throw new Error("TEST_SIGNUP_EMAIL is required for the signup E2E test.");
+ const signupDiagnostics:{console:string[];responses:string[]}={console:[],responses:[]};
+ page.on("console",message=>{if(message.type()==="error")signupDiagnostics.console.push(message.text());});
+ page.on("response",async response=>{
+  if(response.url().includes("/auth/v1/signup")){
+   let body="";
+   try{body=await response.text();}catch{}
+   signupDiagnostics.responses.push(JSON.stringify({status:response.status(),body}));
+  }
+ });
  await page.goto("/");
  await page.locator("#showSignupBtn").click();
  await expect(page.locator("#signupSection")).toBeVisible();
@@ -237,7 +254,11 @@ test("signup validates inputs and completes the public registration flow",async(
  await expect(page.locator("#signupEmail")).toHaveValue(signupEmail);
  await page.locator("#signupConfirmPassword").fill("E2E-Strong-Pass-2026!");
  await page.locator("#signupForm button[type=submit]").click();
- await expect(page.locator("#authMessage")).toContainText(/Registration successful|Account created successfully/i,{timeout:20000});
+ try{
+  await expect(page.locator("#authMessage")).toContainText(/Registration successful|Account created successfully/i,{timeout:20000});
+ }catch(error){
+  throw new Error("Public signup failed. Diagnostics: "+JSON.stringify({message:await page.locator("#authMessage").innerText(),signupDiagnostics})+"\n"+String(error));
+ }
  const state=await page.locator("#authMessage").innerText();
  if(/Registration successful/i.test(state)){
   await expect(page.locator("#authMessage")).toContainText(/check your email to verify/i);
