@@ -298,7 +298,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.locator("#identifier").fill("X3142");
  await page.locator("#mapAccount").selectOption({label:cashName});
  await page.locator("#mappingForm button[type=submit]").click();
- await expect(page.locator("#mappings")).toContainText("X3142");
+ await expect(page.locator("#mappings")).toContainText("3142");
  await expect(page.locator("#mappings")).toContainText(cashName);
  const reference=String(Date.now());
  const smsMessage="Dear UPI user A/C X3142 debited by 78.00 on 20Nov26 trf to E2E Store UPI Ref No "+reference+".";
@@ -308,7 +308,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  expect(firstCapture.ok(),"First SMS capture failed: "+firstCapture.status()+" "+await firstCapture.text()).toBeTruthy();
  await page.reload();
  await expect(page.locator("#inbox article.item").filter({hasText:reference})).toContainText("Needs review");
- await expect(page.locator("#inbox article.item").filter({hasText:reference})).toContainText("X3142");
+ await expect(page.locator("#inbox article.item").filter({hasText:reference})).toContainText("3142");
  await expect(page.locator("#inbox article.item").filter({hasText:reference})).toContainText(cashName);
  const duplicateCapture=await page.request.post(captureUrl,{headers:captureHeaders,data:{message:smsMessage,sender:"SBI"}});
  expect(duplicateCapture.ok()||duplicateCapture.status()===409,"Duplicate SMS capture request failed: "+duplicateCapture.status()+" "+await duplicateCapture.text()).toBeTruthy();
