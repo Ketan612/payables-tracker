@@ -166,7 +166,9 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
 
  // Settle the person-linked payable in two stages and verify the remaining balance.
  const payableRow=page.locator("#list .item").filter({hasText:marker+" Personal expense"});
- const payableButton=payableRow.locator('[data-settle-type="payable"]');
+ await payableRow.locator("[data-details]").click();
+ await expect(page.locator("#balanceDetailDlg")).toBeVisible();
+ const payableButton=page.locator('#balanceDetailDlg [data-settle-type="payable"]');
  await expect(payableButton).toBeVisible();
  await payableButton.click();
  await expect(page.locator("#settlementDlg")).toBeVisible();
