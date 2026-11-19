@@ -216,14 +216,18 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.locator("#amt").fill("100");
  await page.locator("#transactionDate").fill(today);
  await page.locator("#typ").selectOption({label:"Shared"});
+ // The Shared selector reloads the participant list asynchronously and resets
+ // split inputs when loading completes. Wait for that refresh before entering shares.
+ await page.waitForLoadState("networkidle");
+ await page.locator("#sharedFields").waitFor({state:"visible"});
  await page.locator("#yourShare").fill("60");
  await page.locator("#addSplitPerson").click();
  await page.locator(".participant-person").selectOption({label:personName});
  await page.locator(".participant-share").fill("40");
  const sharedDialogStart=dialogMessages.length;
  await page.locator("#form").getByRole("button",{name:"Save",exact:true}).click();
- await expect(page.locator("#dlg")).not.toBeVisible();
  expect(dialogMessages.slice(sharedDialogStart),"Shared expense save should not raise a validation or database error").toEqual([]);
+ await expect(page.locator("#dlg")).not.toBeVisible();
  await expect(page.locator("#list")).toContainText(marker+" Shared expense");
 });
 
