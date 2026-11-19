@@ -4103,8 +4103,12 @@ function getSignupErrorMessage(error) {
     return "Your password does not meet the security requirements.";
   }
 
-  if (message.includes("rate limit")) {
-    return "Too many registration attempts. Please wait and try again.";
+  if (
+    code === "over_email_send_rate_limit" ||
+    message.includes("rate limit") ||
+    message.includes("email rate limit")
+  ) {
+    return "Too many verification emails have been requested. Please wait a while before trying again.";
   }
 
   if (message.includes("database error saving new user")) {
