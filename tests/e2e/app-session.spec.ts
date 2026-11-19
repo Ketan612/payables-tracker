@@ -200,6 +200,8 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.getByRole("button",{name:"Save",exact:true}).click();
  expect(payableSaveAlert,"Payable transaction save should not raise a validation or database error").toBe("");
  await expect(page.locator("#dlg")).not.toBeVisible();
+ // Bank-funded expenses are recorded as paid, so include every status when verifying the saved record.
+ await page.locator("#statusF").selectOption("all");
  await expect(page.locator("#list")).toContainText(marker+" Personal expense");
 
  // Shared expense and participant split.
