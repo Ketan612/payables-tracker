@@ -2509,14 +2509,16 @@ $("#typ").addEventListener("change", async () => {
   $("#sharedFields").hidden = !isShared;
 
   if (isShared) {
-    await loadPeople();
-  
+    // Reset the split inputs before awaiting the participant refresh. Resetting
+    // after the request can erase values the user entered while it was loading.
     $("#sharedPayer").value = "user";
     updateSharedPayerField();
   
     $("#participantSplits").innerHTML = "";
     $("#yourShare").value = "";
     updateSplitTotal();
+
+    await loadPeople();
   }
   });
 
