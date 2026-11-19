@@ -181,19 +181,24 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await expect(page.locator("#settlementOutstanding")).toContainText("250");
  await page.locator("#settlementAmount").fill("100");
  await page.locator("#settlementPaymentMethod").selectOption("cash");
- const partialPayableDialogStart=dialogMessages.length;
+ const partialSettlementRequest=page.waitForResponse(response=>response.url().includes("/rest/v1/rpc/record_payable_settlement")&&response.request().method()==="POST");
  await page.locator("#settlementForm button[type=submit]").click();
+ const partialSettlementResponse=await partialSettlementRequest;
+ const partialSettlementBody=await partialSettlementResponse.text();
+ expect(partialSettlementResponse.ok(),"Partial payable settlement RPC failed: "+partialSettlementResponse.status()+" "+partialSettlementBody).toBeTruthy();
  await expect(page.locator("#settlementDlg")).not.toBeVisible();
- await expect.poll(()=>dialogMessages.slice(partialPayableDialogStart).some(x=>x.message.includes("Settlement recorded successfully"))).toBeTruthy();
- await payableRow.locator('[data-settle-type="payable"]').click();
+ await expect(page.locator("#balanceDetailDlg")).toBeVisible();
+ await page.locator('#balanceDetailDlg [data-settle-type="payable"]').click();
  await expect(page.locator("#settlementOutstanding")).toContainText("150");
  await page.locator("#settlementAmount").fill("150");
  await page.locator("#settlementPaymentMethod").selectOption("cash");
- const finalPayableDialogStart=dialogMessages.length;
+ const finalSettlementRequest=page.waitForResponse(response=>response.url().includes("/rest/v1/rpc/record_payable_settlement")&&response.request().method()==="POST");
  await page.locator("#settlementForm button[type=submit]").click();
+ const finalSettlementResponse=await finalSettlementRequest;
+ const finalSettlementBody=await finalSettlementResponse.text();
+ expect(finalSettlementResponse.ok(),"Final payable settlement RPC failed: "+finalSettlementResponse.status()+" "+finalSettlementBody).toBeTruthy();
  await expect(page.locator("#settlementDlg")).not.toBeVisible();
- await expect.poll(()=>dialogMessages.slice(finalPayableDialogStart).some(x=>x.message.includes("Settlement recorded successfully"))).toBeTruthy();
- await expect(payableRow.locator('[data-settle-type="payable"]')).toHaveCount(0);
+ await expect(page.locator('#balanceDetailDlg [data-settle-type="payable"]')).toHaveCount(0);
 
  // Credit-card purchase automatically creates a linked card payable.
  await page.locator("#add").click();
