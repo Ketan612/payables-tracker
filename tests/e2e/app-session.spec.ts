@@ -225,7 +225,9 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.locator("#list .item").filter({hasText:marker+" Personal expense"}).locator("[data-details]").click();
  await expect(page.locator("#balanceDetailDlg")).toBeVisible();
  // The final settlement RPC above is the authoritative zero-outstanding assertion;
- // the details view may retain a payment-history action for fully settled payables.
+ // Close the details modal before continuing the same journey into card purchases.
+ await page.locator("#closeBalanceDetail").click();
+ await expect(page.locator("#balanceDetailDlg")).not.toBeVisible();
 
  // Credit-card purchase automatically creates a linked card payable.
  await page.locator("#add").click();
