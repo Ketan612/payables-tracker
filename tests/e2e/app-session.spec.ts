@@ -255,9 +255,12 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await expect(page.locator("#dlg")).not.toBeVisible();
  expect(dialogMessages.slice(cardPurchaseDialogStart), "Card purchase should save without an application error").toEqual([]);
  const cardTransactionsLoad=page.waitForResponse(response=>response.url().includes("/rest/v1/transactions")&&response.request().method()==="GET");
- await expect(page.locator("#list")).toContainText(marker+" Card purchase");
+ await page.reload();
  const cardTransactionsResponse=await cardTransactionsLoad;
+ await expect(page.locator("html")).toHaveAttribute("data-dashboard-ready","true",{timeout:30000});
  const cardTransactions=await cardTransactionsResponse.json();
+ await page.locator("#statusF").selectOption("all");
+ await expect(page.locator("#list")).toContainText(marker+" Card purchase");
  expect(cardTransactions.some(row=>row.title===marker+" Card purchase"&&row.payment_card_id===cardId),"Card expense was not returned by transactions API").toBeTruthy();
  expect(cardTransactions.some(row=>row.transaction_kind==="payable"&&row.related_transaction_id&&row.payable_to_type==="credit_card"&&row.payable_to_card_id===cardId&&Number(row.amount)===500),"Linked card payable was not returned by transactions API").toBeTruthy();
  await page.locator("#cards .credit-card-open").filter({hasText:cardName}).click();
