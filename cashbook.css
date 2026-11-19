@@ -2,3 +2,5 @@
 @media(max-width:380px){.selector-row{grid-template-columns:minmax(0,1fr);gap:10px}.month-field input{width:100%;min-width:0}}
 
 .session-identity{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.18);font-size:12px;color:#d5dfec;flex-wrap:wrap}.session-identity b{color:#fff;overflow-wrap:anywhere}.session-identity button{min-height:34px;padding:6px 12px;border:1px solid rgba(255,255,255,.28);border-radius:8px;background:rgba(255,255,255,.1);color:#fff;font:inherit;font-weight:650;cursor:pointer}
+
+.txn-table td:last-child{white-space:nowrap}.txn-table td:last-child button{min-height:30px;padding:5px 8px;font-size:11px;border:1px solid #d9e0e8;border-radius:7px;background:#f7f9fc}.txn-table td:last-child button[data-delete-txn]{color:#b43e3e}.txn-table th:last-child{width:118px}@media(max-width:540px){.txn-table td:last-child{white-space:normal}.txn-table td:last-child button{display:block;width:100%;margin:2px 0;padding:4px 3px;font-size:10px;min-height:27px}.txn-table th:last-child{width:44px}}
