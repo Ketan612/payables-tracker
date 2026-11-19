@@ -539,7 +539,7 @@ $("#bankAccountForm").addEventListener("submit", async event => {
   const name = $("#bankAccountName").value.trim();
   const lastFour = $("#bankLastFour").value.trim();
   if (!name) return alert("Please enter an account name.");
-  if (lastFour && !/^\\d{4}$/.test(lastFour)) return alert("Last four digits must contain exactly four numbers.");
+  if (lastFour && !/^\d{4}$/.test(lastFour)) return alert("Last four digits must contain exactly four numbers.");
   const payload = {
     account_name: name,
     institution_name: $("#bankInstitution").value.trim() || null,
