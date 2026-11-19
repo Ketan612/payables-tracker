@@ -89,7 +89,8 @@ Parser behavior for formats not covered by a passing regression test must remain
 - `sms-admin.html`: 11 unique IDs; all 18 JavaScript element references resolve.
 - SMS Cash Book duplicate lookup checks both exact `sms_reference_number` and the escaped `reference_note` fallback; simulated tests verified both query paths run and query errors fail closed.
 - SMS claim restoration now treats a zero-row update as unconfirmed rather than assuming the item returned to review.
-- Admin monitor escapes event-controlled table values before rendering. Database RLS remains the authorization boundary and has not been verified in this environment.
+- Admin monitor escapes event-controlled table values before rendering; a simulated `<img src=x onerror=alert(1)>` value is rendered as escaped text. Database RLS remains the authorization boundary and has not been verified in this environment.
+- Claim restoration simulation verified a zero-row update is reported as unconfirmed, while a returned row is accepted.
 
 ## Evidence log (complete only after live tests)
 
@@ -104,7 +105,7 @@ Parser behavior for formats not covered by a passing regression test must remain
 | Parser regression cases | Prior local result reported; not rerun here | |
 | Reference dedupe sequential | Not verified in this environment | |
 | Reference dedupe concurrent / atomic | Blocked until DB/server-side protection verified | |
-| Production deployment | READY | 2026-11-19: code commit `75ada54a383ca5cf81eec6fb4a06838e1e9a023c` plus QA checklist commit `f919557b11e38c07cc596074c6ea99c9b2c829c3` are included in production deployment `dpl_Hif6q7bNQWMjzepNg5Ak73VTMi8B` (READY); all three production aliases assigned. |
+| Production deployment | READY | 2026-11-19: latest production commit `48ddc4717b8aa4563068f0301df57d40576dcd88` is deployed as `dpl_CmuQeqt8tM7u2N4TXiX12hL2nxCr` (READY); aliases `payables-tracker-ten.vercel.app`, `payables-tracker-ketan-soni.vercel.app`, and `payables-tracker-git-main-ketan-soni.vercel.app` are assigned. Build events show `Build Completed` and `Deployment completed`. |
 | Production page browser access | Blocked | 2026-11-19: production alias and deployment hostname could not be opened unauthenticated; Vercel project reports SSO protection enabled for all except custom domains, and the tested hosts are Vercel aliases. No live UI interaction was performed. |
 
 Never mark the module ready from static UI checks or a Vercel `READY` deployment alone. A release-ready report must include live endpoint results and the concurrent duplicate test evidence.
