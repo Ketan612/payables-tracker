@@ -4226,6 +4226,7 @@ signupForm.addEventListener("submit", async event => {
 
 function initializeAuth() {
   supabaseClient.auth.onAuthStateChange((event, session) => {
+    document.documentElement.dataset.dashboardReady = "false";
 
     if (event === "PASSWORD_RECOVERY") {
       updateAuthUI(null);
@@ -4284,6 +4285,7 @@ function initializeAuth() {
         renderPeople();
         renderSchedules();
         populatePaymentDropdowns();
+        document.documentElement.dataset.dashboardReady = "true";
       }, 0);
     } else {
             rows = [];
