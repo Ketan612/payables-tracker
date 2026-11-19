@@ -66,19 +66,26 @@ async function loadMappings(){
 
 function reportActionError(action,error){alert(action+" could not be fully confirmed: "+(error?.message||String(error))+". Refresh the inbox and check Cash Book before retrying.")}
 async function loadInbox(){
- const [pending,locked]=await Promise.all([
+ const [pending,locked,duplicates,duplicateEvents]=await Promise.all([
   sb.from("sms_capture_inbox").select("*").eq("user_id",user.id).eq("status","needs_review").order("received_at",{ascending:false}).limit(50),
-  sb.from("sms_capture_inbox").select("*").eq("user_id",user.id).eq("status","posted").is("movement_id",null).order("received_at",{ascending:false}).limit(50)
+  sb.from("sms_capture_inbox").select("*").eq("user_id",user.id).eq("status","posted").is("movement_id",null).order("received_at",{ascending:false}).limit(50),
+  sb.from("sms_capture_inbox").select("*").eq("user_id",user.id).eq("status","duplicate").order("received_at",{ascending:false}).limit(50),
+  sb.from("sms_capture_events").select("id,created_at,sender,account_identifier,reference_number,amount,direction,detail,outcome").eq("user_id",user.id).eq("outcome","duplicate").order("created_at",{ascending:false}).limit(50)
  ]);
- if(pending.error)throw pending.error;if(locked.error)throw locked.error;
- const data=[...(pending.data||[]),...(locked.data||[])].sort((x,y)=>Date.parse(y.received_at||0)-Date.parse(x.received_at||0)).slice(0,50);
- $("inbox").innerHTML=data.map(r=>{
-  const isLocked=r.status==="posted";
-  return '<article class="item"><b>'+esc(r.parsed_description||"SMS transaction")+'</b><span>'+esc(r.parsed_date||"Date unknown")+' · '+esc(r.parsed_direction||"Unknown")+' · '+fmt(r.parsed_amount)+'</span><span>Identifier: '+esc(r.account_identifier||"not detected")+' | Ref: '+esc(r.reference_number||"none")+'</span>'+(isLocked?'<p class="warn">Posting is locked or its outcome is uncertain. Check Cash Book before any manual recovery; do not retry.</p>':'<label>Post to account<select data-inbox-account="'+r.id+'">'+accounts.map(a=>'<option value="'+a.id+'" '+(a.id===r.account_id?"selected":"")+'>'+esc(a.account_name)+'</option>').join("")+'</select></label>')+'<small>'+esc(r.parse_reason||"Please review")+'</small><div class="row"><button data-approve="'+r.id+'" '+(isLocked?"disabled":"")+'>Approve & post</button><button data-reject="'+r.id+'" '+(isLocked?"disabled":"")+'>Reject</button></div></article>';
- }).join("")||'<p class="muted">Review inbox is clear.</p>';
+ if(pending.error)throw pending.error;if(locked.error)throw locked.error;if(duplicates.error)throw duplicates.error;if(duplicateEvents.error)throw duplicateEvents.error;
+ const data=[...(pending.data||[]),...(locked.data||[]),...(duplicates.data||[])].sort((x,y)=>Date.parse(y.received_at||0)-Date.parse(x.received_at||0)).slice(0,50);
+ const inboxRefs=new Set((duplicates.data||[]).map(r=>r.reference_number).filter(Boolean));
+ const eventDuplicates=(duplicateEvents.data||[]).filter(e=>!e.reference_number||!inboxRefs.has(e.reference_number));
+ const reviewHtml=data.map(r=>{
+  const isLocked=r.status==="posted",isDuplicate=r.status==="duplicate";
+  return '<article class="item"><b>'+esc(r.parsed_description||"SMS transaction")+'</b><span>'+esc(r.parsed_date||"Date unknown")+' · '+esc(r.parsed_direction||"Unknown")+' · '+fmt(r.parsed_amount)+'</span><span>Identifier: '+esc(r.account_identifier||"not detected")+' | Ref: '+esc(r.reference_number||"none")+'</span>'+(isDuplicate?'<p class="warn"><b>Duplicate blocked.</b> This SMS/reference has already been captured. No second Cash Book entry was created.</p>':isLocked?'<p class="warn">Posting is locked or its outcome is uncertain. Check Cash Book before any manual recovery; do not retry.</p>':'<label>Post to account<select data-inbox-account="'+r.id+'">'+accounts.map(a=>'<option value="'+a.id+'" '+(a.id===r.account_id?"selected":"")+'>'+esc(a.account_name)+'</option>').join("")+'</select></label>')+'<small>'+esc(r.parse_reason||"Please review")+'</small><div class="row">'+(isDuplicate?'': '<button data-approve="'+r.id+'" '+(isLocked?"disabled":"")+'>Approve & post</button><button data-reject="'+r.id+'" '+(isLocked?"disabled":"")+'>'+ 'Reject</button>')+'</div></article>';
+ }).join("");
+ const duplicateHtml=eventDuplicates.map(e=>'<article class="item"><b>Duplicate SMS detected</b><span>'+new Date(e.created_at).toLocaleString()+' · '+esc(e.direction||"Unknown")+' · '+fmt(e.amount)+'</span><span>Identifier: '+esc(e.account_identifier||"not detected")+' | Ref: '+esc(e.reference_number||"none")+'</span><p class="warn">Duplicate capture blocked. '+esc(e.detail||"No second Cash Book entry was created.")+'</p><small>Logged by SMS Capture</small></article>').join("");
+ $("inbox").innerHTML=reviewHtml+duplicateHtml||'<p class="muted">Review inbox is clear.</p>';
  document.querySelectorAll("[data-approve]").forEach(b=>b.onclick=()=>{b.disabled=true;approve(b.dataset.approve).catch(e=>reportActionError("Approval",e)).finally(()=>{b.disabled=false})});
  document.querySelectorAll("[data-reject]").forEach(b=>b.onclick=()=>{b.disabled=true;reject(b.dataset.reject).catch(e=>reportActionError("Rejection",e)).finally(()=>{b.disabled=false})});
-}function escapeLikePattern(value){return String(value??"").replace(/[\\%_]/g,"\\$&")}
+}
+function escapeLikePattern(value){return String(value??"").replace(/[\\%_]/g,"\\$&")}
 async function findCashMovementDuplicate(referenceNumber){const safeReference=escapeLikePattern(referenceNumber);const [bySmsReference,byReferenceNote]=await Promise.all([sb.from("cash_movements").select("id").eq("user_id",user.id).eq("sms_reference_number",referenceNumber).limit(1),sb.from("cash_movements").select("id").eq("user_id",user.id).ilike("reference_note","%Ref "+safeReference+" ·%").limit(1)]);if(bySmsReference.error)return {data:null,error:bySmsReference.error};if(byReferenceNote.error)return {data:null,error:byReferenceNote.error};return {data:(bySmsReference.data?.length?bySmsReference.data:(byReferenceNote.data||[])),error:null}}
 async function restoreClaim(id,reason){const r=await sb.from("sms_capture_inbox").update({status:"needs_review",parse_reason:reason}).eq("id",id).eq("user_id",user.id).eq("status","posted").select("id").maybeSingle();if(!r.error&&!r.data)r.error={message:"No claimed inbox row was restored; it may remain locked."};try{await loadInbox()}catch(e){console.error("SMS Capture inbox refresh after restore",e);r.refreshError=e}return r}
 async function approve(id){
