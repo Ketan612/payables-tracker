@@ -91,6 +91,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await expect(page.locator("#accountSelect")).toContainText(cashName);
  await page.locator("#accountSelect").selectOption({label:cashName});
  await expect(page.locator("#accountSelect")).toHaveValue(await page.locator("#accountSelect option").filter({hasText:cashName}).getAttribute("value"));
+ await expect(page.locator("#closing")).toContainText("0.00");
  await page.locator("#editOpening").click();
  await page.locator("#opening").fill("2600");
  await page.locator("#saveOpening").click();
