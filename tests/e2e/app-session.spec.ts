@@ -176,6 +176,8 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await expect(page.locator("#balanceDetailDlg")).toBeVisible();
  const payableButton=page.locator('#balanceDetailDlg [data-settle-type="payable"]');
  await expect(payableButton).toBeVisible();
+ const payableId=await payableButton.getAttribute("data-settle-id");
+ expect(payableId).toBeTruthy();
  await payableButton.click();
  await expect(page.locator("#settlementDlg")).toBeVisible();
  await expect(page.locator("#settlementOutstanding")).toContainText("250");
@@ -188,9 +190,14 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  expect(partialSettlementResponse.ok(),"Partial payable settlement RPC failed: "+partialSettlementResponse.status()+" "+partialSettlementBody).toBeTruthy();
  const partialSettlement=JSON.parse(partialSettlementBody);
  expect(Number(partialSettlement.outstanding_amount)).toBe(150);
+ await expect(page.locator("#balanceDetailDlg")).toContainText("Remaining: ₹150.00");
 
  // Reload from the database to verify the persisted partial balance, not stale modal state.
+ const partialHistoryLoad=page.waitForResponse(response=>response.url().includes("/rest/v1/transaction_settlements")&&response.request().method()==="GET");
  await page.goto("/");
+ const partialHistoryResponse=await partialHistoryLoad;
+ const partialHistoryRows=await partialHistoryResponse.json();
+ expect(partialHistoryRows.some(row=>row.payable_transaction_id===payableId&&Number(row.amount)===100)).toBeTruthy();
  await page.locator("#statusF").selectOption("all");
  await expect(page.locator("#list")).toContainText(marker+" Personal expense");
  const refreshedPayableRow=page.locator("#list .item").filter({hasText:marker+" Personal expense"});
@@ -207,7 +214,12 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  expect(finalSettlementResponse.ok(),"Final payable settlement RPC failed: "+finalSettlementResponse.status()+" "+finalSettlementBody).toBeTruthy();
  expect(Number(JSON.parse(finalSettlementBody).outstanding_amount)).toBe(0);
  await expect(page.locator("#settlementDlg")).not.toBeVisible();
+ await expect(page.locator('#balanceDetailDlg [data-settle-type="payable"]')).toHaveCount(0);
+ const finalHistoryLoad=page.waitForResponse(response=>response.url().includes("/rest/v1/transaction_settlements")&&response.request().method()==="GET");
  await page.goto("/");
+ const finalHistoryResponse=await finalHistoryLoad;
+ const finalHistoryRows=await finalHistoryResponse.json();
+ expect(finalHistoryRows.filter(row=>row.payable_transaction_id===payableId).reduce((total,row)=>total+Number(row.amount),0)).toBe(250);
  await page.locator("#statusF").selectOption("all");
  await expect(page.locator("#list")).toContainText(marker+" Personal expense");
  await page.locator("#list .item").filter({hasText:marker+" Personal expense"}).locator("[data-details]").click();
