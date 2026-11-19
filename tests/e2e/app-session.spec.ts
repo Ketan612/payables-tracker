@@ -50,7 +50,8 @@ test("seeded finance data populates payment and payable destination dropdowns",a
  await expect(page.locator("#payableCard option")).toHaveCount(2);
  await page.locator("#cancel").click();
 });
-\ntest("dashboard reminder preferences save locally without creating financial records",async({page})=>{
+
+test("dashboard reminder preferences save locally without creating financial records",async({page})=>{
  await signIn(page);
  await page.locator("#reminderEmail").fill("e2e-reminder@example.invalid");
  await page.locator("#reminderDays").selectOption("5");
