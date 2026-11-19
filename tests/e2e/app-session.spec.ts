@@ -258,6 +258,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await duplicateItem.locator("[data-approve]").click();
  await expect(page.locator("#inbox article.item").filter({hasText:reference})).toHaveCount(0);
  await page.goto("/cashbook.html");
+ await page.locator("#accountSelect").selectOption({label:cashName});
  await expect(page.locator("#transactions")).toContainText("E2E Store");
  await expect(page.locator("#transactions .ledger-table tbody tr").filter({hasText:"E2E Store"})).toHaveCount(1);
 
