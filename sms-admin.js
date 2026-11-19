@@ -2,7 +2,7 @@ const sb=supabase.createClient("https://magxbczgrxeypryjborr.supabase.co","sb_pu
 const ADMIN_EMAIL="ketansoni8@gmail.com";
 const $=id=>document.getElementById(id);
 const OUTCOME_CLASSES=new Set(["posted","duplicate","needs_review","invalid_token","cashbook_write_failed","invalid_request","missing_token","invalid_message"]);
-let all=[];
+let all=[],reviews=[];
 
 const esc=value=>String(value??"—").replace(/[&<>"']/g,char=>({
  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
@@ -51,6 +51,12 @@ function draw(){
   const outcomeClass=OUTCOME_CLASSES.has(outcome)?outcome:"unknown";
   return "<tr><td>"+esc(time)+"</td><td><span class='pill "+outcomeClass+"'>"+esc(outcome.replace(/_/g," "))+"</span></td><td>"+esc(item.user_id)+"</td><td>"+esc(item.sender)+"</td><td>"+esc(item.account_identifier)+"</td><td>"+esc(fmtAmount(item.amount,item.direction))+"</td><td>"+esc(item.reference_number)+"</td><td>"+esc(item.http_status)+"</td><td>"+esc(item.detail)+"</td></tr>";
  }).join("")||"<tr><td colspan='9' class='empty'>No events found for this filter.</td></tr>";
+ const reviewRows=reviews.map(item=>{
+  const time=new Date(item.reviewed_at).toLocaleString("en-IN",{timeZone:"Asia/Kolkata"});
+  const accepted=item.status==="posted";
+  return "<tr><td>"+esc(time)+"</td><td><span class='pill "+(accepted?"posted":"rejected")+"'>"+(accepted?"accepted":"rejected")+"</span></td><td>"+esc(item.user_id)+"</td><td>"+esc(item.sms_sender)+"</td><td>"+esc(item.account_identifier)+"</td><td>"+esc(fmtAmount(item.parsed_amount,item.parsed_direction))+"</td><td>"+esc(item.reference_number)+"</td><td colspan='2'>"+esc(item.parse_reason||"Reviewed transaction")+"</td></tr>";
+ }).join("");
+ $("reviewRows").innerHTML=reviewRows||"<tr><td colspan='8' class='empty'>No reviewed transactions in this period.</td></tr>";
 }
 
 async function load(){
@@ -62,8 +68,13 @@ async function load(){
   .gte("created_at",since).order("created_at",{ascending:false}).limit(500);
  if(error){$("status").textContent="Could not load events: "+error.message;return}
  all=data||[];
+ const reviewResult=await sb.from("sms_capture_inbox")
+  .select("id,user_id,sms_sender,account_identifier,reference_number,parsed_amount,parsed_direction,status,parse_reason,reviewed_at")
+  .not("reviewed_at","is",null).gte("reviewed_at",since).order("reviewed_at",{ascending:false}).limit(500);
+ if(reviewResult.error){$("status").textContent="Integration events loaded, but review decisions failed to load: "+reviewResult.error.message;reviews=[];draw();return}
+ reviews=reviewResult.data||[];
  draw();
- $("status").textContent=all.length+" event(s) loaded. Last refreshed "+new Date().toLocaleTimeString("en-IN");
+ $("status").textContent=all.length+" integration event(s) and "+reviews.length+" review decision(s) loaded. Last refreshed "+new Date().toLocaleTimeString("en-IN");
 }
 
 $("refresh").onclick=()=>load().catch(error=>{$("status").textContent="Could not load events: "+(error?.message||String(error))});
