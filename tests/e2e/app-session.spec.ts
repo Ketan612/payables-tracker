@@ -60,6 +60,8 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
 
  // Cash Book account, opening balance, debit and credit all entered via UI.
  await page.goto("/cashbook.html");
+ await expect(page.locator("#signedInEmail")).toContainText(email);
+ await expect(page.locator("#accountSelect option")).not.toHaveCount(0);
  await page.locator("#addAccount").click();
  await page.locator("#accountName").fill(cashName);
  await page.locator("#accountType").selectOption({label:"Cash"});
@@ -93,12 +95,14 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.locator("#opening").fill("2600");
  await page.locator("#saveOpening").click();
  await expect(page.locator("#openingDisplay")).toContainText("2,600");
+ await expect(page.locator("#closing")).toContainText("2,600");
  await page.locator("#addTxn").click();
  await page.locator("#direction").selectOption("out");
  await page.locator("#description").fill(marker+" Cash debit");
  await page.locator("#amount").fill("75");
  await page.locator("#txnForm button[type=submit]").click();
  await expect(page.locator("#transactions")).toContainText(marker+" Cash debit");
+ await expect(page.locator("#closing")).toContainText("2,525");
  await page.locator("#addTxn").click();
  await page.locator("#direction").selectOption("in");
  await page.locator("#description").fill(marker+" Cash credit");
