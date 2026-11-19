@@ -119,7 +119,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.locator("#cycleEnd").fill("30");
  await page.locator("#cardDueDay").fill("5");
  await page.locator("#cardDueDate").fill(future);
- await page.locator("#cardForm button[type=submit]").click();
+ await page.locator("#cardForm button").click();
  await expect(page.locator("#cardDlg")).not.toBeVisible();
 
  // Person created through People.
@@ -136,7 +136,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.locator("#emiDue").fill(future);
  await page.locator("#emiStart").fill(today);
  await page.locator("#emiEnd").fill(future);
- await page.locator("#emiForm button[type=submit]").click();
+ await page.locator("#emiForm button").click();
  await expect(page.locator("#emiDlg")).not.toBeVisible();
  await expect(page.locator("#emis")).toContainText(emiName);
 
