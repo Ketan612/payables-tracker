@@ -88,9 +88,11 @@ Parser behavior for formats not covered by a passing regression test must remain
 - `sms-capture.js` and `sms-admin.js` compile with the JavaScript V8 parser.
 - `sms-capture.html`: 18 unique IDs; all 32 JavaScript element references resolve.
 - `sms-admin.html`: 11 unique IDs; all 18 JavaScript element references resolve.
-- SMS Cash Book duplicate lookup checks both exact `sms_reference_number` and the escaped `reference_note` fallback; simulated tests verified both query paths run and query errors fail closed.
+- SMS Cash Book duplicate lookup checks both exact `sms_reference_number` and the escaped `reference_note` fallback; simulated tests verified both query paths run, matches from either path are detected, wildcard characters are escaped, and query errors fail closed.
 - SMS claim restoration now treats a zero-row update as unconfirmed rather than assuming the item returned to review.
-- Admin monitor escapes event-controlled table values before rendering; a simulated `<img src=x onerror=alert(1)>` value is rendered as escaped text. Database RLS remains the authorization boundary and has not been verified in this environment.
+- Admin monitor escapes event-controlled table values before rendering; a simulated `<img src=x onerror=alert(1)>` value is rendered as escaped text. The 500-row display cap is labelled in the UI. Database RLS remains the authorization boundary and has not been verified in this environment.
+- Review inbox loads pending, locked, and duplicate inbox rows without querying the administrator-only `sms_capture_events` table; duplicate rows have no approve/reject actions.
+- Cache-busting query versions were refreshed for both SMS Capture and the admin monitor scripts.
 - Claim restoration simulation verified a zero-row update is reported as unconfirmed, while a returned row is accepted.
 
 ## Evidence log (complete only after live tests)
@@ -106,7 +108,7 @@ Parser behavior for formats not covered by a passing regression test must remain
 | Parser regression cases | Prior local result reported; not rerun here | |
 | Reference dedupe sequential | Not verified in this environment | |
 | Reference dedupe concurrent / atomic | Blocked until DB/server-side protection verified | |
-| Production deployment | READY | 2026-11-19: latest production commit `48ddc4717b8aa4563068f0301df57d40576dcd88` is deployed as `dpl_CmuQeqt8tM7u2N4TXiX12hL2nxCr` (READY); aliases `payables-tracker-ten.vercel.app`, `payables-tracker-ketan-soni.vercel.app`, and `payables-tracker-git-main-ketan-soni.vercel.app` are assigned. Build events show `Build Completed` and `Deployment completed`. |
+| Production deployment | READY | 2026-11-19: application code through commit `9aeec7ad90be770adea16578f9aaa77924680ae2` is deployed as `dpl_5yv2ZnFdsVnPhvErQMcg9AFULQez` (READY); production aliases `payables-tracker-ten.vercel.app`, `payables-tracker-ketan-soni.vercel.app`, and `payables-tracker-git-main-ketan-soni.vercel.app` are assigned. Build events show `Build Completed`; the deployment reports `READY` with no alias error. |
 | Production page browser access | Blocked | 2026-11-19: production alias and deployment hostname could not be opened unauthenticated; Vercel project reports SSO protection enabled for all except custom domains, and the tested hosts are Vercel aliases. No live UI interaction was performed. |
 
 Never mark the module ready from static UI checks or a Vercel `READY` deployment alone. A release-ready report must include live endpoint results and the concurrent duplicate test evidence.
