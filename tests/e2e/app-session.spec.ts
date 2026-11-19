@@ -195,7 +195,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.locator("#payableAmount").fill("250");
  await page.locator("#payableDueDate").fill(future);
  await page.locator("#payableNotes").fill(marker);
- await page.locator("#form button[type=submit]").click();
+ await page.getByRole("button",{name:"Save",exact:true}).click();
  await expect(page.locator("#dlg")).not.toBeVisible();
  await expect(page.locator("#list")).toContainText(marker+" Personal expense");
 
