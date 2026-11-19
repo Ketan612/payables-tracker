@@ -87,7 +87,8 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await expect(page.locator("#accountDialog")).not.toBeVisible();
  expect(dialogMessages.slice(cashDialogStart),"Cash Book account save should not raise an application error").toEqual([]);
  await expect(page.locator("#accountSelect")).toContainText(cashName);
- await expect(page.locator("#accountSelect")).toContainText(cashName);
+ await page.locator("#accountSelect").selectOption({label:cashName});
+ await expect(page.locator("#accountSelect")).toHaveValue(await page.locator("#accountSelect option").filter({hasText:cashName}).getAttribute("value"));
  await page.locator("#editOpening").click();
  await page.locator("#opening").fill("2600");
  await page.locator("#saveOpening").click();
