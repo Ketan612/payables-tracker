@@ -52,19 +52,19 @@ async function loadAccounts(){
  const status=$("accountLoadStatus");
  status.textContent="Loading Cash Book accounts…";status.className="status";
  const {data,error}=await sb.from("bank_accounts").select("id,account_name").eq("user_id",user.id).eq("is_active",true);
- if(error){status.textContent="Account loading failed: "+error.message;status.className="status error";$("mapAccount").innerHTML='<option value="">Unable to load accounts</option>';$("senderAccount").innerHTML='<option value="">Unable to load accounts</option>';throw error}
+ if(error){status.textContent="Account loading failed: "+error.message;status.className="status error";$("mapAccount").innerHTML='<option value="">Unable to load accounts</option>';throw error}
  accounts=data||[];
  const options=accounts.map(a=>'<option value="'+a.id+'">'+esc(a.account_name)+'</option>').join("");
  const empty='<option value="">'+(accounts.length?"Select account":"No Cash Book accounts found for this login")+'</option>';
- $("mapAccount").innerHTML=empty+options;$("senderAccount").innerHTML=empty+options;
- status.textContent=accounts.length?accounts.length+" Cash Book account(s) loaded.":"No Cash Book accounts found for the current login.";
+ $("mapAccount").innerHTML=empty+options;
+ status.textContent=accounts.length?accounts.length+" active Cash Book account(s) loaded.":"No active Cash Book accounts found for the current login.";
  status.className=accounts.length?"status success":"status error";
 }
 
 async function loadTokens(){
- const {data,error}=await sb.from("sms_capture_tokens").select("id,label,is_active,created_at").eq("user_id",user.id).order("created_at",{ascending:false});
+ const {data,error}=await sb.from("sms_capture_tokens").select("id,label,is_active,created_at").eq("user_id",user.id).eq("is_active",true).order("created_at",{ascending:false});
  if(error)throw error;
- $("tokens").innerHTML=(data||[]).map(t=>'<div class="item"><b>'+esc(t.label)+' · '+(t.is_active?"Active":"Revoked")+'</b><small>'+new Date(t.created_at).toLocaleString()+'</small>'+(t.is_active?'<button data-revoke="'+t.id+'">Revoke token</button>':'')+'</div>').join("")||'<p class="muted">No tokens yet.</p>';
+ $("tokens").innerHTML=(data||[]).map(t=>'<div class="item"><b>'+esc(t.label)+' · Active</b><small>Created: '+new Date(t.created_at).toLocaleString("en-IN",{timeZone:"Asia/Kolkata"})+'</small><button data-revoke="'+t.id+'">Revoke token</button></div>').join("")||'<p class="muted">No active capture token. Generate a new token to connect your automation.</p>';
  document.querySelectorAll("[data-revoke]").forEach(button=>button.onclick=async()=>{
   if(!confirm("Revoke this capture token?"))return;
   button.disabled=true;button.textContent="Revoking…";
@@ -83,9 +83,7 @@ async function loadMappings(){
  if(error)throw error;
  const rules=data||[];
  const identifierRules=rules.filter(r=>r.account_identifier);
- const senderRules=rules.filter(r=>!r.account_identifier&&r.sender&&!r.sender.startsWith("__account__:"));
  $("mappings").innerHTML=identifierRules.map(r=>'<div class="item"><b>'+esc(r.account_identifier)+'</b><span>'+esc(accounts.find(a=>a.id===r.account_id)?.account_name||"⚠ Linked account not found")+'</span><button data-delmap="'+r.id+'">Remove</button></div>').join("")||'<p class="muted">No identifier rules configured.</p>';
- $("senderMappings").innerHTML=senderRules.map(r=>'<div class="item"><b>'+esc(r.sender)+'</b><span>Default account: '+esc(accounts.find(a=>a.id===r.account_id)?.account_name||"⚠ Linked account not found")+'</span><button data-delmap="'+r.id+'">Remove</button></div>').join("")||'<p class="muted">No sender defaults configured.</p>';
  document.querySelectorAll("[data-delmap]").forEach(b=>b.onclick=async()=>{
   if(!confirm("Remove this mapping?"))return;
   const r=await sb.from("sms_capture_account_rules").delete().eq("id",b.dataset.delmap).eq("user_id",user.id);
@@ -143,7 +141,39 @@ async function reconcileInboxCashBookDuplicates(rows){
   if(result.data){row.status="duplicate";row.movement_id=movement.id;row.review_decision=null;row.parse_reason=patch.parse_reason}
  }
 }
-async function clearReviewInbox(){if(!confirm("Clear all records currently shown in the SMS review inbox? This will close their review records only. Existing Cash Book transactions will NOT be deleted."))return;const button=$("clearReviewInbox"),status=$("clearInboxStatus");button.disabled=true;status.textContent="Clearing review records…";status.className="status";try{const patch={status:"ignored",review_decision:"cleared",parse_reason:"Cleared from SMS review inbox by user",reviewed_at:new Date().toISOString()};const [openItems,rejectedItems,uncertainItems]=await Promise.all([sb.from("sms_capture_inbox").update(patch).eq("user_id",user.id).in("status",["needs_review","duplicate"]).select("id"),sb.from("sms_capture_inbox").update(patch).eq("user_id",user.id).eq("status","ignored").eq("review_decision","rejected").select("id"),sb.from("sms_capture_inbox").update(patch).eq("user_id",user.id).eq("status","posted").is("movement_id",null).select("id")]);if(openItems.error)throw openItems.error;if(rejectedItems.error)throw rejectedItems.error;if(uncertainItems.error)throw uncertainItems.error;await loadInbox();status.textContent=((openItems.data?.length||0)+(rejectedItems.data?.length||0)+(uncertainItems.data?.length||0))+" review record(s) cleared, including rejected items. Existing Cash Book entries were not changed.";status.className="status success"}catch(error){status.textContent="Could not clear review records: "+(error?.message||String(error));status.className="status error"}finally{button.disabled=false}}
+async function clearReviewInbox(){
+ if(!confirm("Clear all records currently shown in the SMS review inbox? This closes review records only. Existing Cash Book transactions will NOT be deleted."))return;
+ const button=$("clearReviewInbox"),status=$("clearInboxStatus");
+ button.disabled=true;status.textContent="Finding review records…";status.className="status";
+ try{
+  const [openItems,rejectedItems,uncertainItems]=await Promise.all([
+   sb.from("sms_capture_inbox").select("id").eq("user_id",user.id).in("status",["needs_review","duplicate"]),
+   sb.from("sms_capture_inbox").select("id").eq("user_id",user.id).eq("status","ignored").eq("review_decision","rejected"),
+   sb.from("sms_capture_inbox").select("id").eq("user_id",user.id).eq("status","posted").is("movement_id",null)
+  ]);
+  for(const result of [openItems,rejectedItems,uncertainItems])if(result.error)throw result.error;
+  const ids=[...new Set([...(openItems.data||[]),...(rejectedItems.data||[]),...(uncertainItems.data||[])].map(r=>r.id))];
+  if(!ids.length){await loadInbox();status.textContent="No uncleared review records were found. Existing Cash Book entries were not changed.";status.className="status";return}
+  status.textContent="Closing "+ids.length+" review record(s)…";
+  const patch={status:"ignored",review_decision:"cleared",parse_reason:"Cleared from SMS review inbox by user",reviewed_at:new Date().toISOString()};
+  const updated=await sb.from("sms_capture_inbox").update(patch).eq("user_id",user.id).in("id",ids).select("id");
+  if(updated.error)throw updated.error;
+  const changed=updated.data||[];
+  if(changed.length!==ids.length)throw new Error("Only "+changed.length+" of "+ids.length+" records were updated. Refresh the page and retry; no Cash Book entries were deleted.");
+  await loadInbox();
+  const [stillRejected,stillOpen,stillUncertain]=await Promise.all([
+   sb.from("sms_capture_inbox").select("id").eq("user_id",user.id).eq("status","ignored").eq("review_decision","rejected").in("id",ids),
+   sb.from("sms_capture_inbox").select("id").eq("user_id",user.id).in("status",["needs_review","duplicate"]).in("id",ids),
+   sb.from("sms_capture_inbox").select("id").eq("user_id",user.id).eq("status","posted").is("movement_id",null).in("id",ids)
+  ]);
+  for(const result of [stillRejected,stillOpen,stillUncertain])if(result.error)throw result.error;
+  const remaining=(stillRejected.data?.length||0)+(stillOpen.data?.length||0)+(stillUncertain.data?.length||0);
+  if(remaining)throw new Error(remaining+" records are still in the active review queue after refresh.");
+  status.textContent=changed.length+" review record(s) cleared and verified, including rejected items. Audit records were retained; Cash Book entries were not changed.";
+  status.className="status success";
+ }catch(error){status.textContent="Could not clear review records: "+(error?.message||String(error));status.className="status error"}
+ finally{button.disabled=false}
+}
 function escapeLikePattern(value){return String(value??"").replace(/[\\%_]/g,"\\$&")}
 async function findCashMovementDuplicate(referenceNumber){const safeReference=escapeLikePattern(referenceNumber);const [bySmsReference,byReferenceNote]=await Promise.all([sb.from("cash_movements").select("id").eq("user_id",user.id).eq("sms_reference_number",referenceNumber).limit(1),sb.from("cash_movements").select("id").eq("user_id",user.id).ilike("reference_note","%Ref "+safeReference+" ·%").limit(1)]);if(bySmsReference.error)return {data:null,error:bySmsReference.error};if(byReferenceNote.error)return {data:null,error:byReferenceNote.error};return {data:(bySmsReference.data?.length?bySmsReference.data:(byReferenceNote.data||[])),error:null}}
 async function restoreClaim(id,reason){const r=await sb.from("sms_capture_inbox").update({status:"needs_review",parse_reason:reason}).eq("id",id).eq("user_id",user.id).eq("status","posted").select("id").maybeSingle();if(!r.error&&!r.data)r.error={message:"No claimed inbox row was restored; it may remain locked."};try{await loadInbox()}catch(e){console.error("SMS Capture inbox refresh after restore",e);r.refreshError=e}return r}
@@ -165,7 +195,7 @@ async function approve(id){
 async function reject(id){const current=await sb.from("sms_capture_inbox").select("id,status,movement_id").eq("id",id).eq("user_id",user.id).maybeSingle();if(current.error){alert("Unable to check this SMS status: "+current.error.message);return}if(!current.data){alert("SMS record not found. Refresh the inbox.");await loadInbox();return}if(current.data.status==="posted"){alert("This SMS is locked because its Cash Book posting outcome must be verified first. Check the Cash Book for the matching amount and date. Do not reject or retry it until confirmed.");await loadInbox();return}if(!["needs_review","duplicate"].includes(current.data.status)){alert("This SMS has already been reviewed. Refreshing the inbox.");await loadInbox();return}const r=await sb.from("sms_capture_inbox").update({status:"ignored",review_decision:"rejected",parse_reason:"Rejected by user",reviewed_at:new Date().toISOString()}).eq("id",id).eq("user_id",user.id).in("status",["needs_review","duplicate"]).select("id").maybeSingle();if(r.error){alert("Reject failed: "+r.error.message);return}if(!r.data){alert("This SMS changed status before rejection. Refreshing the inbox.");await loadInbox();return}await loadInbox()}
 $("generateToken").onclick=async()=>{const btn=$("generateToken"),status=$("tokenStatus");btn.disabled=true;btn.textContent="Generating…";status.textContent="Checking session…";status.className="status";try{const {data,error}=await sb.auth.getSession();if(error)throw new Error("Session lookup failed: "+error.message);const session=data.session;if(!session?.access_token)throw new Error("No active login session. Sign out and log in again.");status.textContent="Registering token with server…";latestToken="pt_sms_"+Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b=>b.toString(16).padStart(2,"0")).join("");const response=await fetch("https://magxbczgrxeypryjborr.supabase.co/functions/v1/sms-capture/register",{method:"POST",headers:{apikey:"sb_publishable_o3SjG1KCygJ99RuamTJdsQ_RIkHJ-gX",Authorization:"Bearer "+session.access_token,"Content-Type":"application/json"},body:JSON.stringify({token:latestToken,label:"iPhone Shortcut"})});const raw=await response.text();let result;try{result=JSON.parse(raw)}catch{result={error:raw||"Empty server response"}}if(!response.ok||!result.ok)throw new Error("HTTP "+response.status+": "+(result.error||raw||"Registration rejected"));$("tokenValue").value=latestToken;$("tokenBox").hidden=false;status.textContent="Token generated successfully. Copy it now—the plaintext is shown only once.";status.className="status success";try{await loadTokens()}catch(refreshError){status.textContent="Token was generated successfully, and is displayed below. Token list refresh failed: "+(refreshError?.message||String(refreshError));status.className="status success"}}catch(e){latestToken="";$("tokenBox").hidden=true;status.textContent="Token generation failed: "+(e?.message||String(e));status.className="status error";console.error("SMS Capture token registration",e)}finally{btn.disabled=false;btn.textContent="Generate new token"}}
 $("copyToken").onclick=async()=>{await navigator.clipboard.writeText($("tokenValue").value);alert("Copied token. Store it safely.")};
-$("mappingForm").onsubmit=async e=>{e.preventDefault();const identifier=($("identifier").value.trim().match(/\d+/g)||[]).join(""),account_id=$("mapAccount").value;if(!identifier||!account_id)return;const ruleSender="__account__:"+identifier;const r=await sb.from("sms_capture_account_rules").upsert({user_id:user.id,sender:ruleSender,account_identifier:identifier,account_id},{onConflict:"user_id,sender"});if(r.error)alert("Identifier mapping save failed: "+r.error.message);else{$("identifier").value="";await loadMappings()}};$("senderMappingForm").onsubmit=async e=>{e.preventDefault();const sender=$("senderId").value.trim().toUpperCase(),account_id=$("senderAccount").value;if(!sender||!account_id)return;if(sender.startsWith("__ACCOUNT__:"))return alert("That sender ID is reserved for account-identifier rules.");const r=await sb.from("sms_capture_account_rules").upsert({user_id:user.id,sender,account_identifier:null,account_id},{onConflict:"user_id,sender"});if(r.error)alert("Sender mapping save failed: "+r.error.message);else{$("senderId").value="";await loadMappings()}};
+$("mappingForm").onsubmit=async e=>{e.preventDefault();const identifier=($("identifier").value.trim().match(/\d+/g)||[]).join(""),account_id=$("mapAccount").value;if(!identifier||!account_id)return;const ruleSender="__account__:"+identifier;const r=await sb.from("sms_capture_account_rules").upsert({user_id:user.id,sender:ruleSender,account_identifier:identifier,account_id},{onConflict:"user_id,sender"});if(r.error)alert("Identifier mapping save failed: "+r.error.message);else{$("identifier").value="";await loadMappings()}};
 (async()=>{
  const inbox=$("inbox");if(inbox)inbox.textContent="Checking your session…";
  if(!await auth())return;
