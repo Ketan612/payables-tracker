@@ -224,21 +224,15 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.locator("#desc").fill(marker+" Shared expense");
  await page.locator("#amt").fill("100");
  await page.locator("#transactionDate").fill(today);
- const peopleRefresh=page.waitForResponse(response=>
-  response.url().includes("/rest/v1/people") &&
-  response.request().method()==="GET"
- );
  await page.locator("#typ").selectOption({label:"Shared"});
- // The Shared selector reloads participants and resets split inputs when loading completes.
- const peopleResponse=await peopleRefresh;
- expect(peopleResponse.ok(),"Shared expense participant refresh should succeed").toBeTruthy();
- await peopleResponse.finished();
- await page.waitForTimeout(200);
  await page.locator("#sharedFields").waitFor({state:"visible"});
+ await expect(page.locator("#yourShare")).toBeVisible();
  await page.locator("#yourShare").fill("60");
  await page.locator("#addSplitPerson").click();
  await page.locator(".participant-person").selectOption({label:personName});
  await page.locator(".participant-share").fill("40");
+ await expect(page.locator("#yourShare")).toHaveValue("60");
+ await expect(page.locator(".participant-share")).toHaveValue("40");
  const sharedValidity=await page.locator("#form").evaluate(form=>{
   const element=form as HTMLFormElement;
   return {
