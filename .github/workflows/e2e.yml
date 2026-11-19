@@ -19,7 +19,7 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
       TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
-      TEST_SIGNUP_EMAIL: payables-e2e-signup-${{ github.run_id }}@example.com
+      TEST_SIGNUP_EMAIL: playwrighte2e+payables-e2e-${{ github.run_id }}@gmail.com
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
