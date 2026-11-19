@@ -243,6 +243,17 @@ async function loadAccounts() {
 function populatePaymentDropdowns() {
   const method = $("#paymentMethod").value;
 
+  // Dataset refreshes can finish after the user has already opened the
+  // transaction dialog and selected a funding source. Preserve valid choices
+  // when rebuilding options so a late refresh cannot silently clear them.
+  const previousSelections = {
+    paymentAccount: $("#paymentAccount").value,
+    payableAccount: $("#payableAccount").value,
+    paymentCard: $("#paymentCard").value,
+    payableCard: $("#payableCard").value,
+    payablePerson: $("#payablePerson").value
+  };
+
   const sourceAccounts = accounts.filter(
     account => account.account_type === method
   );
@@ -252,25 +263,22 @@ function populatePaymentDropdowns() {
       `<option value="${safe(item.id)}">${safe(item[labelField])}</option>`
     ).join("");
 
-  $("#paymentAccount").innerHTML =
-    '<option value="">Select account</option>' +
-    accountOptions(sourceAccounts, "account_name");
+  const rebuildSelect = (selector, placeholder, items, labelField, previousValue) => {
+    const select = $(selector);
+    select.innerHTML =
+      `<option value="">${placeholder}</option>` +
+      accountOptions(items, labelField);
 
-  $("#payableAccount").innerHTML =
-    '<option value="">Select account / fund</option>' +
-    accountOptions(accounts, "account_name");
+    if (previousValue && items.some(item => item.id === previousValue)) {
+      select.value = previousValue;
+    }
+  };
 
-  $("#paymentCard").innerHTML =
-    '<option value="">Select card</option>' +
-    accountOptions(cards, "name");
-
-  $("#payableCard").innerHTML =
-    '<option value="">Select card</option>' +
-    accountOptions(cards, "name");
-
-  $("#payablePerson").innerHTML =
-    '<option value="">Select person</option>' +
-    accountOptions(people, "name");
+  rebuildSelect("#paymentAccount", "Select account", sourceAccounts, "account_name", previousSelections.paymentAccount);
+  rebuildSelect("#payableAccount", "Select account / fund", accounts, "account_name", previousSelections.payableAccount);
+  rebuildSelect("#paymentCard", "Select card", cards, "name", previousSelections.paymentCard);
+  rebuildSelect("#payableCard", "Select card", cards, "name", previousSelections.payableCard);
+  rebuildSelect("#payablePerson", "Select person", people, "name", previousSelections.payablePerson);
 }
 function updateDefaultPayableAmount() {
   if (!$("#createPayable").checked) return;
