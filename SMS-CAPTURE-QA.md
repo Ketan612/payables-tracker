@@ -64,6 +64,7 @@ Parser behavior for formats not covered by a passing regression test must remain
 
 - [ ] Confirm `sms_capture_events` has row-level security enabled.
 - [ ] Confirm the SELECT policy allows only the intended administrator identity; an authenticated non-admin must receive no event rows / a permission error, and anonymous access must be denied.
+- [ ] Simulate admin-only RLS denial on `sms_capture_events`; the normal user's review inbox must still load because it reads only that user's inbox rows and does not depend on admin event access.
 - [ ] Do not treat the client-side email check in `sms-admin.js` as authorization. It is only a UI gate; database RLS is the security boundary.
 - [ ] Test event fields containing HTML such as `<img src=x onerror=alert(1)>` in sender, reference, outcome, and detail. The monitor must render them as text and never execute markup.
 - [ ] Keep SMS body text, full token values, authorization headers, and secrets out of the event table and monitor.
