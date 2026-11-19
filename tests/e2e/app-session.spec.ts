@@ -242,11 +242,13 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  const captureHeaders={apikey:"sb_publishable_o3SjG1KCygJ99RuamTJdsQ_RIkHJ-gX",Authorization:"Bearer "+captureToken};
  const firstCapture=await page.request.post(captureUrl,{headers:captureHeaders,data:{message:smsMessage,sender:"SBI"}});
  expect(firstCapture.ok(),"First SMS capture failed: "+firstCapture.status()+" "+await firstCapture.text()).toBeTruthy();
+ await page.reload();
  await expect(page.locator("#inbox article.item").filter({hasText:reference})).toContainText("Needs review");
  await expect(page.locator("#inbox article.item").filter({hasText:reference})).toContainText("X3142");
  await expect(page.locator("#inbox article.item").filter({hasText:reference})).toContainText(cashName);
  const duplicateCapture=await page.request.post(captureUrl,{headers:captureHeaders,data:{message:smsMessage,sender:"SBI"}});
  expect(duplicateCapture.ok(),"Duplicate SMS capture request failed: "+duplicateCapture.status()+" "+await duplicateCapture.text()).toBeTruthy();
+ await page.reload();
  await expect(page.locator("#inbox article.item").filter({hasText:reference})).toContainText("Duplicate");
  const reviewItem=page.locator("#inbox article.item").filter({hasText:reference}).filter({hasText:"Needs review"});
  await reviewItem.locator("[data-approve]").click();
@@ -265,6 +267,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  const rejectedMessage="Dear UPI user A/C X3142 debited by 19.00 on 20Nov26 trf to E2E Rejected Store UPI Ref No "+rejectedReference+".";
  const rejectedCapture=await page.request.post(captureUrl,{headers:captureHeaders,data:{message:rejectedMessage,sender:"SBI"}});
  expect(rejectedCapture.ok(),"Rejected-message capture failed: "+rejectedCapture.status()+" "+await rejectedCapture.text()).toBeTruthy();
+ await page.reload();
  const rejectedItem=page.locator("#inbox article.item").filter({hasText:rejectedReference});
  await expect(rejectedItem).toContainText("Needs review");
  await rejectedItem.locator("[data-reject]").click();
