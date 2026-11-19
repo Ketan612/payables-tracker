@@ -40,7 +40,7 @@ async function auth(){
   user=verified;
   setStatus(user.email||"Authenticated user","success");
   sb.auth.onAuthStateChange((event,nextSession)=>{
-   if(event==="SIGNED_OUT"||!nextSession||nextSession.user?.id!==user.id){
+   if(event==="SIGNED_OUT"||(nextSession?.user?.id&&nextSession.user.id!==user.id)){
     setStatus("Session ended. Returning to login…","error");
     loginRedirectForCurrentPage();
    }
@@ -65,6 +65,22 @@ async function loadAccounts(){
  status.className=accounts.length?"status success":"status error";
 }
 
+async function loadReminderPreference(){
+ const toggle=$("emailReminderEnabled"),save=$("saveEmailReminder"),status=$("emailReminderStatus");
+ status.textContent="Loading reminder preference…";toggle.disabled=true;save.disabled=true;
+ const {data,error}=await sb.from("sms_review_reminder_settings").select("enabled").eq("user_id",user.id).maybeSingle();
+ if(error)throw error;if(!data)throw new Error("Reminder settings are not configured for this account.");
+ toggle.checked=!!data.enabled;toggle.disabled=false;save.disabled=false;
+ status.textContent=data.enabled?"Email reminders are enabled.":"Email reminders are disabled.";
+ status.className="status "+(data.enabled?"success":"");
+}
+$("saveEmailReminder").onclick=async()=>{
+ const toggle=$("emailReminderEnabled"),save=$("saveEmailReminder"),status=$("emailReminderStatus");
+ save.disabled=true;toggle.disabled=true;status.textContent="Saving preference…";status.className="status";
+ try{const {data,error}=await sb.from("sms_review_reminder_settings").update({enabled:toggle.checked,updated_at:new Date().toISOString()}).eq("user_id",user.id).select("enabled").maybeSingle();if(error)throw error;if(!data)throw new Error("No reminder setting was updated. Refresh and try again.");status.textContent=data.enabled?"Email reminders enabled. You’ll receive an email only when items need review.":"Email reminders disabled. No scheduled reminder emails will be sent.";status.className="status success";}
+ catch(error){status.textContent="Could not save preference: "+(error?.message||String(error));status.className="status error";try{await loadReminderPreference()}catch(_){}}
+ finally{save.disabled=false;toggle.disabled=false}
+};
 async function loadTokens(){
  const {data,error}=await sb.from("sms_capture_tokens").select("id,label,is_active,created_at").eq("user_id",user.id).eq("is_active",true).order("created_at",{ascending:false});
  if(error)throw error;
@@ -223,8 +239,9 @@ $("mappingForm").onsubmit=async e=>{e.preventDefault();const identifier=($("iden
  if(!await auth())return;
  const acct=await Promise.allSettled([loadAccounts()]);
  if(acct[0].status==="rejected")console.error("SMS Capture accounts load",acct[0].reason);
- const tasks=await Promise.allSettled([loadTokens(),loadMappings(),loadInbox()]);
+ const tasks=await Promise.allSettled([loadTokens(),loadMappings(),loadInbox(),loadReminderPreference()]);
  if(tasks[0].status==="rejected")$("tokenStatus").textContent="Token list failed to load: "+(tasks[0].reason?.message||String(tasks[0].reason));
  if(tasks[1].status==="rejected")$("mappings").innerHTML='<p class="warn">Mapping list failed to load: '+esc(tasks[1].reason?.message||String(tasks[1].reason))+'</p>';
+ if(tasks[3].status==="rejected")$("emailReminderStatus").textContent="Reminder preference failed to load: "+(tasks[3].reason?.message||String(tasks[3].reason));
  if(tasks[2].status==="rejected")$("inbox").innerHTML='<p class="warn">Review inbox failed to load: '+esc(tasks[2].reason?.message||String(tasks[2].reason))+'</p>';
 })().catch(e=>{console.error("SMS Capture initialization",e);const status=$("signedInEmail");if(status)status.textContent="Page initialization failed: "+(e?.message||String(e));});

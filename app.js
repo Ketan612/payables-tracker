@@ -3,7 +3,8 @@ const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_o3SjG1KCygJ99RuamTJdsQ_RIkHJ-gX
 
 const supabaseClient = window.supabase.createClient(
   SUPABASE_URL,
-  SUPABASE_PUBLISHABLE_KEY
+  SUPABASE_PUBLISHABLE_KEY,
+  { auth: { storageKey: "sb-magxbczgrxeypryjborr-auth-token", persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }
 );
 const K = "payables-v1";
 
