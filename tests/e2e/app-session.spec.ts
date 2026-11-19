@@ -236,7 +236,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.locator("#mappingForm button[type=submit]").click();
  await expect(page.locator("#mappings")).toContainText("X3142");
  await expect(page.locator("#mappings")).toContainText(cashName);
- const reference="E2E"+Date.now();
+ const reference=String(Date.now());
  const smsMessage="Dear UPI user A/C X3142 debited by 78.00 on 20Nov26 trf to E2E Store UPI Ref No "+reference+".";
  const captureUrl="https://magxbczgrxeypryjborr.supabase.co/functions/v1/sms-capture/capture";
  const captureHeaders={apikey:"sb_publishable_o3SjG1KCygJ99RuamTJdsQ_RIkHJ-gX",Authorization:"Bearer "+captureToken};
@@ -264,7 +264,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
 
  // A second simulated message is rejected and remains visible in the audit inbox.
  await page.goto("/sms-capture.html");
- const rejectedReference="E2ER"+Date.now();
+ const rejectedReference=String(Date.now()+1);
  const rejectedMessage="Dear UPI user A/C X3142 debited by 19.00 on 20Nov26 trf to E2E Rejected Store UPI Ref No "+rejectedReference+".";
  const rejectedCapture=await page.request.post(captureUrl,{headers:captureHeaders,data:{message:rejectedMessage,sender:"SBI"}});
  expect(rejectedCapture.ok(),"Rejected-message capture failed: "+rejectedCapture.status()+" "+await rejectedCapture.text()).toBeTruthy();
