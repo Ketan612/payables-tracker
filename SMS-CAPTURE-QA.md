@@ -72,7 +72,7 @@ Parser behavior for formats not covered by a passing regression test must remain
 
 | Check | Result | Evidence / date |
 |---|---|---|
-| Static HTML/JS checks | PASS | 2026-11-19: V8 syntax compilation; 16 unique HTML IDs; all JavaScript `$()` ID references resolve; both inbox duplicate queries filter to `needs_review` / `posted`; Cash Book LIKE metacharacter escaping for `%`, `_`, and `\\` passes direct helper tests; post-insert inbox update requires a returned row and rolls back on error or zero-row result; approve/reject promise failures are caught and buttons are disabled while requests run. |
+| Static HTML/JS checks | PASS | 2026-11-19: JavaScript delimiter scan balanced; 16 unique HTML IDs and all 16 JavaScript `$()` references resolve; locked `posted` rows with null `movement_id` are fetched into the inbox and approve/reject controls are disabled; uncertain Cash Book insert errors retain the claim, refresh the inbox, and warn the user to check Cash Book before retrying; duplicate checks, token revocation row checks, and both SBI reference expectations remain present in the source/QA checklist. |
 | Token create / revoke | Not verified in this environment | |
 | Identifier mapping persistence | Not verified in this environment | |
 | Sender/default mapping persistence | Not verified in this environment | |
@@ -81,7 +81,7 @@ Parser behavior for formats not covered by a passing regression test must remain
 | Parser regression cases | Prior local result reported; not rerun here | |
 | Reference dedupe sequential | Not verified in this environment | |
 | Reference dedupe concurrent / atomic | Blocked until DB/server-side protection verified | |
-| Production deployment | READY | 2026-11-19: deployed commit `945e23e0fc3af80826e517c4ee165297162fcf19` in deployment `dpl_GMCwU1EhrfUFvgBZvgKFs7KcdDgP`; build events report `Build Completed` and `Deployment completed`; all three production aliases assigned. This QA-only edit follows that code deployment. |
+| Production deployment | READY | 2026-11-19: code commit `75ada54a383ca5cf81eec6fb4a06838e1e9a023c` plus QA checklist commit `f919557b11e38c07cc596074c6ea99c9b2c829c3` are included in production deployment `dpl_Hif6q7bNQWMjzepNg5Ak73VTMi8B` (READY); all three production aliases assigned. |
 | Production page browser access | Blocked | 2026-11-19: production alias and deployment hostname could not be opened unauthenticated; Vercel project reports SSO protection enabled for all except custom domains, and the tested hosts are Vercel aliases. No live UI interaction was performed. |
 
 Never mark the module ready from static UI checks or a Vercel `READY` deployment alone. A release-ready report must include live endpoint results and the concurrent duplicate test evidence.
