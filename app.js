@@ -29,6 +29,9 @@ let accounts = [];
 let transactionSplits = [];
 let transactionSettlements = [];
 let settlements = [];
+let transactionsLoadVersion = 0;
+let transactionSplitsLoadVersion = 0;
+let transactionSettlementsLoadVersion = 0;
 
 async function loadPeople() {
   const userId = currentUserId;
@@ -65,9 +68,11 @@ try {
   rows = seed;
 }
 async function loadTransactionSplits() {
+  const requestVersion = ++transactionSplitsLoadVersion;
   const userId = currentUserId;
 
   if (!userId) {
+    if (requestVersion !== transactionSplitsLoadVersion) return;
     transactionSplits = [];
     return;
   }
@@ -86,7 +91,7 @@ async function loadTransactionSplits() {
     `)
     .eq("user_id", userId);
 
-  if (currentUserId !== userId) return;
+  if (currentUserId !== userId || requestVersion !== transactionSplitsLoadVersion) return;
 
   if (error) {
     console.error("Failed to load transaction splits:", error);
@@ -98,9 +103,11 @@ async function loadTransactionSplits() {
   transactionSplits = data || [];
 }
 async function loadTransactionSettlements() {
+  const requestVersion = ++transactionSettlementsLoadVersion;
   const userId = currentUserId;
 
   if (!userId) {
+    if (requestVersion !== transactionSettlementsLoadVersion) return;
     transactionSettlements = [];
     settlements = [];
     return;
@@ -149,7 +156,7 @@ async function loadTransactionSettlements() {
     loadLedger(true)
   ]);
 
-  if (currentUserId !== userId) return;
+  if (currentUserId !== userId || requestVersion !== transactionSettlementsLoadVersion) return;
 
   if (legacyResult.error) {
     console.error(
@@ -194,7 +201,7 @@ async function loadTransactionSettlements() {
     }
   }
 
-  if (currentUserId !== userId) return;
+  if (currentUserId !== userId || requestVersion !== transactionSettlementsLoadVersion) return;
 
   if (ledgerResult.error) {
     console.error(
@@ -635,9 +642,11 @@ function safe(s) {
   }[c]));
 }
 async function loadTransactions() {
+  const requestVersion = ++transactionsLoadVersion;
   const userId = currentUserId;
 
   if (!userId) {
+    if (requestVersion !== transactionsLoadVersion) return;
     rows = [];
     render();
     return;
@@ -650,7 +659,7 @@ async function loadTransactions() {
       .eq("user_id", userId)
       .order("transaction_date", { ascending: false });
 
-    if (currentUserId !== userId) return;
+    if (currentUserId !== userId || requestVersion !== transactionsLoadVersion) return;
 
     if (error) {
       console.error("Failed to load transactions:", error);
@@ -726,7 +735,7 @@ rows = (data || []).map(x => ({
     render();
 
   } catch (error) {
-    if (currentUserId !== userId) return;
+    if (currentUserId !== userId || requestVersion !== transactionsLoadVersion) return;
 
     console.error("Unexpected transaction loading error:", error);
     rows = [];
