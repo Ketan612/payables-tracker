@@ -53,7 +53,7 @@ Parser behavior for formats not covered by a passing regression test must remain
 - [ ] Re-forward the same SMS/reference and confirm the duplicate is blocked or flagged.
 - [ ] If two pending inbox rows share a reference, reject one and verify the remaining `needs_review` row can still be approved. An `ignored` row must not permanently block the valid transaction.
 - [ ] Force a duplicate-check query error and confirm the item is restored to review with no movement created.
-- [ ] Force Cash Book insert failure and confirm inbox returns to review.
+- [ ] Force a Cash Book insert error and confirm the inbox item stays locked (`posted`) with an explicit uncertain-outcome warning. Do not blindly restore it to review: a network error can occur after the database committed the insert. Check Cash Book and inbox before any manual recovery.
 - [ ] Force the inbox update after insert to fail and confirm rollback is attempted and its deleted row is verified. If rollback cannot be confirmed, the inbox item must remain `posted` / locked (not reappear as approvable); inspect Cash Book before manual recovery.
 - [ ] Force the post-insert inbox update to affect zero rows without a database error; confirm the UI treats this as failure and verifies the Cash Book movement rollback.
 - [ ] Test reference values containing `%`, `_`, and `\\` in the Cash Book duplicate lookup; these characters must be treated literally, not as SQL `LIKE` wildcards.
