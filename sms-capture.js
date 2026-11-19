@@ -6,19 +6,7 @@ async function forceLocalLogout(){
  try{localStorage.removeItem("sb-magxbczgrxeypryjborr-auth-token")}catch(_){}
  location.replace("index.html");
 }
-async function auth(){
- const {data:{session},error:sessionError}=await sb.auth.getSession();
- if(sessionError||!session?.access_token){location.replace("index.html");return false}
- const {data:{user:verifiedUser},error:userError}=await sb.auth.getUser(session.access_token);
- if(userError||!verifiedUser){await sb.auth.signOut();location.replace("index.html");return false}
- user=verifiedUser;
- $("signedInEmail").textContent=user.email||"Authenticated user";
- $("smsLogout").onclick=forceLocalLogout;
- sb.auth.onAuthStateChange((event,nextSession)=>{
-  if(event==="SIGNED_OUT"||!nextSession)location.replace("index.html");else if(nextSession.user?.id!==user.id)location.replace("index.html");
- });
- return true;
-}
+async function auth(){const status=$("signedInEmail");status.textContent="Checking saved session…";let sessionResult;try{sessionResult=await Promise.race([sb.auth.getSession(),new Promise((_,reject)=>setTimeout(()=>reject(new Error("Session check timed out")),10000))]);}catch(error){status.textContent="Session check timed out. Refresh this page; if it continues, sign out and log in again.";console.error("SMS Capture session restore",error);return false}const {data:{session},error:sessionError}=sessionResult;if(sessionError){status.textContent="Session error: "+sessionError.message;return false}if(!session?.access_token){status.textContent="No saved login session. Redirecting to login…";location.replace("index.html");return false}let userResult;try{userResult=await Promise.race([sb.auth.getUser(session.access_token),new Promise((_,reject)=>setTimeout(()=>reject(new Error("User verification timed out")),10000))]);}catch(error){status.textContent="Login verification timed out. Refresh or log in again.";console.error("SMS Capture user verification",error);return false}const {data:{user:verifiedUser},error:userError}=userResult;if(userError||!verifiedUser){status.textContent="Login expired. Redirecting to login…";await sb.auth.signOut({scope:"local"});location.replace("index.html");return false}user=verifiedUser;status.textContent=user.email||"Authenticated user";$("smsLogout").onclick=forceLocalLogout;sb.auth.onAuthStateChange((event,nextSession)=>{if(event==="SIGNED_OUT"||!nextSession||nextSession.user?.id!==user.id)location.replace("index.html")});return true;}
 async function loadAccounts(){
  const status=$("accountLoadStatus");
  status.textContent="Loading Cash Book accounts…";status.className="status";
