@@ -7,6 +7,8 @@ async function auth(){
  const {data:{user:verifiedUser},error:userError}=await sb.auth.getUser(session.access_token);
  if(userError||!verifiedUser){await sb.auth.signOut();location.replace("index.html");return false}
  user=verifiedUser;
+ $("signedInEmail").textContent=user.email||"Authenticated user";
+ $("smsLogout").onclick=async()=>{const {error}=await sb.auth.signOut({scope:"local"});if(error)alert("Logout failed: "+error.message);else location.replace("index.html")};
  sb.auth.onAuthStateChange((event,nextSession)=>{
   if(event==="SIGNED_OUT"||!nextSession)location.replace("index.html");
  });
