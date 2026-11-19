@@ -152,20 +152,29 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.locator("#addAccount").click();
  await page.locator("#accountName").fill(cashName);
  await page.locator("#accountType").selectOption({label:"Cash"});
- const cashDiagnostics:{submitEvents:number;requests:string[];responses:string[];pageErrors:string[];consoleErrors:string[]}={submitEvents:0,requests:[],responses:[],pageErrors:[],consoleErrors:[]};
+ const cashDiagnostics:{requests:string[];responses:string[];pageErrors:string[];consoleErrors:string[]}={requests:[],responses:[],pageErrors:[],consoleErrors:[]};
  page.on("pageerror",error=>cashDiagnostics.pageErrors.push(error.stack||error.message));
  page.on("console",message=>{if(message.type()==="error")cashDiagnostics.consoleErrors.push(message.text())});
  page.on("request",request=>{if(request.url().includes("/rest/v1/bank_accounts"))cashDiagnostics.requests.push(request.method()+" "+request.url())});
  page.on("requestfailed",request=>{if(request.url().includes("/rest/v1/bank_accounts"))cashDiagnostics.requests.push("FAILED "+request.method()+" "+request.url()+" "+request.failure()?.errorText)});
  page.on("response",async response=>{if(response.url().includes("/rest/v1/bank_accounts")){let body="";try{body=await response.text()}catch{}cashDiagnostics.responses.push(response.status()+" "+body)}});
- await page.locator("#accountForm").evaluate(form=>form.addEventListener("submit",()=>{(window as any).__cashAccountSubmitCount=((window as any).__cashAccountSubmitCount||0)+1},{capture:true}));
  const cashDialogStart=dialogMessages.length;
+ const accountInsert=page.waitForResponse(response=>
+  response.url().includes("/rest/v1/bank_accounts") &&
+  response.request().method()==="POST",
+  {timeout:20000}
+ );
  await page.locator("#accountForm button[type=submit]").click();
- await page.waitForTimeout(3000);
- cashDiagnostics.submitEvents=await page.evaluate(()=>Number((window as any).__cashAccountSubmitCount||0));
- const cashFormState=await page.locator("#accountForm").evaluate(form=>({valid:(form as HTMLFormElement).checkValidity(),name:(form.querySelector("#accountName") as HTMLInputElement)?.value,buttonDisabled:(form.querySelector('button[type="submit"]') as HTMLButtonElement)?.disabled,dialogOpen:(form.closest("dialog") as HTMLDialogElement)?.open}));
- if(cashFormState.dialogOpen)throw new Error("Cash Book account save diagnostics: "+JSON.stringify({cashFormState,dialogs:dialogMessages.slice(cashDialogStart),cashDiagnostics}));
- expect(dialogMessages.slice(cashDialogStart), "Cash Book account save should not raise an application error").toEqual([]);
+ let accountResponse;
+ try{
+  accountResponse=await accountInsert;
+ }catch(error){
+  throw new Error("Cash Book account insert did not reach Supabase. Diagnostics: "+JSON.stringify({dialogs:dialogMessages.slice(cashDialogStart),cashDiagnostics})+"\n"+String(error));
+ }
+ const accountResponseBody=await accountResponse.text();
+ expect(accountResponse.ok(),"Cash Book account insert failed: "+accountResponse.status()+" "+accountResponseBody).toBeTruthy();
+ await expect(page.locator("#accountDialog")).not.toBeVisible();
+ expect(dialogMessages.slice(cashDialogStart),"Cash Book account save should not raise an application error").toEqual([]);
  await expect(page.locator("#accountSelect")).toContainText(cashName);
  await expect(page.locator("#accountSelect")).toContainText(cashName);
  await page.locator("#editOpening").click();
