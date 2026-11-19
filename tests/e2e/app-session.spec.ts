@@ -1,6 +1,6 @@
 import {test,expect,Page} from "@playwright/test";
 const email=process.env.TEST_USER_EMAIL!,password=process.env.TEST_USER_PASSWORD!;
-async function signIn(page:Page){await page.goto("/");await expect(page.locator("#loginForm")).toBeVisible();await page.locator("#loginEmail").fill(email);await page.locator("#loginPassword").fill(password);await page.locator("#loginForm button[type=submit]").click();await expect(page.locator("#welcomeMessage")).toContainText(/.+/,{timeout:20000});}
+async function signIn(page:Page){await page.goto("/");await expect(page.locator("#loginForm")).toBeVisible();await page.locator("#loginEmail").fill(email);await page.locator("#loginPassword").fill(password);await page.locator("#loginForm button[type=submit]").click();await expect(page.locator("#welcomeMessage")).toContainText(/.+/,{timeout:20000});await expect(page.locator("html")).toHaveAttribute("data-dashboard-ready","true",{timeout:30000});}
 test.beforeAll(()=>{if(!email||!password)throw new Error("TEST_USER_EMAIL and TEST_USER_PASSWORD are required.");});
 test("creates finance fixtures and verifies workflows entirely through the UI",async({page})=>{
  const dialogMessages:{type:string;message:string}[]=[];
@@ -219,6 +219,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await expect(page.locator('#balanceDetailDlg [data-settle-type="payable"]')).toHaveCount(0);
  const finalHistoryLoad=page.waitForResponse(response=>response.url().includes("/rest/v1/transaction_settlements")&&response.request().method()==="GET");
  await page.goto("/");
+ await expect(page.locator("html")).toHaveAttribute("data-dashboard-ready","true",{timeout:30000});
  const finalHistoryResponse=await finalHistoryLoad;
  const finalHistoryRows=await finalHistoryResponse.json();
  expect(finalHistoryRows.filter(row=>row.payable_transaction_id===payableId).reduce((total,row)=>total+Number(row.amount),0)).toBe(250);
