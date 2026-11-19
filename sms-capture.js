@@ -66,20 +66,18 @@ async function loadMappings(){
 
 function reportActionError(action,error){alert(action+" could not be fully confirmed: "+(error?.message||String(error))+". Refresh the inbox and check Cash Book before retrying.")}
 async function loadInbox(){
- const [pending,locked,duplicates,history]=await Promise.all([
+ const [pending,locked,duplicates]=await Promise.all([
   sb.from("sms_capture_inbox").select("*").eq("user_id",user.id).eq("status","needs_review").order("received_at",{ascending:false}).limit(50),
   sb.from("sms_capture_inbox").select("*").eq("user_id",user.id).eq("status","posted").is("movement_id",null).order("received_at",{ascending:false}).limit(50),
-  sb.from("sms_capture_inbox").select("*").eq("user_id",user.id).eq("status","duplicate").order("received_at",{ascending:false}).limit(50),
-  sb.from("sms_capture_inbox").select("*").eq("user_id",user.id).not("reviewed_at","is",null).in("status",["posted","ignored"]).order("reviewed_at",{ascending:false}).limit(30)
+  sb.from("sms_capture_inbox").select("*").eq("user_id",user.id).eq("status","duplicate").order("received_at",{ascending:false}).limit(50)
  ]);
- if(pending.error)throw pending.error;if(locked.error)throw locked.error;if(duplicates.error)throw duplicates.error;if(history.error)throw history.error;
+ if(pending.error)throw pending.error;if(locked.error)throw locked.error;if(duplicates.error)throw duplicates.error;
  const data=[...(pending.data||[]),...(locked.data||[]),...(duplicates.data||[])].sort((x,y)=>Date.parse(y.received_at||0)-Date.parse(x.received_at||0)).slice(0,50);
  const reviewHtml=data.map(r=>{
   const isLocked=r.status==="posted",isDuplicate=r.status==="duplicate";
   return '<article class="item"><b>'+esc(r.parsed_description||"SMS transaction")+'</b><span>'+esc(r.parsed_date||"Date unknown")+' · '+esc(r.parsed_direction||"Unknown")+' · '+fmt(r.parsed_amount)+'</span><span>Identifier: '+esc(r.account_identifier||"not detected")+' | Ref: '+esc(r.reference_number||"none")+'</span>'+(isDuplicate?'<p class="warn"><b>Duplicate blocked.</b> This SMS/reference has already been captured. No second Cash Book entry was created.</p>':isLocked?'<p class="warn">Posting is locked or its outcome is uncertain. Check Cash Book before any manual recovery; do not retry.</p>':'<label>Post to account<select data-inbox-account="'+r.id+'">'+accounts.map(a=>'<option value="'+a.id+'" '+(a.id===r.account_id?"selected":"")+'>'+esc(a.account_name)+'</option>').join("")+'</select></label>')+'<small>'+esc(r.parse_reason||"Please review")+'</small><div class="row">'+(isDuplicate?'': '<button data-approve="'+r.id+'" '+(isLocked?"disabled":"")+'>Approve & post</button><button data-reject="'+r.id+'" '+(isLocked?"disabled":"")+'>'+ 'Reject</button>')+'</div></article>';
  }).join("");
  $("inbox").innerHTML=reviewHtml||'<p class="muted">No transactions are currently awaiting review.</p>';
- $("reviewHistory").innerHTML=(history.data||[]).map(r=>'<article class="item"><b>'+esc(r.parsed_description||"SMS transaction")+'</b><span>'+esc(r.parsed_date||"Date unknown")+' · '+esc(r.parsed_direction||"Unknown")+' · '+fmt(r.parsed_amount)+'</span><span>Identifier: '+esc(r.account_identifier||"not detected")+' | Ref: '+esc(r.reference_number||"none")+'</span><p class="'+(r.status==="posted"?"success":"warn")+'">'+(r.status==="posted"?"Accepted and posted to Cash Book":"Rejected")+'</p><small>Reviewed: '+esc(r.reviewed_at?new Date(r.reviewed_at).toLocaleString():"Time unavailable")+' · '+esc(r.parse_reason||"")+'</small></article>').join("")||'<p class="muted">No reviewed transactions yet.</p>';
 
  document.querySelectorAll("[data-approve]").forEach(b=>b.onclick=()=>{b.disabled=true;approve(b.dataset.approve).catch(e=>reportActionError("Approval",e)).finally(()=>{b.disabled=false})});
  document.querySelectorAll("[data-reject]").forEach(b=>b.onclick=()=>{b.disabled=true;reject(b.dataset.reject).catch(e=>reportActionError("Rejection",e)).finally(()=>{b.disabled=false})});
