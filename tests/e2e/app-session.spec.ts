@@ -218,3 +218,31 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await expect(page.locator("#dlg")).not.toBeVisible();
  await expect(page.locator("#list")).toContainText(marker+" Shared expense");
 });
+
+
+test("signup validates inputs and completes the public registration flow",async({page},testInfo)=>{
+ // Run the live signup once per CI run; the same disposable address is used for cleanup.
+ test.skip(testInfo.project.name!=="chromium","Public signup creates one disposable account per CI run.");
+ const signupEmail=process.env.TEST_SIGNUP_EMAIL;
+ if(!signupEmail)throw new Error("TEST_SIGNUP_EMAIL is required for the signup E2E test.");
+ await page.goto("/");
+ await page.locator("#showSignupBtn").click();
+ await expect(page.locator("#signupSection")).toBeVisible();
+ await page.locator("#signupName").fill("Payables E2E Signup");
+ await page.locator("#signupEmail").fill(signupEmail);
+ await page.locator("#signupPassword").fill("E2E-Strong-Pass-2026!");
+ await page.locator("#signupConfirmPassword").fill("E2E-Different-Pass-2026!");
+ await page.locator("#signupForm button[type=submit]").click();
+ await expect(page.locator("#authMessage")).toContainText("Passwords do not match");
+ await expect(page.locator("#signupEmail")).toHaveValue(signupEmail);
+ await page.locator("#signupConfirmPassword").fill("E2E-Strong-Pass-2026!");
+ await page.locator("#signupForm button[type=submit]").click();
+ await expect(page.locator("#authMessage")).toContainText(/Registration successful|Account created successfully/i,{timeout:20000});
+ const state=await page.locator("#authMessage").innerText();
+ if(/Registration successful/i.test(state)){
+  await expect(page.locator("#authMessage")).toContainText(/check your email to verify/i);
+  await expect(page.locator("#loginForm")).toBeVisible();
+ }else{
+  await expect(page.locator("#welcomeMessage")).toContainText(/.+/);
+ }
+});
