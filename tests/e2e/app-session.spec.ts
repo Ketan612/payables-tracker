@@ -195,7 +195,10 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.locator("#payableAmount").fill("250");
  await page.locator("#payableDueDate").fill(future);
  await page.locator("#payableNotes").fill(marker);
+ let payableSaveAlert="";
+ page.once("dialog",async dialog=>{payableSaveAlert=dialog.message();await dialog.accept();});
  await page.getByRole("button",{name:"Save",exact:true}).click();
+ expect(payableSaveAlert,"Payable transaction save should not raise a validation or database error").toBe("");
  await expect(page.locator("#dlg")).not.toBeVisible();
  await expect(page.locator("#list")).toContainText(marker+" Personal expense");
 
