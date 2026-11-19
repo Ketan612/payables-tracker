@@ -10,9 +10,14 @@ const sb=supabase.createClient("https://magxbczgrxeypryjborr.supabase.co","sb_pu
 async function init(){
  try{
   const {data:{session},error:sessionError}=await sb.auth.getSession();
-  if(sessionError)throw sessionError;if(!session?.access_token){loginRedirectForCurrentPage();return}
-  const {data:{user:verifiedUser},error:userError}=await sb.auth.getUser(session.access_token);
-  if(userError||!verifiedUser){const refreshed=await sb.auth.refreshSession();if(refreshed.error||!refreshed.data?.session){loginRedirectForCurrentPage();return}const retry=await sb.auth.getUser(refreshed.data.session.access_token);if(retry.error||!retry.data?.user){loginRedirectForCurrentPage();return}u=retry.data.user;}else{u=verifiedUser}
+  if(sessionError)throw sessionError;
+  if(!session?.access_token||!session.user?.id){loginRedirectForCurrentPage();return}
+  // The locally stored Supabase session already contains the signed-in user
+  // identity. Avoid an extra auth.getUser() network round trip here: that
+  // endpoint intermittently returns 403 in the embedded browser even though
+  // the session JWT is valid and PostgREST/RLS requests work normally.
+  // Database operations still carry the access token and remain protected by RLS.
+  u=session.user;
   $("signedInEmail").textContent=u.email||"Authenticated user";
   $("cashbookLogout").onclick=forceLocalLogout;
   sb.auth.onAuthStateChange((event,nextSession)=>{if(event==="SIGNED_OUT"||(nextSession?.user?.id&&nextSession.user.id!==u.id))location.replace("index.html")});
