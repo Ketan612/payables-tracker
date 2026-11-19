@@ -307,33 +307,55 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  const captureHeaders={apikey:"sb_publishable_o3SjG1KCygJ99RuamTJdsQ_RIkHJ-gX",Authorization:"Bearer "+captureToken};
  const firstCapture=await page.request.post(captureUrl,{headers:captureHeaders,data:{message:smsMessage,sender:"SBI"}});
  expect(firstCapture.ok(),"First SMS capture failed: "+firstCapture.status()+" "+await firstCapture.text()).toBeTruthy();
- await page.reload();
- await expect(page.locator("#inbox article.item").filter({hasText:reference})).toContainText("Needs review");
- await expect(page.locator("#inbox article.item").filter({hasText:reference})).toContainText("3142");
- await expect(page.locator("#inbox article.item").filter({hasText:reference})).toContainText(cashName);
+
+ // A mapped X3142 SMS auto-posts once to the linked Cash Book account.
+ await page.goto("/cashbook.html");
+ await expect(page.locator("#signedInEmail")).toContainText(email);
+ await page.locator("#accountSelect").selectOption({label:cashName});
+ await expect(page.locator("#transactions")).toContainText("E2E Store");
+ await expect(page.locator("#transactions .ledger-table tbody tr").filter({hasText:"E2E Store"})).toHaveCount(1);
+ await expect(page.locator("#transactions .ledger-table tbody tr").filter({hasText:"E2E Store"})).toContainText("78.00");
+
+ // Re-forwarding the same reference is classified as a duplicate and must not post twice.
  const duplicateCapture=await page.request.post(captureUrl,{headers:captureHeaders,data:{message:smsMessage,sender:"SBI"}});
  expect(duplicateCapture.ok()||duplicateCapture.status()===409,"Duplicate SMS capture request failed: "+duplicateCapture.status()+" "+await duplicateCapture.text()).toBeTruthy();
- await page.reload();
- await expect(page.locator("#inbox article.item").filter({hasText:reference})).toContainText("Duplicate");
- const reviewItem=page.locator("#inbox article.item").filter({hasText:reference}).filter({hasText:"Needs review"});
- await reviewItem.locator("[data-approve]").click();
- await expect(page.locator("#inbox article.item").filter({hasText:reference}).filter({hasText:"Needs review"})).toHaveCount(0);
- const duplicateItem=page.locator("#inbox article.item").filter({hasText:reference}).filter({hasText:"Duplicate"});
- await expect(duplicateItem).toBeVisible();
+ await page.goto("/sms-capture.html");
+ await expect(page.locator("#signedInEmail")).toContainText(email);
+ const duplicateItem=page.locator("#inbox article.item").filter({hasText:reference});
+ await expect(duplicateItem).toContainText("Duplicate");
  await duplicateItem.locator("[data-approve]").click();
  await expect(page.locator("#inbox article.item").filter({hasText:reference})).toHaveCount(0);
  await page.goto("/cashbook.html");
  await page.locator("#accountSelect").selectOption({label:cashName});
- await expect(page.locator("#transactions")).toContainText("E2E Store");
  await expect(page.locator("#transactions .ledger-table tbody tr").filter({hasText:"E2E Store"})).toHaveCount(1);
 
- // A second simulated message is rejected and remains visible in the audit inbox.
+ // An unmapped identifier is held for manual review and can be approved to Cash Book.
  await page.goto("/sms-capture.html");
- const rejectedReference=String(Date.now()+1);
- const rejectedMessage="Dear UPI user A/C "+smsIdentifier+" debited by 19.00 on 20Nov26 trf to E2E Rejected Store UPI Ref No "+rejectedReference+".";
+ const manualReference=String(Date.now()+1);
+ const manualIdentifier="9999";
+ const manualMessage="Dear UPI user A/C X"+manualIdentifier+" debited by 19.00 on 20Nov26 trf to E2E Manual Review UPI Ref No "+manualReference+".";
+ const manualCapture=await page.request.post(captureUrl,{headers:captureHeaders,data:{message:manualMessage,sender:"SBI"}});
+ expect(manualCapture.ok(),"Unmapped SMS capture failed: "+manualCapture.status()+" "+await manualCapture.text()).toBeTruthy();
+ await page.reload();
+ await expect(page.locator("#signedInEmail")).toContainText(email);
+ const manualItem=page.locator("#inbox article.item").filter({hasText:manualReference});
+ await expect(manualItem).toContainText("Needs review");
+ await manualItem.locator("[data-inbox-account]").selectOption({label:cashName});
+ await manualItem.locator("[data-approve]").click();
+ await expect(page.locator("#inbox article.item").filter({hasText:manualReference})).toHaveCount(0);
+ await page.goto("/cashbook.html");
+ await page.locator("#accountSelect").selectOption({label:cashName});
+ await expect(page.locator("#transactions")).toContainText("E2E Manual Review");
+ await expect(page.locator("#transactions .ledger-table tbody tr").filter({hasText:"E2E Manual Review"})).toContainText("19.00");
+
+ // A second unmapped message is rejected and remains visible in the audit inbox.
+ await page.goto("/sms-capture.html");
+ const rejectedReference=String(Date.now()+2);
+ const rejectedMessage="Dear UPI user A/C X8888 debited by 11.00 on 20Nov26 trf to E2E Rejected Store UPI Ref No "+rejectedReference+".";
  const rejectedCapture=await page.request.post(captureUrl,{headers:captureHeaders,data:{message:rejectedMessage,sender:"SBI"}});
  expect(rejectedCapture.ok(),"Rejected-message capture failed: "+rejectedCapture.status()+" "+await rejectedCapture.text()).toBeTruthy();
  await page.reload();
+ await expect(page.locator("#signedInEmail")).toContainText(email);
  const rejectedItem=page.locator("#inbox article.item").filter({hasText:rejectedReference});
  await expect(rejectedItem).toContainText("Needs review");
  await rejectedItem.locator("[data-reject]").click();
