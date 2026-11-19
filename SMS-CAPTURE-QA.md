@@ -53,6 +53,7 @@ Parser behavior for formats not covered by a passing regression test must remain
 - [ ] Re-forward the same SMS/reference and confirm the duplicate is blocked or flagged.
 - [ ] If two pending inbox rows share a reference, reject one and verify the remaining `needs_review` row can still be approved. An `ignored` row must not permanently block the valid transaction.
 - [ ] Force a duplicate-check query error and confirm the item is restored to review with no movement created.
+- [ ] Force claim restoration to affect zero rows and confirm the UI reports that restoration was not confirmed; the still-locked row must remain visible and must not be approvable.
 - [ ] Force a Cash Book insert error and confirm the inbox item stays locked (`posted`) with an explicit uncertain-outcome warning. The review inbox must show locked rows with no movement ID and disable approve/reject. Do not blindly restore an uncertain insert to ordinary review: a network error can occur after the database committed the insert. Check Cash Book and inbox before any manual recovery.
 - [ ] Force the inbox update after insert to fail and confirm rollback is attempted and its deleted row is verified. If rollback cannot be confirmed, the inbox item must remain `posted` / locked (not reappear as approvable); inspect Cash Book before manual recovery.
 - [ ] Force the post-insert inbox update to affect zero rows without a database error; confirm the UI treats this as failure and verifies the Cash Book movement rollback.
@@ -80,6 +81,15 @@ Parser behavior for formats not covered by a passing regression test must remain
 - [ ] Use `Authorization: Bearer YOUR_GENERATED_TOKEN` and `Content-Type: application/json`.
 - [ ] Do not forward OTP, authentication, login, balance-only, or promotional SMS.
 - [ ] Test with one non-sensitive transaction alert, confirm the inbox/Cash Book result, and re-forward the same SMS to test duplicate handling.
+
+## Latest repository verification (2026-11-19)
+
+- `sms-capture.js` and `sms-admin.js` compile with the JavaScript V8 parser.
+- `sms-capture.html`: 18 unique IDs; all 32 JavaScript element references resolve.
+- `sms-admin.html`: 11 unique IDs; all 18 JavaScript element references resolve.
+- SMS Cash Book duplicate lookup checks both exact `sms_reference_number` and the escaped `reference_note` fallback; simulated tests verified both query paths run and query errors fail closed.
+- SMS claim restoration now treats a zero-row update as unconfirmed rather than assuming the item returned to review.
+- Admin monitor escapes event-controlled table values before rendering. Database RLS remains the authorization boundary and has not been verified in this environment.
 
 ## Evidence log (complete only after live tests)
 
