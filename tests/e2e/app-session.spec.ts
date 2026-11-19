@@ -186,7 +186,15 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  const partialSettlementResponse=await partialSettlementRequest;
  const partialSettlementBody=await partialSettlementResponse.text();
  expect(partialSettlementResponse.ok(),"Partial payable settlement RPC failed: "+partialSettlementResponse.status()+" "+partialSettlementBody).toBeTruthy();
- await expect(page.locator("#settlementDlg")).not.toBeVisible();
+ const partialSettlement=JSON.parse(partialSettlementBody);
+ expect(Number(partialSettlement.outstanding_amount)).toBe(150);
+
+ // Reload from the database to verify the persisted partial balance, not stale modal state.
+ await page.goto("/");
+ await page.locator("#statusF").selectOption("all");
+ await expect(page.locator("#list")).toContainText(marker+" Personal expense");
+ const refreshedPayableRow=page.locator("#list .item").filter({hasText:marker+" Personal expense"});
+ await refreshedPayableRow.locator("[data-details]").click();
  await expect(page.locator("#balanceDetailDlg")).toBeVisible();
  await page.locator('#balanceDetailDlg [data-settle-type="payable"]').click();
  await expect(page.locator("#settlementOutstanding")).toContainText("150");
@@ -197,7 +205,13 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  const finalSettlementResponse=await finalSettlementRequest;
  const finalSettlementBody=await finalSettlementResponse.text();
  expect(finalSettlementResponse.ok(),"Final payable settlement RPC failed: "+finalSettlementResponse.status()+" "+finalSettlementBody).toBeTruthy();
+ expect(Number(JSON.parse(finalSettlementBody).outstanding_amount)).toBe(0);
  await expect(page.locator("#settlementDlg")).not.toBeVisible();
+ await page.goto("/");
+ await page.locator("#statusF").selectOption("all");
+ await expect(page.locator("#list")).toContainText(marker+" Personal expense");
+ await page.locator("#list .item").filter({hasText:marker+" Personal expense"}).locator("[data-details]").click();
+ await expect(page.locator("#balanceDetailDlg")).toBeVisible();
  await expect(page.locator('#balanceDetailDlg [data-settle-type="payable"]')).toHaveCount(0);
 
  // Credit-card purchase automatically creates a linked card payable.
