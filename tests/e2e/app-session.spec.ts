@@ -194,8 +194,9 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
 
  // Reload from the database to verify the persisted partial balance, not stale modal state.
  const partialHistoryLoad=page.waitForResponse(response=>response.url().includes("/rest/v1/transaction_settlements")&&response.request().method()==="GET");
+ const settlementLedgerLoad=page.waitForResponse(response=>response.url().includes("/rest/v1/settlements")&&response.request().method()==="GET");
  await page.goto("/");
- const partialHistoryResponse=await partialHistoryLoad;
+ const [partialHistoryResponse]=await Promise.all([partialHistoryLoad,settlementLedgerLoad]);
  const partialHistoryRows=await partialHistoryResponse.json();
  expect(partialHistoryRows.some(row=>row.payable_transaction_id===payableId&&Number(row.amount)===100)).toBeTruthy();
  await page.locator("#statusF").selectOption("all");
@@ -203,6 +204,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  const refreshedPayableRow=page.locator("#list .item").filter({hasText:marker+" Personal expense"});
  await refreshedPayableRow.locator("[data-details]").click();
  await expect(page.locator("#balanceDetailDlg")).toBeVisible();
+ await expect(page.locator("#balanceDetailDlg")).toContainText("Remaining: ₹150.00");
  await page.locator('#balanceDetailDlg [data-settle-type="payable"]').click();
  await expect(page.locator("#settlementOutstanding")).toContainText("150");
  await page.locator("#settlementAmount").fill("150");
