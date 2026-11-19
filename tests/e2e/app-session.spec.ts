@@ -147,9 +147,10 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.locator("#accountType").selectOption({label:"Cash"});
  let cashAccountSaveError="";
  const cashDiagnostics:{submitEvents:number;requests:string[];responses:string[];pageErrors:string[];consoleErrors:string[]}={submitEvents:0,requests:[],responses:[],pageErrors:[],consoleErrors:[]};
- page.on("pageerror",error=>cashDiagnostics.pageErrors.push(error.message));
+ page.on("pageerror",error=>cashDiagnostics.pageErrors.push(error.stack||error.message));
  page.on("console",message=>{if(message.type()==="error")cashDiagnostics.consoleErrors.push(message.text())});
  page.on("request",request=>{if(request.url().includes("/rest/v1/bank_accounts"))cashDiagnostics.requests.push(request.method()+" "+request.url())});
+ page.on("requestfailed",request=>{if(request.url().includes("/rest/v1/bank_accounts"))cashDiagnostics.requests.push("FAILED "+request.method()+" "+request.url()+" "+request.failure()?.errorText)});
  page.on("response",async response=>{if(response.url().includes("/rest/v1/bank_accounts")){let body="";try{body=await response.text()}catch{}cashDiagnostics.responses.push(response.status()+" "+body)}});
  await page.locator("#accountForm").evaluate(form=>form.addEventListener("submit",()=>{(window as any).__cashAccountSubmitCount=((window as any).__cashAccountSubmitCount||0)+1},{capture:true}));
  page.once("dialog",async dialog=>{cashAccountSaveError=dialog.message();await dialog.accept();});
