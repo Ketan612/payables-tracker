@@ -1,6 +1,11 @@
 const sb=supabase.createClient("https://magxbczgrxeypryjborr.supabase.co","sb_publishable_o3SjG1KCygJ99RuamTJdsQ_RIkHJ-gX");const $=id=>document.getElementById(id);let user,accounts=[],latestToken="";
 const esc=s=>String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmt=v=>"₹"+Number(v||0).toLocaleString("en-IN",{minimumFractionDigits:2});
+async function forceLocalLogout(){
+ try{const {error}=await sb.auth.signOut({scope:"local"});if(error)console.warn("Remote/local sign-out returned an error:",error.message)}catch(error){console.warn("Sign-out request failed; clearing this browser session locally:",error)}
+ try{localStorage.removeItem("sb-magxbczgrxeypryjborr-auth-token")}catch(_){}
+ location.replace("index.html");
+}
 async function auth(){
  const {data:{session},error:sessionError}=await sb.auth.getSession();
  if(sessionError||!session?.access_token){location.replace("index.html");return false}
@@ -8,7 +13,7 @@ async function auth(){
  if(userError||!verifiedUser){await sb.auth.signOut();location.replace("index.html");return false}
  user=verifiedUser;
  $("signedInEmail").textContent=user.email||"Authenticated user";
- $("smsLogout").onclick=async()=>{const {error}=await sb.auth.signOut({scope:"local"});if(error)alert("Logout failed: "+error.message);else location.replace("index.html")};
+ $("smsLogout").onclick=forceLocalLogout;
  sb.auth.onAuthStateChange((event,nextSession)=>{
   if(event==="SIGNED_OUT"||!nextSession)location.replace("index.html");else if(nextSession.user?.id!==user.id)location.replace("index.html");
  });
