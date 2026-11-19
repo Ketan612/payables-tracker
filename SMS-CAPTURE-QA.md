@@ -59,6 +59,19 @@ Parser behavior for formats not covered by a passing regression test must remain
 - [ ] Test reference values containing `%`, `_`, and `\\` in the Cash Book duplicate lookup; these characters must be treated literally, not as SQL `LIKE` wildcards.
 - [ ] Approve two separate inbox rows with the same reference at nearly the same time. This is a required concurrency test and must be protected by a database uniqueness constraint/server-side atomic operation before release.
 
+## Administrator integration monitor security
+
+- [ ] Confirm `sms_capture_events` has row-level security enabled.
+- [ ] Confirm the SELECT policy allows only the intended administrator identity; an authenticated non-admin must receive no event rows / a permission error, and anonymous access must be denied.
+- [ ] Do not treat the client-side email check in `sms-admin.js` as authorization. It is only a UI gate; database RLS is the security boundary.
+- [ ] Test event fields containing HTML such as `<img src=x onerror=alert(1)>` in sender, reference, outcome, and detail. The monitor must render them as text and never execute markup.
+- [ ] Keep SMS body text, full token values, authorization headers, and secrets out of the event table and monitor.
+
+## Duplicate reference coverage
+
+- [ ] Verify duplicate lookup checks both exact `cash_movements.sms_reference_number` and the legacy `reference_note` representation.
+- [ ] A query error on either duplicate lookup must fail closed; approval must not continue if either check cannot be completed.
+
 ## iPhone Shortcuts
 
 - [ ] Create a Personal Automation for Message and restrict it to bank sender(s) and transaction keywords.
