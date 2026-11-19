@@ -14,3 +14,4 @@ const sb=supabase.createClient("https://magxbczgrxeypryjborr.supabase.co","sb_pu
   await entries();
  }catch(e){console.error(e);alert("Unable to load Cash Book: "+(e.message||e))}
 }
+init();
