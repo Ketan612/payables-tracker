@@ -3866,6 +3866,13 @@ document.addEventListener("visibilitychange", () => {
 
 function updateAuthUI(session) {
   const isLoggedIn = !!session;
+  const adminTools = document.getElementById("administrator-tools");
+  if (adminTools) {
+    adminTools.hidden = !(
+      isLoggedIn &&
+      (session.user.email || "").toLowerCase() === "ketansoni8@gmail.com"
+    );
+  }
 
   currentUserId = session?.user?.id || null;
 
