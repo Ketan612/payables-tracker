@@ -190,12 +190,14 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  expect(partialSettlementResponse.ok(),"Partial payable settlement RPC failed: "+partialSettlementResponse.status()+" "+partialSettlementBody).toBeTruthy();
  const partialSettlement=JSON.parse(partialSettlementBody);
  expect(Number(partialSettlement.outstanding_amount)).toBe(150);
+ await expect.poll(()=>dialogMessages.some(x=>x.message.includes("Settlement recorded successfully"))).toBeTruthy();
  await expect(page.locator("#balanceDetailDlg")).toContainText("Remaining: ₹150.00");
 
  // Reload from the database to verify the persisted partial balance, not stale modal state.
  const partialHistoryLoad=page.waitForResponse(response=>response.url().includes("/rest/v1/transaction_settlements")&&response.request().method()==="GET");
  const settlementLedgerLoad=page.waitForResponse(response=>response.url().includes("/rest/v1/settlements")&&response.request().method()==="GET");
  await page.goto("/");
+ await expect(page.locator("html")).toHaveAttribute("data-dashboard-ready","true",{timeout:30000});
  const [partialHistoryResponse]=await Promise.all([partialHistoryLoad,settlementLedgerLoad]);
  const partialHistoryRows=await partialHistoryResponse.json();
  expect(partialHistoryRows.some(row=>row.payable_transaction_id===payableId&&Number(row.amount)===100)).toBeTruthy();
