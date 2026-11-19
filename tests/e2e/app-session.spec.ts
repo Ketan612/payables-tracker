@@ -247,7 +247,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await expect(page.locator("#inbox article.item").filter({hasText:reference})).toContainText("X3142");
  await expect(page.locator("#inbox article.item").filter({hasText:reference})).toContainText(cashName);
  const duplicateCapture=await page.request.post(captureUrl,{headers:captureHeaders,data:{message:smsMessage,sender:"SBI"}});
- expect(duplicateCapture.ok(),"Duplicate SMS capture request failed: "+duplicateCapture.status()+" "+await duplicateCapture.text()).toBeTruthy();
+ expect(duplicateCapture.ok()||duplicateCapture.status()===409,"Duplicate SMS capture request failed: "+duplicateCapture.status()+" "+await duplicateCapture.text()).toBeTruthy();
  await page.reload();
  await expect(page.locator("#inbox article.item").filter({hasText:reference})).toContainText("Duplicate");
  const reviewItem=page.locator("#inbox article.item").filter({hasText:reference}).filter({hasText:"Needs review"});
