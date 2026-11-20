@@ -299,9 +299,13 @@ test("complete authenticated E2E journey across all implemented modules",async({
  // Exercise the SMS integration with a disposable token and simulated bank messages.
  await page.goto("/sms-capture.html");
  await expect(page.locator("#signedInEmail")).toContainText(email);
+ const activeTokenIdsBefore=await page.locator("#tokens [data-revoke]").evaluateAll(buttons=>buttons.map(button=>(button as HTMLButtonElement).dataset.revoke!));
  await page.locator("#generateToken").click();
  await expect(page.locator("#tokenStatus")).toContainText("Token generated successfully", {timeout:20000});
  const captureToken=await page.locator("#tokenValue").inputValue();
+ await expect.poll(async()=>{const ids=await page.locator("#tokens [data-revoke]").evaluateAll(buttons=>buttons.map(button=>(button as HTMLButtonElement).dataset.revoke!));return ids.some(id=>!activeTokenIdsBefore.includes(id));},{timeout:10000}).toBeTruthy();
+ const activeTokenIdsAfter=await page.locator("#tokens [data-revoke]").evaluateAll(buttons=>buttons.map(button=>(button as HTMLButtonElement).dataset.revoke!));
+ const captureTokenId=activeTokenIdsAfter.find(id=>!activeTokenIdsBefore.includes(id))!;
  expect(captureToken).toMatch(/^pt_sms_/);
  const smsIdentifier=String.fromCharCode(88)+"3142";
  await page.locator("#identifier").fill(smsIdentifier);
@@ -367,7 +371,7 @@ test("complete authenticated E2E journey across all implemented modules",async({
  await rejectedItem.locator("[data-reject]").click();
  await expect(page.locator("#inbox article.item").filter({hasText:rejectedReference})).toContainText("Rejected");
  await captureCheckpoint(page,testInfo,"08-sms-rejection-and-token-management");
- await page.locator("#tokens [data-revoke]").first().click();
+ await page.locator('#tokens [data-revoke="'+captureTokenId+'"]').click();
  await expect(page.locator("#tokenStatus")).toContainText("Token revoked successfully");
  await page.goto("/sms-admin.html");
  await expect(page.getByRole("heading",{name:"Access denied"})).toBeVisible();
