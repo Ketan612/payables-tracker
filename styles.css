@@ -1661,3 +1661,7 @@ main{max-width:1160px;padding:28px 24px 100px}
 }
 @media(max-width:360px){.welcome-copy h2{font-size:28px}.welcome-actions a{font-size:9px;padding:0 7px}.overview-stats article{padding:11px 7px}.overview-stats article b{font-size:12px}.module-tile{gap:6px;padding:9px 7px}.module-icon{flex-basis:30px;width:30px;height:30px}.module-label strong{font-size:10px}.module-label small{font-size:8px}}
 @media(prefers-reduced-motion:reduce){.module-tile{transition:none}}
+
+/* iOS Safari: prevent automatic focus zoom on form controls while preserving user pinch zoom. */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+@media(max-width:760px){input,select,textarea,button{font-size:16px!important}.filters select{font-size:16px!important}}
