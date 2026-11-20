@@ -108,3 +108,29 @@ test("app returns to normal navigation after connectivity is restored", async ({
   await expect(page.locator("body")).not.toContainText("You're offline");
   await expect(page.locator("body")).not.toBeEmpty();
 });
+
+test("iPhone-sized layouts keep form controls at a non-zooming text size", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const route of appPages) {
+    await page.goto(route);
+    const result = await page.evaluate(() => {
+      const controls = [...document.querySelectorAll("input, select, textarea")];
+      return {
+        viewportMeta: document.querySelector('meta[name="viewport"]')?.getAttribute("content") ?? "",
+        viewportWidth: document.documentElement.clientWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        undersizedControls: controls
+          .filter((control) => {
+            const style = getComputedStyle(control);
+            return style.display !== "none" && style.visibility !== "hidden" &&
+              Number.parseFloat(style.fontSize) < 16;
+          })
+          .map((control) => ({ id: control.id, fontSize: getComputedStyle(control).fontSize }))
+      };
+    });
+    expect(result.viewportMeta).toMatch(/width=device-width/);
+    expect(result.viewportMeta).toMatch(/initial-scale=1/);
+    expect(result.documentWidth).toBeLessThanOrEqual(result.viewportWidth + 1);
+    expect(result.undersizedControls, `iOS auto-zoom risk on ${route}`).toEqual([]);
+  }
+});
