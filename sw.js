@@ -1,1 +1,69 @@
-const C="payables-v1";self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>c.addAll(["./","./index.html","./styles.css","./app.js","./manifest.json"]))));self.addEventListener("fetch",e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));
+const CACHE_NAME = "payables-shell-v2";
+const SHELL_ASSETS = [
+  "./offline.html",
+  "./manifest.json",
+  "./icons/payables-tracker.svg",
+  "./styles.css",
+  "./app.js",
+  "./cashbook.css",
+  "./cashbook.js",
+  "./sms-capture.css",
+  "./sms-capture.js",
+  "./sms-admin.js"
+];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(SHELL_ASSETS))
+      .then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys()
+      .then((keys) => Promise.all(
+        keys.filter((key) => key.startsWith("payables-shell-") && key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
+      ))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  const request = event.request;
+  const url = new URL(request.url);
+
+  // Never intercept writes, cross-origin requests, auth/API traffic, or non-HTTP schemes.
+  if (request.method !== "GET" || url.origin !== self.location.origin) return;
+  if (url.pathname.includes("/rest/") || url.pathname.includes("/auth/") ||
+      url.pathname.includes("/functions/") || url.pathname.includes("/storage/")) return;
+
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request).catch(async () => {
+        const cache = await caches.open(CACHE_NAME);
+        return (await cache.match("./offline.html")) ||
+          new Response("You are offline. Reconnect and try again.", {
+            status: 503,
+            headers: { "Content-Type": "text/plain; charset=utf-8" }
+          });
+      })
+    );
+    return;
+  }
+
+  const isShellAsset = SHELL_ASSETS.some((asset) => url.pathname.endsWith(asset.replace("./", "")));
+  if (!isShellAsset) return;
+
+  event.respondWith(
+    caches.match(request).then((cached) => cached || fetch(request).then((response) => {
+      if (response.ok) {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+      }
+      return response;
+    }))
+  );
+});
