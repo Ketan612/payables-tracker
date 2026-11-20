@@ -30,6 +30,27 @@ test("PWA manifest is linked and exposes install metadata", async ({ page }) => 
   }
 });
 
+test("PWA install prompt is displayed and invokes the browser prompt", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => {
+    let prompted = false;
+    const event = new Event("beforeinstallprompt", { cancelable: true });
+    Object.defineProperties(event, {
+      prompt: { value: async () => { prompted = true; } },
+      userChoice: { value: Promise.resolve({ outcome: "accepted", platform: "web" }) }
+    });
+    window.dispatchEvent(event);
+    (window as Window & { __installPromptCalled?: () => boolean }).__installPromptCalled = () => prompted;
+  });
+
+  const banner = page.locator(".payables-pwa-banner");
+  await expect(banner).toContainText("Install Payables Tracker");
+  await banner.getByRole("button", { name: "Install" }).click();
+  await expect.poll(() => page.evaluate(() =>
+    (window as Window & { __installPromptCalled?: () => boolean }).__installPromptCalled?.()
+  )).toBe(true);
+});
+
 test("PWA service worker is registered on every app page", async ({ page }) => {
   for (const route of appPages) {
     await page.goto(route);
@@ -37,12 +58,8 @@ test("PWA service worker is registered on every app page", async ({ page }) => {
     const registration = await page.evaluate(async () => {
       if (!("serviceWorker" in navigator)) return null;
       const result = await navigator.serviceWorker.ready;
-      return {
-        scope: result.scope,
-        scriptURL: result.active?.scriptURL ?? null
-      };
+      return { scope: result.scope, scriptURL: result.active?.scriptURL ?? null };
     });
-
     expect(registration, `Service worker unavailable on ${route}`).not.toBeNull();
     expect(registration!.scriptURL).toContain("/sw.js");
     expect(registration!.scope).toContain("/");
@@ -50,19 +67,20 @@ test("PWA service worker is registered on every app page", async ({ page }) => {
 });
 
 test("mobile app pages do not introduce horizontal document overflow", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-
-  for (const route of appPages) {
-    await page.goto(route);
-    await page.waitForLoadState("domcontentloaded");
-    const dimensions = await page.evaluate(() => ({
-      viewport: document.documentElement.clientWidth,
-      document: document.documentElement.scrollWidth
-    }));
-    expect(
-      dimensions.document,
-      `Horizontal overflow on ${route}: viewport=${dimensions.viewport}, document=${dimensions.document}`
-    ).toBeLessThanOrEqual(dimensions.viewport + 1);
+  for (const width of [320, 360, 375, 390, 430, 768]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const route of appPages) {
+      await page.goto(route);
+      await page.waitForLoadState("domcontentloaded");
+      const dimensions = await page.evaluate(() => ({
+        viewport: document.documentElement.clientWidth,
+        document: document.documentElement.scrollWidth
+      }));
+      expect(
+        dimensions.document,
+        `Horizontal overflow on ${route} at ${width}px: document=${dimensions.document}`
+      ).toBeLessThanOrEqual(dimensions.viewport + 1);
+    }
   }
 });
 
@@ -71,7 +89,6 @@ test("offline navigation shows a clear fallback instead of stale financial data"
   await page.evaluate(async () => {
     if ("serviceWorker" in navigator) await navigator.serviceWorker.ready;
   });
-
   await page.context().setOffline(true);
   await page.goto("/cashbook.html");
   await expect(page.getByRole("heading", { name: "You're offline" })).toBeVisible();
@@ -83,11 +100,9 @@ test("app returns to normal navigation after connectivity is restored", async ({
   await page.evaluate(async () => {
     if ("serviceWorker" in navigator) await navigator.serviceWorker.ready;
   });
-
   await page.context().setOffline(true);
   await page.goto("/cashbook.html");
   await expect(page.getByRole("heading", { name: "You're offline" })).toBeVisible();
-
   await page.context().setOffline(false);
   await page.goto("/cashbook.html");
   await expect(page.locator("body")).not.toContainText("You're offline");
