@@ -14,12 +14,19 @@ test("PWA manifest is linked and exposes install metadata", async ({ page }) => 
   expect(manifest.display).toBe("standalone");
   expect(manifest.start_url).toBe("./");
   expect(manifest.scope).toBe("./");
-  expect(manifest.icons.length).toBeGreaterThan(0);
 
-  for (const icon of manifest.icons) {
-    const iconResponse = await page.request.get(icon.src);
-    expect(iconResponse.ok(), `Icon failed to load: ${icon.src}`).toBeTruthy();
-    expect(iconResponse.headers()["content-type"]).toMatch(/image\//);
+  for (const [size, path] of [["192x192", "./icons/icon-192.png"], ["512x512", "./icons/icon-512.png"]]) {
+    const icon = manifest.icons.find((item: { src: string }) => item.src === path);
+    expect(icon, `Manifest is missing ${size} icon`).toBeTruthy();
+    expect(icon.sizes).toBe(size);
+    expect(icon.type).toBe("image/png");
+    const iconResponse = await page.request.get(path);
+    expect(iconResponse.ok(), `Icon failed to load: ${path}`).toBeTruthy();
+    expect(iconResponse.headers()["content-type"]).toMatch(/image\/png/);
+    const bytes = await iconResponse.body();
+    expect(bytes.toString("hex", 0, 8)).toBe("89504e470d0a1a0a");
+    expect(bytes.readUInt32BE(16)).toBe(Number(size.split("x")[0]));
+    expect(bytes.readUInt32BE(20)).toBe(Number(size.split("x")[1]));
   }
 });
 
