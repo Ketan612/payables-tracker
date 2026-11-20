@@ -22,7 +22,6 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
       TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
-      TEST_SIGNUP_EMAIL: playwrighte2e+payables-e2e-${{ github.run_id }}@gmail.com
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -43,14 +42,9 @@ jobs:
           done
           cat /tmp/payables-tracker-http.log
           exit 1
-      - name: Provision isolated test user
-        run: node scripts/ensure-test-user.mjs
       - name: Run browser tests against checked-out application
         run: npx playwright test
-      - name: Remove disposable signup test user
-        if: always()
-        run: node scripts/cleanup-signup-test-user.mjs
-      - name: Upload test report
+      - name: Upload full E2E recording, screenshots and report
         if: always()
         uses: actions/upload-artifact@v4
         with:

@@ -1,8 +1,9 @@
 import {test,expect,Page} from "@playwright/test";
 const email=process.env.TEST_USER_EMAIL!,password=process.env.TEST_USER_PASSWORD!;
-async function signIn(page:Page){await page.goto("/");await expect(page.locator("#loginForm")).toBeVisible();await page.locator("#loginEmail").fill(email);await page.locator("#loginPassword").fill(password);await page.locator("#loginForm button[type=submit]").click();await expect(page.locator("#welcomeMessage")).toContainText(/.+/,{timeout:20000});await expect(page.locator("html")).toHaveAttribute("data-dashboard-ready","true",{timeout:30000});}
+async function captureCheckpoint(page:Page,testInfo:any,label:string){await page.screenshot({path:testInfo.outputPath(`${label}.png`),fullPage:true,animations:"disabled"});}
+async function establishAuthenticatedSession(page:Page){await page.goto("/");await expect(page.locator("#loginForm")).toBeVisible();await page.locator("#loginEmail").fill(email);await page.locator("#loginPassword").fill(password);await page.locator("#loginForm button[type=submit]").click();await expect(page.locator("#welcomeMessage")).toContainText(/.+/,{timeout:20000});await expect(page.locator("html")).toHaveAttribute("data-dashboard-ready","true",{timeout:30000});}
 test.beforeAll(()=>{if(!email||!password)throw new Error("TEST_USER_EMAIL and TEST_USER_PASSWORD are required.");});
-test("creates finance fixtures and verifies workflows entirely through the UI",async({page})=>{
+test("complete authenticated E2E journey across all implemented modules",async({page},testInfo)=>{
  const dialogMessages:{type:string;message:string}[]=[];
  // One dialog listener for this test prevents competing handlers from accepting
  // the same browser dialog more than once. Assertions below inspect captured alerts.
@@ -10,7 +11,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
   dialogMessages.push({type:dialog.type(),message:dialog.message()});
   await dialog.accept();
  });
- await signIn(page);
+ await establishAuthenticatedSession(page);
  const marker="E2E-"+Date.now();
  const bankName=marker+" Bank";
  const cardName=marker+" Card";
@@ -57,6 +58,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.getByRole("button",{name:"Save EMI",exact:true}).click();
  await expect(page.locator("#emiDlg")).not.toBeVisible();
  await expect(page.locator("#emis")).toContainText(emiName);
+ await captureCheckpoint(page,testInfo,"01-dashboard-emi-people-bank-card");
 
  // Cash Book account, opening balance, debit and credit all entered via UI.
  await page.goto("/cashbook.html");
@@ -112,6 +114,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await expect(page.locator("#transactions")).toContainText(marker+" Cash credit");
  await expect(page.locator("#closing")).toContainText("2,650");
  await expect(page.locator("#transactions .ledger-table tbody tr")).toHaveCount(2);
+ await captureCheckpoint(page,testInfo,"02-cash-book-opening-debit-credit");
 
  // Personal expense with a bank payment and a person-linked payable.
  await page.goto("/");
@@ -169,6 +172,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await expect(page.locator("#dlg")).not.toBeVisible();
 
  await expect(page.locator("#list")).toContainText(marker+" Shared expense");
+ await captureCheckpoint(page,testInfo,"03-payables-and-shared-expense");
 
  // Settle the person-linked payable in two stages and verify the remaining balance.
  const payableRow=page.locator("#list .item").filter({hasText:marker+" Personal expense"});
@@ -231,6 +235,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await expect(page.locator("#balanceDetailDlg")).toBeVisible();
  // The final settlement RPC above is the authoritative zero-outstanding assertion;
  // Close the details modal before continuing the same journey into card purchases.
+ await captureCheckpoint(page,testInfo,"04-payable-partial-and-full-settlement");
  await page.locator("#closeBalanceDetail").click();
  await expect(page.locator("#balanceDetailDlg")).not.toBeVisible();
 
@@ -289,6 +294,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await expect(page.locator("#balanceDetailSummary")).toContainText("0.00");
  await page.locator("#showCardPaymentHistory").click();
  await expect(page.locator("#balanceDetailDlg .card-payment-history-entry")).toHaveCount(2);
+ await captureCheckpoint(page,testInfo,"05-credit-card-outstanding-and-payment-history");
 
  // Exercise the SMS integration with a disposable token and simulated bank messages.
  await page.goto("/sms-capture.html");
@@ -316,6 +322,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.locator("#accountSelect").selectOption({label:cashName});
  await expect(page.locator("#transactions")).toContainText("E2E Store");
  await expect(page.locator("#transactions .ledger-table tbody tr").filter({hasText:"E2E Store"})).toHaveCount(1);
+ await captureCheckpoint(page,testInfo,"06-sms-auto-post-to-cash-book");
  await expect(page.locator("#transactions .ledger-table tbody tr").filter({hasText:"E2E Store"})).toContainText("78.00");
 
  // Re-forwarding the same reference is classified as a duplicate and must not post twice.
@@ -345,6 +352,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await page.locator("#accountSelect").selectOption({label:cashName});
  await expect(page.locator("#transactions")).toContainText("E2E Manual Review");
  await expect(page.locator("#transactions .ledger-table tbody tr").filter({hasText:"E2E Manual Review"})).toContainText("19.00");
+ await captureCheckpoint(page,testInfo,"07-sms-unmapped-review-and-approval");
 
  // A second unmapped message is rejected and remains visible in the audit inbox.
  await page.goto("/sms-capture.html");
@@ -358,6 +366,7 @@ test("creates finance fixtures and verifies workflows entirely through the UI",a
  await expect(rejectedItem).toContainText("Needs review");
  await rejectedItem.locator("[data-reject]").click();
  await expect(page.locator("#inbox article.item").filter({hasText:rejectedReference})).toContainText("Rejected");
+ await captureCheckpoint(page,testInfo,"08-sms-rejection-and-token-management");
  await page.locator("#tokens [data-revoke]").first().click();
  await expect(page.locator("#tokenStatus")).toContainText("Token revoked successfully");
  await page.goto("/sms-admin.html");
