@@ -4001,9 +4001,9 @@ async function loadDashboardCashBookSummary(userId) {
         for (let depth = 0; depth < 36; depth++) {
           cursor.setMonth(cursor.getMonth() - 1);
           const previous = cursor.getFullYear() + "-" + String(cursor.getMonth()+1).padStart(2,"0");
-          if (explicit.has(previous)) { opening = explicit.get(previous); break; }
           const net = movements.filter(x => x.account_id === account.id && String(x.movement_date).slice(0,7) === previous)
             .reduce((sum,x) => sum + (x.direction === "in" ? 1 : -1) * Number(x.amount || 0), 0);
+          if (explicit.has(previous)) { opening = explicit.get(previous) + net; break; }
           opening += net;
         }
       }
