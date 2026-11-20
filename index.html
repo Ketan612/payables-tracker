@@ -5,17 +5,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#101827">
-  <link rel="stylesheet" href="styles.css?v=mobile-ui-refresh-20261120-1">
+  <link rel="stylesheet" href="styles.css?v=dashboard-redesign-20261120-2">
   <title>Payables Tracker</title>
 </head>
 <body>
   <header class="app-header">
-    <div class="brand-lockup">
+    <a class="brand-lockup" href="#overview" aria-label="Payables Tracker home">
       <span class="brand-mark">₹</span>
-      <div><small>PERSONAL FINANCE</small><h1>Payables Tracker</h1></div>
-    </div>
+      <span class="brand-copy"><small>PERSONAL FINANCE</small><strong>Payables Tracker</strong></span>
+    </a>
     <div class="header-user">
-      <span class="currency-chip">INR <i></i> IST</span>
+      <span class="currency-chip">INR · IST</span>
       <p id="welcomeMessage"></p>
       <button id="logoutBtn" type="button">Log out</button>
     </div>
@@ -110,28 +110,38 @@
   </section>
   <!-- Finance dashboard -->
   <main>
-    <div class="dashboard-intro">
-      <div><span class="form-eyebrow">YOUR MONEY, MADE CLEAR</span><h2>Financial overview</h2><p>A live snapshot of your personal finances.</p></div>
-      <div class="dashboard-date"><span class="live-dot"></span> YOUR PRIVATE WORKSPACE</div>
-    </div>
-    <nav class="dashboard-nav" aria-label="Dashboard sections">
-      <a href="#overview">Overview</a><a href="#payables-section">Payables</a><a href="#cards-section">Cards</a><a href="#accounts-section">Accounts</a><a href="#emi-section">EMIs</a><a href="#people-section">People</a><a href="#reminders-section">Reminders</a>
-    </nav>
-    <section class="stats" id="overview">
-      <article>
-        <small>PERSONAL PENDING</small>
-        <b id="p">₹0</b>
-      </article>
-      <article>
-        <small>COMMON PENDING</small>
-        <b id="c">₹0</b>
-      </article>
-      <article>
-        <small>ALL PENDING</small>
-        <b id="t">₹0</b>
-      </article>
+    <section class="dashboard-welcome" id="overview">
+      <div class="welcome-copy">
+        <span class="eyebrow"><i></i> YOUR FINANCIAL WORKSPACE</span>
+        <h2>Good day<span class="welcome-comma">,</span><br><em>stay in control.</em></h2>
+        <p>Here’s your money snapshot. Know what’s due, what’s pending, and what needs your attention.</p>
+      </div>
+      <div class="welcome-actions">
+        <a href="#payables-section" class="welcome-primary"><span>＋</span> Add a payable</a>
+        <a href="#cards-section" class="welcome-secondary">View cards <span>↗</span></a>
+      </div>
+      <div class="welcome-decoration" aria-hidden="true"><span>₹</span><i></i><b></b></div>
     </section>
-        <!-- Balances overview -->
+    <section class="overview-section" aria-label="Pending amounts">
+      <div class="section-heading"><div><span class="eyebrow">AT A GLANCE</span><h2>Pending overview</h2></div><span class="section-note">Your outstanding amounts</span></div>
+      <section class="stats overview-stats">
+        <article class="stat-personal"><span class="stat-icon">↗</span><small>PERSONAL</small><b id="p">₹0</b><span class="stat-caption">Your expenses</span></article>
+        <article class="stat-common"><span class="stat-icon">⌘</span><small>COMMON</small><b id="c">₹0</b><span class="stat-caption">Shared expenses</span></article>
+        <article class="stat-total"><span class="stat-icon">₹</span><small>TOTAL PENDING</small><b id="t">₹0</b><span class="stat-caption">All outstanding</span></article>
+      </section>
+    </section>
+    <section class="module-hub" aria-label="Finance modules">
+      <div class="section-heading"><div><span class="eyebrow">YOUR TOOLS</span><h2>Manage your money</h2></div><span class="section-note">Choose a workspace</span></div>
+      <div class="module-grid">
+        <a class="module-tile tile-payables" href="#payables-section"><span class="module-icon">↗</span><span class="module-label"><strong>Payables</strong><small>Track and settle expenses</small></span><span class="module-arrow">↗</span></a>
+        <a class="module-tile tile-cards" href="#cards-section"><span class="module-icon">▣</span><span class="module-label"><strong>Credit cards</strong><small>Purchases and payments</small></span><span class="module-arrow">↗</span></a>
+        <a class="module-tile tile-emi" href="#emi-section"><span class="module-icon">◷</span><span class="module-label"><strong>EMI schedules</strong><small>Upcoming instalments</small></span><span class="module-arrow">↗</span></a>
+        <a class="module-tile tile-people" href="#people-section"><span class="module-icon">♧</span><span class="module-label"><strong>People</strong><small>Shared expense balances</small></span><span class="module-arrow">↗</span></a>
+        <a class="module-tile tile-accounts" href="#accounts-section"><span class="module-icon">▤</span><span class="module-label"><strong>Accounts</strong><small>Payment sources and history</small></span><span class="module-arrow">↗</span></a>
+        <a class="module-tile tile-reminders" href="#reminders-section"><span class="module-icon">◉</span><span class="module-label"><strong>Reminders</strong><small>Payment preferences</small></span><span class="module-arrow">↗</span></a>
+      </div>
+    </section>
+    <!-- Balances overview -->
     <section class="panel">
       <h2>Balances Overview</h2>
       <p class="hint">
@@ -681,7 +691,7 @@
 
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script id="appScript" src="app.js?v=dashboard-mobile-cashbook-20261120-1"></script>
+  <script id="appScript" src="app.js?v=dashboard-redesign-20261120-2"></script>
   
 
 </body>
