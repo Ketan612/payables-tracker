@@ -1,23 +1,51 @@
-# Payables Tracker v1
-A private, responsive browser-based web app prototype with local browser persistence.
+# Payables Tracker
 
-## Run
-From this folder: `python -m http.server 8000`, then open `http://localhost:8000`.
-Deploy to an HTTPS host to access it through a normal browser on iPhone, Android, tablet, laptop or desktop. No installation is required.
+Payables Tracker is a responsive personal-finance web application backed by Supabase and deployed through Vercel.
 
-## Current capabilities
-Add/edit bills, mark paid, filter by month/type/status, see separate Personal/Common totals. INR only. Unpaid items are not deleted. October/November seed records included.
+## Application modules
 
-## Important
-This is the first working local version. Data is stored in this browser on this device; it is not yet synchronized to a cloud database or accessible to ChatGPT. The supplied Supabase schema and FastAPI read-only endpoints are the cloud integration starter. Configure Supabase credentials on a secure server; never put a service-role key in frontend code. Then configure a private authenticated ChatGPT app/connector to call the read-only API.
+- Dashboard and pending overview
+- Payables, settlements and shared expenses
+- Credit cards and payment allocations
+- Cash Book ledger and opening balances
+- EMI schedules and reminders
+- People and account mapping
+- SMS capture, review and admin monitoring
 
-Seed caveat: Axis personal amount ₹6,975.89 reflects supplied personal items less ₹10.90 and ₹19.98 surcharge credits. Common ₹3,401.21 reflects common items less ₹29.32. ₹12 overall adjustment is a separate provisional record and must only be deducted once. October EMI status is provisional. Verify all seed records before relying on totals.
+The application uses the existing Supabase authentication, PostgreSQL data model and row-level security policies. Do not expose a Supabase service-role key in browser code.
 
-## Credit-card cycle and EMI reminders (v1.1)
-The UI now captures card cycle start/end, statement generation day, payment due day and next due date. EMI schedules capture monthly amount, next due date, start/end dates and reminder lead time. Email address and reminder lead time can be saved locally.
+## Run locally
 
-**Email alerts are not live in this local prototype.** Reliable scheduled email needs the cloud deployment plus a scheduler (e.g. Supabase scheduled function/cron) and a transactional email provider (e.g. Resend/SendGrid) with a verified sender domain. The scheduled job should run daily in Asia/Kolkata, query unpaid card bills and EMI instalments, send one reminder per due item at the configured lead time, and log sent reminders to prevent duplicates. A browser notification can be an optional secondary reminder, but it cannot reliably replace server-side email when the PWA is closed.
+This repository is a static HTML/CSS/JavaScript application. From the repository root:
 
+```bash
+python -m http.server 8000
+```
 
-## Platform decision update
-The target is now a responsive web app for mobile and desktop browsers, not an installable-PWA-first experience. The manifest and service-worker files are retained in the source package as optional future assets but are not linked/registered by the website entry point.
+Open `http://localhost:8000`. Service workers are supported on localhost and HTTPS origins.
+
+## Progressive Web App
+
+The application can be used in a normal browser or installed as a PWA on supported Android and iOS devices.
+
+- `manifest.json` contains the install metadata.
+- `sw.js` caches the static application shell and provides a network-offline fallback.
+- `pwa.js` registers the service worker.
+- `offline.html` explains when an internet connection is required.
+
+The service worker deliberately does not cache Supabase API/auth responses, financial records, or non-GET requests. Financial writes remain online-only; offline mode must never imply that a payment or transaction was saved.
+
+### Install
+
+- **Android:** Open the HTTPS site in a supported browser and choose Install app / Add to Home screen.
+- **iPhone:** Open the site in Safari, choose Share → Add to Home Screen, enable Open as Web App if offered, then tap Add.
+
+PWA installation and browser access use the same application and Supabase user account. The normal browser experience remains supported.
+
+## Development and release
+
+- Repository: `Ketan612/payables-tracker`
+- Active development/testing branch: `test/e2e-stabilization`
+- Production branch: `main`
+
+Changes should be validated on the test branch and its Vercel preview before any production promotion. Do not make schema or production data changes as part of frontend-only PWA work.
