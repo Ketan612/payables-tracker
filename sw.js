@@ -1,8 +1,10 @@
-const CACHE_NAME = "payables-shell-v3";
+const CACHE_NAME = "payables-shell-v4";
 const SHELL_ASSETS = [
   "./offline.html",
   "./manifest.json",
   "./icons/payables-tracker.svg",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png",
   "./styles.css",
   "./app.js",
   "./cashbook.css",
