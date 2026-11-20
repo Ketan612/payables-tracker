@@ -1,8 +1,27 @@
 {
+  "id": "./",
   "name": "Payables Tracker",
   "short_name": "Payables",
+  "description": "Track payables, Cash Book entries, cards, EMIs and shared expenses.",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#f3f5f8",
-  "theme_color": "#101827"
+  "theme_color": "#101827",
+  "categories": ["finance", "productivity"],
+  "icons": [
+    {
+      "src": "./icons/payables-tracker.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/payables-tracker.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
 }
