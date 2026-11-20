@@ -148,3 +148,7 @@
  .cashbook-topbar{align-items:flex-start}
  .cashbook-header .top-action{min-height:38px}
 }
+
+/* iOS Safari automatically zooms focused controls below 16px. Keep the page at device scale. */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+@media(max-width:760px){input,select,textarea{font-size:16px!important}}
