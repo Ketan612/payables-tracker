@@ -3970,15 +3970,65 @@ function restoreRequestedPage(session) {
   window.location.replace(target);
 }
 
+async function loadDashboardCashBookSummary(userId) {
+  const openingEl = document.getElementById("dashboardCashbookOpening");
+  const closingEl = document.getElementById("dashboardCashbookClosing");
+  const changeEl = document.getElementById("dashboardCashbookChange");
+  const accountsEl = document.getElementById("dashboardCashbookAccounts");
+  if (!openingEl || !closingEl || !changeEl || !accountsEl || !userId) return;
+  const money = value => "₹" + Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const month = todayDate().slice(0, 7);
+  const monthStart = month + "-01";
+  try {
+    const [accountsResult, movementsResult, openingsResult] = await Promise.all([
+      supabaseClient.from("bank_accounts").select("id,account_name").eq("user_id", userId).eq("is_active", true),
+      supabaseClient.from("cash_movements").select("account_id,movement_date,direction,amount").eq("user_id", userId),
+      supabaseClient.from("cashbook_opening_balances").select("account_id,month,opening_balance").eq("user_id", userId)
+    ]);
+    for (const result of [accountsResult, movementsResult, openingsResult]) if (result.error) throw result.error;
+    const activeAccounts = accountsResult.data || [];
+    const movements = movementsResult.data || [];
+    const openingRows = openingsResult.data || [];
+    let totalOpening = 0, totalClosing = 0;
+    for (const account of activeAccounts) {
+      const explicit = new Map(openingRows.filter(x => x.account_id === account.id).map(x => [String(x.month).slice(0,7), Number(x.opening_balance || 0)]));
+      let opening;
+      if (explicit.has(month)) opening = explicit.get(month);
+      else {
+        // Match Cash Book's carry-forward logic when the selected month's opening was not manually set.
+        let cursor = new Date(monthStart + "T00:00:00");
+        opening = 0;
+        for (let depth = 0; depth < 36; depth++) {
+          cursor.setMonth(cursor.getMonth() - 1);
+          const previous = cursor.getFullYear() + "-" + String(cursor.getMonth()+1).padStart(2,"0");
+          if (explicit.has(previous)) { opening = explicit.get(previous); break; }
+          const net = movements.filter(x => x.account_id === account.id && String(x.movement_date).slice(0,7) === previous)
+            .reduce((sum,x) => sum + (x.direction === "in" ? 1 : -1) * Number(x.amount || 0), 0);
+          opening += net;
+        }
+      }
+      const monthNet = movements.filter(x => x.account_id === account.id && String(x.movement_date).slice(0,7) === month)
+        .reduce((sum,x) => sum + (x.direction === "in" ? 1 : -1) * Number(x.amount || 0), 0);
+      totalOpening += opening;
+      totalClosing += opening + monthNet;
+    }
+    const delta = totalClosing - totalOpening;
+    openingEl.textContent = money(totalOpening);
+    closingEl.textContent = money(totalClosing);
+    changeEl.textContent = (delta > 0 ? "+" : delta < 0 ? "−" : "") + money(Math.abs(delta));
+    changeEl.classList.toggle("is-negative", delta < 0);
+    accountsEl.textContent = activeAccounts.length
+      ? activeAccounts.length + " active Cash Book account" + (activeAccounts.length === 1 ? "" : "s") + " · " + new Date(monthStart + "T00:00:00").toLocaleDateString("en-IN", {month:"long",year:"numeric"})
+      : "No active Cash Book accounts yet";
+  } catch (error) {
+    console.error("Cash Book dashboard summary failed:", error);
+    openingEl.textContent = closingEl.textContent = changeEl.textContent = "—";
+    accountsEl.textContent = "Unable to load Cash Book balances. Open Cash Book to retry.";
+  }
+}
+
 function updateAuthUI(session) {
   const isLoggedIn = !!session;
-  const adminTools = document.getElementById("administrator-tools");
-  if (adminTools) {
-    adminTools.hidden = !(
-      isLoggedIn &&
-      (session.user.email || "").toLowerCase() === "ketansoni8@gmail.com"
-    );
-  }
 
   currentUserId = session?.user?.id || null;
 
@@ -4282,7 +4332,8 @@ function initializeAuth() {
           loadPeople(),
           loadAccounts(),
           loadTransactionSplits(),
-          loadTransactionSettlements()
+          loadTransactionSettlements(),
+          loadDashboardCashBookSummary(session.user.id)
         ]);
 
         loadResults.forEach((result, index) => {
