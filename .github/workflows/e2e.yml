@@ -8,8 +8,8 @@ on:
   schedule:
     - cron: "30 2 * * *"
 concurrency:
-  group: payables-e2e-${{ github.ref }}
-  cancel-in-progress: true
+  group: payables-e2e-shared-test-account
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:
