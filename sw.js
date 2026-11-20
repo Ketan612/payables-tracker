@@ -1,4 +1,4 @@
-const CACHE_NAME = "payables-shell-v2";
+const CACHE_NAME = "payables-shell-v3";
 const SHELL_ASSETS = [
   "./offline.html",
   "./manifest.json",
@@ -9,7 +9,8 @@ const SHELL_ASSETS = [
   "./cashbook.js",
   "./sms-capture.css",
   "./sms-capture.js",
-  "./sms-admin.js"
+  "./sms-admin.js",
+  "./pwa.js"
 ];
 
 self.addEventListener("install", (event) => {
