@@ -1,4 +1,4 @@
-const CACHE_NAME = "payables-shell-v6";
+const CACHE_NAME = "payables-shell-v7";
 const SHELL_ASSETS = [
   "./offline.html",
   "./manifest.json",
