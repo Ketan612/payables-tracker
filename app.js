@@ -29,6 +29,9 @@ let accounts = [];
 let transactionSplits = [];
 let transactionSettlements = [];
 let settlements = [];
+let transactionsLoadVersion = 0;
+let transactionSplitsLoadVersion = 0;
+let transactionSettlementsLoadVersion = 0;
 
 async function loadPeople() {
   const userId = currentUserId;
@@ -65,9 +68,11 @@ try {
   rows = seed;
 }
 async function loadTransactionSplits() {
+  const requestVersion = ++transactionSplitsLoadVersion;
   const userId = currentUserId;
 
   if (!userId) {
+    if (requestVersion !== transactionSplitsLoadVersion) return;
     transactionSplits = [];
     return;
   }
@@ -86,7 +91,7 @@ async function loadTransactionSplits() {
     `)
     .eq("user_id", userId);
 
-  if (currentUserId !== userId) return;
+  if (currentUserId !== userId || requestVersion !== transactionSplitsLoadVersion) return;
 
   if (error) {
     console.error("Failed to load transaction splits:", error);
@@ -98,9 +103,11 @@ async function loadTransactionSplits() {
   transactionSplits = data || [];
 }
 async function loadTransactionSettlements() {
+  const requestVersion = ++transactionSettlementsLoadVersion;
   const userId = currentUserId;
 
   if (!userId) {
+    if (requestVersion !== transactionSettlementsLoadVersion) return;
     transactionSettlements = [];
     settlements = [];
     return;
@@ -149,7 +156,7 @@ async function loadTransactionSettlements() {
     loadLedger(true)
   ]);
 
-  if (currentUserId !== userId) return;
+  if (currentUserId !== userId || requestVersion !== transactionSettlementsLoadVersion) return;
 
   if (legacyResult.error) {
     console.error(
@@ -194,7 +201,7 @@ async function loadTransactionSettlements() {
     }
   }
 
-  if (currentUserId !== userId) return;
+  if (currentUserId !== userId || requestVersion !== transactionSettlementsLoadVersion) return;
 
   if (ledgerResult.error) {
     console.error(
@@ -212,6 +219,17 @@ async function loadTransactionSettlements() {
 
   transactionSettlements = legacyResult.data || [];
   settlements = ledgerResult.data || [];
+
+  // Refresh an open transaction detail view when settlement history arrives late.
+  if (activeDetailsTransactionId && $("#balanceDetailDlg")?.open) {
+    const activeTransaction = rows.find(row => row.id === activeDetailsTransactionId);
+    if (activeTransaction) {
+      showTransactionDetails(activeTransaction, {
+        returnToCardId: activeDetailsReturnCardId,
+        hideBackButton: activeDetailsHideBackButton
+      });
+    }
+  }
 }
 async function loadAccounts() {
   const userId = currentUserId;
@@ -243,6 +261,17 @@ async function loadAccounts() {
 function populatePaymentDropdowns() {
   const method = $("#paymentMethod").value;
 
+  // Dataset refreshes can finish after the user has already opened the
+  // transaction dialog and selected a funding source. Preserve valid choices
+  // when rebuilding options so a late refresh cannot silently clear them.
+  const previousSelections = {
+    paymentAccount: $("#paymentAccount").value,
+    payableAccount: $("#payableAccount").value,
+    paymentCard: $("#paymentCard").value,
+    payableCard: $("#payableCard").value,
+    payablePerson: $("#payablePerson").value
+  };
+
   const sourceAccounts = accounts.filter(
     account => account.account_type === method
   );
@@ -252,25 +281,22 @@ function populatePaymentDropdowns() {
       `<option value="${safe(item.id)}">${safe(item[labelField])}</option>`
     ).join("");
 
-  $("#paymentAccount").innerHTML =
-    '<option value="">Select account</option>' +
-    accountOptions(sourceAccounts, "account_name");
+  const rebuildSelect = (selector, placeholder, items, labelField, previousValue) => {
+    const select = $(selector);
+    select.innerHTML =
+      `<option value="">${placeholder}</option>` +
+      accountOptions(items, labelField);
 
-  $("#payableAccount").innerHTML =
-    '<option value="">Select account / fund</option>' +
-    accountOptions(accounts, "account_name");
+    if (previousValue && items.some(item => item.id === previousValue)) {
+      select.value = previousValue;
+    }
+  };
 
-  $("#paymentCard").innerHTML =
-    '<option value="">Select card</option>' +
-    accountOptions(cards, "name");
-
-  $("#payableCard").innerHTML =
-    '<option value="">Select card</option>' +
-    accountOptions(cards, "name");
-
-  $("#payablePerson").innerHTML =
-    '<option value="">Select person</option>' +
-    accountOptions(people, "name");
+  rebuildSelect("#paymentAccount", "Select account", sourceAccounts, "account_name", previousSelections.paymentAccount);
+  rebuildSelect("#payableAccount", "Select account / fund", accounts, "account_name", previousSelections.payableAccount);
+  rebuildSelect("#paymentCard", "Select card", cards, "name", previousSelections.paymentCard);
+  rebuildSelect("#payableCard", "Select card", cards, "name", previousSelections.payableCard);
+  rebuildSelect("#payablePerson", "Select person", people, "name", previousSelections.payablePerson);
 }
 function updateDefaultPayableAmount() {
   if (!$("#createPayable").checked) return;
@@ -627,9 +653,11 @@ function safe(s) {
   }[c]));
 }
 async function loadTransactions() {
+  const requestVersion = ++transactionsLoadVersion;
   const userId = currentUserId;
 
   if (!userId) {
+    if (requestVersion !== transactionsLoadVersion) return;
     rows = [];
     render();
     return;
@@ -642,7 +670,7 @@ async function loadTransactions() {
       .eq("user_id", userId)
       .order("transaction_date", { ascending: false });
 
-    if (currentUserId !== userId) return;
+    if (currentUserId !== userId || requestVersion !== transactionsLoadVersion) return;
 
     if (error) {
       console.error("Failed to load transactions:", error);
@@ -718,7 +746,7 @@ rows = (data || []).map(x => ({
     render();
 
   } catch (error) {
-    if (currentUserId !== userId) return;
+    if (currentUserId !== userId || requestVersion !== transactionsLoadVersion) return;
 
     console.error("Unexpected transaction loading error:", error);
     rows = [];
@@ -2501,14 +2529,19 @@ $("#typ").addEventListener("change", async () => {
   $("#sharedFields").hidden = !isShared;
 
   if (isShared) {
-    await loadPeople();
-  
+    // Reset the split inputs before awaiting the participant refresh. Resetting
+    // after the request can erase values the user entered while it was loading.
     $("#sharedPayer").value = "user";
     updateSharedPayerField();
   
     $("#participantSplits").innerHTML = "";
     $("#yourShare").value = "";
     updateSplitTotal();
+
+    // The dashboard already loads the user's people list after authentication.
+    // Avoid a redundant request on every Shared toggle; it can race with the
+    // user's split entry on slower mobile connections.
+    if (!people.length) await loadPeople();
   }
   });
 
@@ -4095,8 +4128,12 @@ function getSignupErrorMessage(error) {
     return "Your password does not meet the security requirements.";
   }
 
-  if (message.includes("rate limit")) {
-    return "Too many registration attempts. Please wait and try again.";
+  if (
+    code === "over_email_send_rate_limit" ||
+    message.includes("rate limit") ||
+    message.includes("email rate limit")
+  ) {
+    return "Too many verification emails have been requested. Please wait a while before trying again.";
   }
 
   if (message.includes("database error saving new user")) {
@@ -4200,6 +4237,7 @@ signupForm.addEventListener("submit", async event => {
 
 function initializeAuth() {
   supabaseClient.auth.onAuthStateChange((event, session) => {
+    document.documentElement.dataset.dashboardReady = "false";
 
     if (event === "PASSWORD_RECOVERY") {
       updateAuthUI(null);
@@ -4258,6 +4296,7 @@ function initializeAuth() {
         renderPeople();
         renderSchedules();
         populatePaymentDropdowns();
+        document.documentElement.dataset.dashboardReady = "true";
       }, 0);
     } else {
             rows = [];
