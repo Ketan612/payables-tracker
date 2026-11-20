@@ -18,7 +18,7 @@ async function init(){
   // the session JWT is valid and PostgREST/RLS requests work normally.
   // Database operations still carry the access token and remain protected by RLS.
   u=session.user;
-  const adminTools=$("cashbook-admin-tools");if(adminTools)adminTools.hidden=(u.email||"").toLowerCase()!=="ketansoni8@gmail.com";
+  const adminLink=$("cashbookAdminLink");if(adminLink)adminLink.hidden=(u.email||"").toLowerCase()!=="ketansoni8@gmail.com";
   $("signedInEmail").textContent=u.email||"Authenticated user";
   $("cashbookLogout").onclick=forceLocalLogout;
   sb.auth.onAuthStateChange((event,nextSession)=>{if(event==="SIGNED_OUT"||(nextSession?.user?.id&&nextSession.user.id!==u.id))location.replace("index.html")});
