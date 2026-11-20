@@ -1,4 +1,4 @@
-const CACHE_NAME = "payables-shell-v4";
+const CACHE_NAME = "payables-shell-v5";
 const SHELL_ASSETS = [
   "./offline.html",
   "./manifest.json",
@@ -14,6 +14,10 @@ const SHELL_ASSETS = [
   "./sms-admin.js",
   "./pwa.js"
 ];
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
+});
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
