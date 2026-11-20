@@ -5,6 +5,7 @@
   let installBanner = null;
   let updateBanner = null;
   let refreshing = false;
+  const hadControllerAtPageStart = Boolean(navigator.serviceWorker.controller);
 
   const addBannerStyles = () => {
     if (document.getElementById("payables-pwa-styles")) return;
@@ -67,7 +68,7 @@
         { title: "Install Payables Tracker", detail: "Add the app to your home screen for a dedicated app experience." },
         "Install",
         async () => {
-          deferredInstallPrompt.prompt();
+          await deferredInstallPrompt.prompt();
           await deferredInstallPrompt.userChoice.catch(() => null);
           deferredInstallPrompt = null;
           installBanner?.remove();
@@ -133,7 +134,9 @@
   });
 
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (refreshing) return;
+    // First-time control should not interrupt the page. Reload only when an
+    // already-controlled page receives an explicitly activated update.
+    if (!hadControllerAtPageStart || refreshing) return;
     refreshing = true;
     window.location.reload();
   });
