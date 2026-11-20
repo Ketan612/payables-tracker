@@ -119,3 +119,32 @@
  .txn-table.ledger-table td.ledger-actions .icon-action{display:inline-flex!important;box-sizing:border-box!important;width:18px!important;min-width:18px!important;max-width:18px!important;height:24px!important;min-height:24px!important;margin:0!important;padding:0!important;border:0!important;border-radius:4px!important;background:transparent!important;align-items:center!important;justify-content:center!important;font-size:15px!important;line-height:1!important}
  .txn-table.ledger-table td.ledger-actions .delete-action{font-size:19px!important;color:#b84949!important}
 }
+
+/* Cash Book header action layout: separate navigation controls from the page title. */
+.cashbook-header{padding:20px 22px 18px}
+.cashbook-topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,.15)}
+.cashbook-header-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+.cashbook-header .top-action{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 13px;border:1px solid rgba(255,255,255,.24);border-radius:10px;background:rgba(255,255,255,.08);color:#e5edf7;text-decoration:none;font-size:12px;font-weight:700;white-space:nowrap}
+.cashbook-header .home-action{background:rgba(255,255,255,.13)}
+.cashbook-header .sms-settings-link{background:#e8f3ec;border-color:#e8f3ec;color:#175b3d}
+.cashbook-header .admin-monitor-link{background:#f7edda;border-color:#f7edda;color:#78551d}
+.cashbook-title{padding-top:18px}
+.cashbook-eyebrow{font-size:9px;letter-spacing:1.5px;font-weight:800;color:#aebfd0}
+.cashbook-header h1{margin:5px 0 3px;font-size:27px;letter-spacing:-.6px}
+.cashbook-header .session-identity{margin-top:17px;padding-top:13px}
+@media(max-width:540px){
+ .cashbook-header{padding:13px}
+ .cashbook-topbar{align-items:stretch;gap:9px;padding-bottom:12px}
+ .cashbook-topbar>.home-action{flex:0 0 auto}
+ .cashbook-header-actions{flex:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ .cashbook-header .top-action{min-height:40px;padding:7px 8px;font-size:11px;text-align:center}
+ .cashbook-title{padding-top:14px}
+ .cashbook-header h1{font-size:24px}
+ .session-identity{align-items:center;font-size:11px}
+ .session-identity button{flex:0 0 auto}
+}
+@media(max-width:360px){
+ .cashbook-header-actions{grid-template-columns:1fr}
+ .cashbook-topbar{align-items:flex-start}
+ .cashbook-header .top-action{min-height:38px}
+}
