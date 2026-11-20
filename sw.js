@@ -1,4 +1,4 @@
-const CACHE_NAME = "payables-shell-v5";
+const CACHE_NAME = "payables-shell-v6";
 const SHELL_ASSETS = [
   "./offline.html",
   "./manifest.json",
@@ -23,7 +23,7 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(SHELL_ASSETS))
-      .then(() => self.skipWaiting())
+      .then(() => undefined)
   );
 });
 
