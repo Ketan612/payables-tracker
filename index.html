@@ -191,8 +191,16 @@
       <div id="list"></div>
     </section>
 
-    <section class="panel cashbook-launch-panel" id="cashbook-section"><div class="head"><h2>Cash Book</h2><a class="button-link" href="cashbook.html">Open Cash Book</a></div><p class="hint">Monthly cash movements for daily expenses, separate from all other financial modules.</p></section>
-    <section class="panel cashbook-launch-panel" id="administrator-tools" hidden><div class="head"><h2>Administrator</h2><a class="button-link" href="sms-admin.html">Open SMS Integration Monitor</a></div><p class="hint">Restricted administrator view for SMS capture delivery, validation and Cash Book posting events.</p></section>
+    <a class="panel cashbook-launch-panel cashbook-summary-card" id="cashbook-section" href="cashbook.html" aria-label="Open Cash Book">
+      <div class="cashbook-summary-heading"><span class="cashbook-summary-icon" aria-hidden="true">▤</span><span class="cashbook-summary-title"><strong>Cash Book</strong><small>Monthly cash ledger for income, expenses and payments</small></span><span class="cashbook-summary-chevron" aria-hidden="true">›</span></div>
+      <div class="cashbook-balance-grid">
+        <div><small>Opening Balance</small><strong id="dashboardCashbookOpening">—</strong></div>
+        <div><small>Closing Balance</small><strong id="dashboardCashbookClosing">—</strong></div>
+        <div class="cashbook-net"><small>Monthly change</small><strong id="dashboardCashbookChange">—</strong></div>
+      </div>
+      <p class="cashbook-summary-note" id="dashboardCashbookAccounts">Loading Cash Book balances…</p>
+    </a>
+    
 <section class="panel" id="cards-section">
       <h2>Credit cards</h2>
       <p class="hint">Tap anywhere on a card to open its passbook, review purchases and record payments.</p>
@@ -260,7 +268,6 @@
       <a href="#accounts-section"><span aria-hidden="true">▤</span><small>Accounts</small></a>
       <a href="#emi-section"><span aria-hidden="true">◷</span><small>EMIs</small></a>
       <a href="#people-section"><span aria-hidden="true">♙</span><small>People</small></a>
-      <a href="#reminders-section"><span aria-hidden="true">♧</span><small>More</small></a>
     </nav>
   </main>
 
