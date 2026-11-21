@@ -127,7 +127,7 @@ test("complete authenticated E2E journey across all implemented modules",async({
  await expect(page.locator("#transactions .ledger-table tbody tr").filter({hasText:marker+" Cash credit"}).locator(".running")).toContainText("2,725");
 
  // Month navigation must isolate history and restore the selected month's ledger.
- const currentMonth=page.locator("#monthSelect").inputValue();
+ const currentMonth=await page.locator("#monthSelect").inputValue();
  const previousMonth=new Date(Number(currentMonth.slice(0,4)),Number(currentMonth.slice(5,7))-2,1);
  const previousMonthValue=previousMonth.getFullYear()+"-"+String(previousMonth.getMonth()+1).padStart(2,"0");
  await page.locator("#monthSelect").fill(previousMonthValue);
