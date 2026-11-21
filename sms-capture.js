@@ -38,6 +38,7 @@ async function auth(){
   }
   if(!verified)throw new Error("Supabase did not return an authenticated user.");
   user=verified;
+  window.payablesSessionPolicy.start(sb,user.id);
   setStatus(user.email||"Authenticated user","success");
   sb.auth.onAuthStateChange((event,nextSession)=>{
    if(event==="SIGNED_OUT"||(nextSession?.user?.id&&nextSession.user.id!==user.id)){
