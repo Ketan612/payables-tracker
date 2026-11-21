@@ -431,3 +431,62 @@ test("complete authenticated E2E journey across all implemented modules",async({
  await page.goto("/sms-admin.html");
  await expect(page.getByRole("heading",{name:"Access denied"})).toBeVisible();
 });
+
+
+test("transaction validation, edit and refresh persistence",async({page})=>{
+ await establishAuthenticatedSession(page);
+ const marker="E2E-HISTORY-"+Date.now();
+ const today=new Date().toISOString().slice(0,10);
+ const rpcRequests:string[]=[];
+ page.on("request",request=>{
+  if(request.url().includes("/rest/v1/rpc/create_expense_v1"))rpcRequests.push(request.method()+" "+request.url());
+ });
+
+ // Browser-level amount validation must prevent an invalid transaction.
+ await page.locator("#add").click();
+ await page.locator("#desc").fill(marker+" invalid");
+ await page.locator("#amt").fill("0");
+ await page.locator("#transactionDate").fill(today);
+ const invalidForm=await page.locator("#form").evaluate(form=>(form as HTMLFormElement).checkValidity());
+ expect(invalidForm,"Zero-amount transaction must fail native form validation").toBeFalsy();
+ await page.locator("#form").getByRole("button",{name:"Save",exact:true}).click();
+ await expect(page.locator("#dlg")).toBeVisible();
+ expect(rpcRequests,"Invalid transaction must not call the create RPC").toHaveLength(0);
+
+ // A valid transaction is created once, edited, and reloaded from Supabase.
+ await page.locator("#amt").fill("42.50");
+ const createRequest=page.waitForResponse(response=>
+  response.url().includes("/rest/v1/rpc/create_expense_v1")&&response.request().method()==="POST"
+ );
+ await page.locator("#form").getByRole("button",{name:"Save",exact:true}).click();
+ const createResponse=await createRequest;
+ const createBody=await createResponse.text();
+ expect(createResponse.ok(),"Valid transaction creation failed: "+createResponse.status()+" "+createBody).toBeTruthy();
+ await expect(page.locator("#dlg")).not.toBeVisible();
+ await page.locator("#statusF").selectOption("all");
+ await expect(page.locator("#list")).toContainText(marker+" invalid");
+ const initialRow=page.locator("#list .item").filter({hasText:marker+" invalid"});
+ await expect(initialRow).toContainText("42.50");
+ await initialRow.locator("[data-edit]").click();
+ await expect(page.locator("#dlg")).toBeVisible();
+ await page.locator("#desc").fill(marker+" edited");
+ await page.locator("#amt").fill("57.25");
+ const updateRequest=page.waitForResponse(response=>
+  response.url().includes("/rest/v1/transactions")&&response.request().method()==="PATCH"
+ );
+ await page.locator("#form").getByRole("button",{name:"Save",exact:true}).click();
+ const updateResponse=await updateRequest;
+ const updateBody=await updateResponse.text();
+ expect(updateResponse.ok(),"Transaction edit failed: "+updateResponse.status()+" "+updateBody).toBeTruthy();
+ await expect(page.locator("#dlg")).not.toBeVisible();
+ await expect(page.locator("#list")).toContainText(marker+" edited");
+ await expect(page.locator("#list .item").filter({hasText:marker+" edited"})).toContainText("57.25");
+
+ await page.reload();
+ await expect(page.locator("html")).toHaveAttribute("data-dashboard-ready","true",{timeout:30000});
+ await page.locator("#statusF").selectOption("all");
+ const persistedRow=page.locator("#list .item").filter({hasText:marker+" edited"});
+ await expect(persistedRow).toBeVisible();
+ await expect(persistedRow).toContainText("57.25");
+ await expect(page.locator("#list")).not.toContainText(marker+" invalid");
+});
