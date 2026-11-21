@@ -241,3 +241,16 @@ These issues contain scope and acceptance criteria. Use them as the active struc
 - This run's SHA is main commit `48495ded5ee0a749887fa31493071cb9eacd891e`; it does not include PR31. Do not use it as evidence for or against the PR31 code fix.
 - PR31 head remains `d75fbf430953aa35a92308103524262be3bfbc0f`, open/draft/unmerged. Its last known workflow run 44946212950 was cancelled, so PR31 still needs a fresh completed full E2E run.
 - Next action: trigger and monitor a fresh workflow on PR31 head; verify request payload `opening_balance: 2600`, persisted ₹2,600 display, all browser tests, and full artifact before backup/merge.
+
+
+## Workflow control change — 2026-11-22
+
+- User decision: stop automatically running the E2E suite on every push/commit to `main`; test runs should be deliberately requested.
+- Updated `.github/workflows/e2e.yml` on `main` in commit `3844c1b1fa4b4409e736cad10ec794812e592766`.
+- Updated the same workflow on PR31 branch in commit `1da2d419043b977ca11cd95a5ca6e27fbd531ed0`.
+- New triggers: `pull_request` targeting `main` or `test-env`, plus manual `workflow_dispatch`. Removed push triggers and the scheduled daily run. Consequently, status-file commits to main will no longer start E2E merely because they are pushes.
+- PR31 remains open/draft, not merged. Latest head: `1da2d419043b977ca11cd95a5ca6e27fbd531ed0`.
+- Checked workflow runs associated with the new PR31 head; no new run was returned at the time of this update. Earlier run `44946212950` has a cancelled browser job and cannot count as validation.
+- The available GitHub connection exposes workflow inspection and job rerun actions, but no workflow-dispatch action. Therefore a new manual `workflow_dispatch` run could not be submitted from this session. Do not claim a test was started or passed.
+- Next action: use GitHub Actions → Payables Tracker E2E → Run workflow, select branch `fix/cashbook-opening-balance-race`, and run the full suite. Then inspect the browser result and uploaded Playwright artifact. Keep PR31 unmerged until all checks pass.
+- Main workflow-control commit is configuration-only; no application code, Supabase schema, or production data was changed.
