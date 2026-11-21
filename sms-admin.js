@@ -9,6 +9,7 @@ const esc=value=>String(value??"—").replace(/[&<>"']/g,char=>({
 }[char]));
 
 async function logout(){
+ window.payablesSessionPolicy.stop();
  try{await sb.auth.signOut({scope:"local"})}catch(error){console.warn("Local sign-out failed",error)}
  try{localStorage.removeItem("sb-magxbczgrxeypryjborr-auth-token")}catch(error){console.warn("Could not clear cached auth token",error)}
  location.replace("index.html");

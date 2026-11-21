@@ -6,6 +6,7 @@ const $=id=>document.getElementById(id);let user,accounts=[],latestToken="";cons
 const esc=s=>String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmt=v=>"₹"+Number(v||0).toLocaleString("en-IN",{minimumFractionDigits:2});
 async function forceLocalLogout(){
+ window.payablesSessionPolicy.stop();
  try{const {error}=await sb.auth.signOut({scope:"local"});if(error)console.warn("Remote/local sign-out returned an error:",error.message)}catch(error){console.warn("Sign-out request failed; clearing this browser session locally:",error)}
  try{localStorage.removeItem("sb-magxbczgrxeypryjborr-auth-token");sessionStorage.removeItem("sb-magxbczgrxeypryjborr-auth-token")}catch(_){}
  location.replace("index.html");
