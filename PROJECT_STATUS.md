@@ -314,3 +314,16 @@ These issues contain scope and acceptance criteria. Use them as the active struc
 - Render verification is pending workspace selection; no Render service or deployment action was taken.
 - No database migration was required for this fix.
 - Remaining checks: verify Render service branch/commit and health after the user selects the correct Render workspace; optionally manually dispatch E2E on main after production rollout. Continue pending SMS live-device/duplicate and Physical Cash edge-case validation.
+
+
+## Render production verification — 2026-11-22
+
+- User confirmed the Render workspace "My Workspace" (`tea-dbjm388ae00c73el4drg`); inspection only, no settings or deployment changes made.
+- Located the exact service: `payables-tracker`, service ID `srv-dbjmdq142hec73dfa8t0`, repository `Ketan612/payables-tracker`.
+- Service configuration verified: branch `main`; auto-deploy enabled on commit; runtime Python; start command `uvicorn main:app --host 0.0.0.0 --port $PORT`; URL https://payables-tracker.onrender.com; service not suspended.
+- Latest Render deployment is live: `dep-dc106q8s00ms7380aqf0`; deployed commit `e5e5260730ab84c82c648ab8115892d8f5303911` (the latest main tracker-status update commit, with PR36 merge in its ancestry).
+- Render build event succeeded and deployment-ended event reports succeeded. Runtime logs show Uvicorn started and "Application startup complete"; Render announced "Your service is live".
+- App source defines `GET /health` returning `ok: true` and whether the Supabase DB configuration is present. The service has no configured Render healthCheckPath. Render's observed `GET /` and `HEAD /` probes return 404 because no root route is defined; this is not a build/startup failure.
+- Direct external HTTP verification of `/health` was not possible through the available network access in this session, so endpoint response and database_configured value remain unconfirmed. No secrets were read.
+- No Render configuration, environment variable, service, or deployment setting was changed.
+- Remaining operational follow-up: if needed, confirm `https://payables-tracker.onrender.com/health` in a normal browser/client and check `database_configured: true`.
