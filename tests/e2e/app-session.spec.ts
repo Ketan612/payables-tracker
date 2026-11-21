@@ -522,3 +522,44 @@ test("rapid repeated transaction submit creates only one record",async({page})=>
 });
 
 // CI retry marker: rerun duplicate-submit regression on current workflow configuration.
+
+
+test("payables month and type filters show only matching transactions",async({page})=>{
+ await establishAuthenticatedSession(page);
+ const marker="E2E-FILTER-"+Date.now();
+ const create=async(description:string,amount:string,date:string,type:string)=>{
+  await page.locator("#add").click();
+  await page.locator("#desc").fill(description);
+  await page.locator("#amt").fill(amount);
+  await page.locator("#transactionDate").fill(date);
+  await page.locator("#typ").selectOption({label:type});
+  const response=page.waitForResponse(r=>r.url().includes("/rest/v1/rpc/create_expense_v1")&&r.request().method()==="POST");
+  await page.locator("#form").getByRole("button",{name:"Save",exact:true}).click();
+  const result=await response;
+  expect(result.ok(),"Filter fixture creation failed: "+result.status()+" "+await result.text()).toBeTruthy();
+  await expect(page.locator("#dlg")).not.toBeVisible();
+  await expect(page.locator("#list")).toContainText(description);
+ };
+ await create(marker+" October Personal","23.10","2026-10-12","Personal");
+ await create(marker+" November Common","45.20","2026-11-12","Common");
+
+ await page.locator("#monthF").selectOption({label:"October 2026"});
+ await expect(page.locator("#list")).toContainText(marker+" October Personal");
+ await expect(page.locator("#list")).not.toContainText(marker+" November Common");
+
+ await page.locator("#monthF").selectOption("all");
+ await page.locator("#typeF").selectOption("Common");
+ await expect(page.locator("#list")).toContainText(marker+" November Common");
+ await expect(page.locator("#list")).not.toContainText(marker+" October Personal");
+
+ await page.locator("#monthF").selectOption({label:"November 2026"});
+ await expect(page.locator("#list")).toContainText(marker+" November Common");
+ await expect(page.locator("#list")).not.toContainText(marker+" October Personal");
+
+ await page.locator("#monthF").selectOption("all");
+ await page.locator("#typeF").selectOption("all");
+ await expect(page.locator("#list")).toContainText(marker+" October Personal");
+ await expect(page.locator("#list")).toContainText(marker+" November Common");
+});
+
+// CI retry marker: rerun month/type filter regression on current main.
