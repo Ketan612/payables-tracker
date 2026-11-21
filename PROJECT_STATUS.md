@@ -208,4 +208,22 @@ Operating rules:
 5. Keep production backup/merge/deployment gates in this status file and the release checklist; never infer production completion from a green preview.
 6. Review the board at the start of each planning session and refresh this file at the end of every project chat.
 
-**Implementation status:** This is the proposed tracking recommendation, not yet an implemented GitHub Projects board. No board, issue set, or labels were created in this session. Next step, once approved, is to set up the board and migrate the current P0–P3 items into individual linked issues without losing their existing evidence.
+**Implementation status:** A full GitHub Projects board could not be created through the currently available GitHub connection because it exposes repository issue/PR actions but no GitHub Projects V2 create/update actions. To avoid leaving the backlog untracked, four structured GitHub Issues were created as the first working backlog. The board remains pending until a Projects-capable connection/UI is available.
+
+### Initial GitHub issue backlog
+- [ ] [#32 — P0: Resolve PR31 Cash Book opening-balance E2E failure](https://github.com/Ketan612/payables-tracker/issues/32)
+- [ ] [#33 — P1: Complete SMS capture and duplicate-detection validation](https://github.com/Ketan612/payables-tracker/issues/33)
+- [ ] [#34 — P1: Verify Physical Cash ledger and custom expense categories](https://github.com/Ketan612/payables-tracker/issues/34)
+- [ ] [#35 — P2: Verify production release, deployment and operational health](https://github.com/Ketan612/payables-tracker/issues/35)
+
+These issues contain scope and acceptance criteria. Use them as the active structured backlog until a Projects board is available; link implementation PRs and CI evidence back to the corresponding issue.
+
+
+## Latest workflow status — 2026-11-22
+
+- Latest repository workflow run at the time of this update: [44946563275](https://github.com/Ketan612/payables-tracker/actions/runs/44946563275), workflow **Payables Tracker E2E**, branch `main`, commit `4a810f2e99b69610cbcf94ea90fc5292dc8cef67`.
+- Status: **in progress**. Parser regression step passed. Application startup passed. Browser E2E step is currently running; artifact upload is pending. Do not report this run as passed until it completes and its artifact is reviewed.
+- PR31 validation run [44946212950](https://github.com/Ketan612/payables-tracker/actions/runs/44946212950) is **cancelled**, not passed. Parser tests had passed before cancellation; browser result is not a valid completion.
+- PR31 remains open/draft and unmerged. PR #31 link: https://github.com/Ketan612/payables-tracker/pull/31
+- This latest main run was triggered by the documentation/status update commit, not by PR31 code. It is a useful current-main workflow result but does not replace PR31 branch validation.
+- Next action: monitor run 44946563275 to completion; then rerun/validate PR31 separately on its latest head, inspect the full E2E recording/report, and only then proceed to backup/release gates.
