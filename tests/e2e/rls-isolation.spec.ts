@@ -1,9 +1,10 @@
 import {test,expect,APIRequestContext} from "@playwright/test";
 
 const supabaseUrl=process.env.SUPABASE_URL!;
-const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const ownerEmail=process.env.TEST_USER_EMAIL!;
 const ownerPassword=process.env.TEST_USER_PASSWORD!;
+const secondaryEmail=process.env.TEST_USER_B_EMAIL!;
+const secondaryPassword=process.env.TEST_USER_B_PASSWORD!;
 const publishableKey="sb_publishable_o3SjG1KCygJ99RuamTJdsQ_RIkHJ-gX";
 
 async function expectOk(response:any,label:string){
@@ -30,23 +31,13 @@ async function rest(request:APIRequestContext,token:string,table:string,method:s
 }
 
 test("RLS isolates financial and profile data between two authenticated users",async({request})=>{
- test.skip(!serviceKey||!supabaseUrl||!ownerEmail||!ownerPassword,"Supabase E2E credentials are required.");
+ test.skip(!supabaseUrl||!ownerEmail||!ownerPassword||!secondaryEmail||!secondaryPassword,"Two dedicated Supabase E2E users are required. Configure TEST_USER_B_EMAIL and TEST_USER_B_PASSWORD repository secrets.");
  const marker="E2E-RLS-"+Date.now();
- const secondaryEmail="e2e-rls-"+Date.now()+"@payables-test.invalid";
- const secondaryPassword="RlsTest!"+Date.now()+"aA9";
- let secondaryUserId:string|undefined;
  let ownerToken:string|undefined;
  let secondaryToken:string|undefined;
  let secondaryBankId:string|undefined;
  const created:{table:string;id:string}[]=[];
  try{
-  const createUser=await request.post(supabaseUrl+"/auth/v1/admin/users",{
-   headers:{apikey:serviceKey,Authorization:"Bearer "+serviceKey,"Content-Type":"application/json"},
-   data:{email:secondaryEmail,password:secondaryPassword,email_confirm:true,user_metadata:{e2e_test:true}}
-  });
-  const newUser=await expectOk(createUser,"Create disposable secondary auth user");
-  secondaryUserId=newUser.id;
-
   const [ownerSession,secondarySession]=await Promise.all([
    signIn(request,ownerEmail,ownerPassword),
    signIn(request,secondaryEmail,secondaryPassword)
@@ -107,11 +98,6 @@ test("RLS isolates financial and profile data between two authenticated users",a
   }
   if(secondaryToken&&secondaryBankId){
    await rest(request,secondaryToken,"bank_accounts","DELETE","id=eq."+secondaryBankId).catch(()=>undefined);
-  }
-  if(secondaryUserId){
-   await request.delete(supabaseUrl+"/auth/v1/admin/users/"+secondaryUserId,{
-    headers:{apikey:serviceKey,Authorization:"Bearer "+serviceKey}
-   }).catch(()=>undefined);
   }
  }
 });
