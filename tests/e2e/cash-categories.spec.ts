@@ -100,7 +100,7 @@ test("users can add expense categories and cash expenses post to Physical Cash",
   );
   expect(updateResponse.ok(),"Updating the source expense failed: "+updateResponse.status()+" "+await updateResponse.text()).toBeTruthy();
   await page.reload();
-  await expect(page.locator("#accountSelect")).toHaveValue(await page.locator("#accountSelect option").filter({hasText:"Physical Cash"}).getAttribute("value"));
+  await page.locator("#accountSelect").selectOption({label:"Physical Cash"});
   const updatedCashRow=page.locator("#transactions .ledger-table tbody tr").filter({hasText:description});
   await expect(updatedCashRow).toHaveCount(1);
   await expect(updatedCashRow.locator(".debit")).toContainText("175.00");
