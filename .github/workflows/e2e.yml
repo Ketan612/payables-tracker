@@ -9,7 +9,7 @@ on:
     - cron: "30 2 * * *"
 concurrency:
   group: payables-e2e-shared-test-account
-  cancel-in-progress: false
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
