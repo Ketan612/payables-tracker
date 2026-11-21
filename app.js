@@ -26,6 +26,7 @@ let rows;
 
 let people = [];
 let accounts = [];
+let expenseCategories = [];
 let transactionSplits = [];
 let transactionSettlements = [];
 let transactionCreateInProgress = false;
@@ -258,6 +259,64 @@ async function loadAccounts() {
   }
 
   accounts = data || [];
+}
+function getPhysicalCashAccountId() {
+  return accounts.find(account =>
+    account.account_type === "cash" &&
+    account.account_name.trim().toLowerCase() === "physical cash"
+  )?.id || null;
+}
+function renderCategoryOptions(selectedValue = $("#cat")?.value) {
+  const select = $("#cat");
+  if (!select) return;
+  const selected = selectedValue || "";
+  select.innerHTML = "";
+  expenseCategories.forEach(category => {
+    const option = document.createElement("option");
+    option.value = category.name;
+    option.textContent = category.name;
+    select.appendChild(option);
+  });
+  if (selected && !expenseCategories.some(category => category.name === selected)) {
+    const legacyOption = document.createElement("option");
+    legacyOption.value = selected;
+    legacyOption.textContent = selected;
+    select.appendChild(legacyOption);
+  }
+  if (selected) select.value = selected;
+  else if (expenseCategories.some(category => category.name === "Other")) select.value = "Other";
+}
+function renderCategoryList() {
+  const container = $("#categoryList");
+  if (!container) return;
+  container.innerHTML = expenseCategories.length
+    ? expenseCategories.map(category => `
+        <div class="category-list-row">
+          <span>${safe(category.name)}</span>
+          <span class="hint">${category.is_default ? "Default" : "Custom"}</span>
+        </div>
+      `).join("")
+    : '<p class="hint">No categories available yet.</p>';
+}
+async function loadCategories() {
+  const userId = currentUserId;
+  if (!userId) {
+    expenseCategories = [];
+    renderCategoryOptions("");
+    renderCategoryList();
+    return;
+  }
+  const { data, error } = await supabaseClient
+    .from("expense_categories")
+    .select("id, name, is_default")
+    .eq("user_id", userId)
+    .order("is_default", { ascending: false })
+    .order("name", { ascending: true });
+  if (currentUserId !== userId) return;
+  if (error) throw error;
+  expenseCategories = data || [];
+  renderCategoryOptions($("#cat")?.value || "Other");
+  renderCategoryList();
 }
 function populatePaymentDropdowns() {
   const method = $("#paymentMethod").value;
@@ -591,6 +650,35 @@ $("#bankAccountForm").addEventListener("submit", async event => {
   }
 });
 
+$("#manageCategories").addEventListener("click", () => {
+  renderCategoryList();
+  $("#categoriesDlg").showModal();
+});
+$("#cancelCategories").addEventListener("click", () => $("#categoriesDlg").close());
+$("#categoryForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const userId = currentUserId;
+  if (!userId) return alert("Please log in before adding a category.");
+  const name = $("#newCategoryName").value.trim().replace(/\s+/g, " ");
+  if (name.length < 2 || name.length > 40) {
+    return alert("Category name must be between 2 and 40 characters.");
+  }
+  const result = await supabaseClient
+    .from("expense_categories")
+    .insert({ user_id: userId, name, is_default: false })
+    .select("id, name, is_default")
+    .single();
+  if (currentUserId !== userId) return;
+  if (result.error) {
+    if (result.error.code === "23505") return alert("This category already exists.");
+    console.error("Category save failed:", result.error);
+    return alert("Could not add category: " + result.error.message);
+  }
+  await loadCategories();
+  $("#cat").value = result.data.name;
+  $("#newCategoryName").value = "";
+  $("#categoriesDlg").close();
+});
 $("#paymentMethod").addEventListener("change", () => {
   populatePaymentDropdowns();
   updatePaymentFields();
@@ -1386,7 +1474,9 @@ $("#settlementForm").addEventListener("submit", async event => {
   const paymentMethod = $("#settlementPaymentMethod").value;
   const accountId = paymentMethod === "bank"
     ? $("#settlementAccount").value
-    : null;
+    : paymentMethod === "cash"
+      ? getPhysicalCashAccountId()
+      : null;
   if (!Number.isFinite(amount) || amount <= 0) {
     alert("Enter a valid settlement amount greater than zero.");
     return;
@@ -2819,7 +2909,14 @@ $("#form").onsubmit = async e => {
   const paymentAccountId =
     paymentMethod === "bank"
       ? $("#paymentAccount").value
-      : null;
+      : paymentMethod === "cash"
+        ? getPhysicalCashAccountId()
+        : null;
+
+  if (!someoneElsePays && paymentMethod === "cash" && !paymentAccountId) {
+    alert("Physical Cash account is unavailable. Refresh the page and try again.");
+    return;
+  }
 
   const paymentCardId =
     paymentMethod === "credit_card"
@@ -3315,7 +3412,12 @@ $("#cardPaymentForm").addEventListener("submit", async event => {
   const amount = Number($("#cardPaymentAmount").value);
   const paymentDate = $("#cardPaymentDate").value;
   const method = $("#cardPaymentMethod").value;
-  const accountId = method === "bank" ? $("#cardPaymentAccount").value : null;
+  const accountId = method === "bank"
+    ? $("#cardPaymentAccount").value
+    : method === "cash"
+      ? getPhysicalCashAccountId()
+      : null;
+  if (method === "cash" && !accountId) return alert("Physical Cash account is unavailable. Refresh the page and try again.");
   const note = $("#cardPaymentReference").value.trim();
 
   if (!Number.isFinite(amount) || amount <= 0 || Math.round(amount*100) !== amount*100) return alert("Enter a valid amount with up to two decimal places.");
@@ -4196,6 +4298,7 @@ function initializeAuth() {
       cards = [];
       people = [];
       accounts = [];
+      expenseCategories = [];
       transactionSplits = [];
       transactionSettlements = [];
       settlements = [];
@@ -4216,6 +4319,7 @@ function initializeAuth() {
           loadCards(),
           loadPeople(),
           loadAccounts(),
+          loadCategories(),
           loadTransactionSplits(),
           loadTransactionSettlements(),
           loadDashboardCashBookSummary(session.user.id)
@@ -4240,6 +4344,7 @@ function initializeAuth() {
             cards = [];
             people = [];
             accounts = [];
+            expenseCategories = [];
             transactionSplits = [];
             transactionSettlements = [];
             settlements = [];

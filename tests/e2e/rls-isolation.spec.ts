@@ -51,6 +51,7 @@ test("RLS isolates financial and profile data between two authenticated users",a
    {table:"bank_accounts",payload:{user_id:ownerId,account_name:marker+" bank",institution_name:"E2E",account_type:"bank",notes:marker}},
    {table:"payment_cards",payload:{user_id:ownerId,card_name:marker+" card",issuer:"E2E",notes:marker}},
    {table:"people",payload:{user_id:ownerId,name:marker+" person",notes:marker}},
+   {table:"expense_categories",payload:{user_id:ownerId,name:marker+" category",is_default:false}},
    {table:"emi_schedules",payload:{user_id:ownerId,lender_name:"E2E",loan_name:marker+" emi",installment_amount:10,first_due_date:"2026-12-01",notes:marker}}
   ];
   for(const item of records){
@@ -62,7 +63,7 @@ test("RLS isolates financial and profile data between two authenticated users",a
 
   // User B must not read any User A rows in the core personal-data tables.
   for(const item of records){
-   const filterColumn=({bank_accounts:"account_name",payment_cards:"card_name",people:"name",emi_schedules:"loan_name"} as Record<string,string>)[item.table];
+   const filterColumn=({bank_accounts:"account_name",payment_cards:"card_name",people:"name",expense_categories:"name",emi_schedules:"loan_name"} as Record<string,string>)[item.table];
    const response=await rest(request,secondaryToken,item.table,"GET","select=*&"+filterColumn+"=like.*"+encodeURIComponent(marker)+"*");
    const rows=await expectOk(response,"Cross-user read check for "+item.table);
    expect(rows,"Other user must not see "+item.table+" rows").toEqual([]);
@@ -80,6 +81,8 @@ test("RLS isolates financial and profile data between two authenticated users",a
   // Even with a valid authenticated token, User B cannot create a row owned by User A.
   const spoof=await rest(request,secondaryToken,"bank_accounts","POST","select=id",{user_id:ownerId,account_name:marker+" spoof",account_type:"bank"});
   expect(spoof.status(),"Spoofed user_id insert must be rejected by RLS").toBe(403);
+  const categorySpoof=await rest(request,secondaryToken,"expense_categories","POST","select=id",{user_id:ownerId,name:marker+" spoof category",is_default:false});
+  expect(categorySpoof.status(),"Cross-user custom category insert must be rejected by RLS").toBe(403);
 
   // User B can still create and read their own data.
   const own=await rest(request,secondaryToken,"bank_accounts","POST","select=id,account_name",{user_id:secondarySession.user.id,account_name:marker+" user-b",account_type:"bank"});
