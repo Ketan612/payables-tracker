@@ -407,3 +407,5 @@ test("rapid repeated transaction submit creates only one record",async({page})=>
  await page.locator("#statusF").selectOption("all");
  await expect(page.locator("#list .item").filter({hasText:marker})).toHaveCount(1);
 });
+
+// CI retry marker: rerun duplicate-submit regression on current workflow configuration.
