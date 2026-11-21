@@ -6,7 +6,7 @@ This document is a repeatable verification plan for the Cash Book SMS Capture mo
 
 - Use a test Cash Book account, not an account with real expenses.
 - The browser UI is in `sms-capture.html`; setup instructions are also shown in the page.
-- The capture and token registration endpoints are hosted as Supabase Edge Functions and are not versioned in this repository. Do not mark endpoint/parser checks complete from frontend-only checks.
+- The capture and token registration endpoints are Supabase Edge Functions. The capture function source is versioned in this repository at `supabase/functions/sms-capture/`; the deployed function version must still be verified independently. Do not mark live endpoint checks complete from frontend-only checks.
 - A database-level unique key or server-side atomic dedupe is required to guarantee no duplicate Cash Book movement when two separate inbox items with the same reference are approved concurrently.
 
 ## Expected parser regression cases
@@ -114,3 +114,13 @@ Parser behavior for formats not covered by a passing regression test must remain
 | Production static resource fetch | PASS (HTTP 200) | 2026-11-19: authenticated Vercel fetch returned HTTP 200 for `sms-capture.html`, `sms-capture.js`, and `sms-capture.css` from the production alias. The HTML references cache version `sms-capture-20261119c`; the served JavaScript contains the confirmed-reference `23505` guard. This verifies deployed static resources only, not a signed-in Supabase session or live UI actions. |
 
 Never mark the module ready from static UI checks or a Vercel `READY` deployment alone. A release-ready report must include live endpoint results and the concurrent duplicate test evidence.
+
+
+## Production audit observations — 2026-11-22 (read-only)
+
+- Supabase project status was ACTIVE_HEALTHY; active `sms-capture` Edge Function was version 17.
+- Database audit found no duplicate exact message-hash groups. Unique indexes protect per-user message hashes, active inbox references, and Cash Book SMS references.
+- Historical inbox totals at audit time: 253 rows (100 posted, 39 needs_review, 50 duplicate, 64 ignored). Event totals: 261 rows.
+- One historical `cashbook_write_failed` event (2026-11-19) reported `permission denied for table cash_movements`. Current service_role INSERT/SELECT/UPDATE grants were present during the audit; no later write-failure event was found.
+- Event traceability gap identified: posted, needs_review, and cashbook_write_failed events did not consistently include the originating inbox row ID. The source-link regression fix is being validated on a feature branch; it is not considered released until the full branch workflow passes and the Edge Function deployment is separately verified.
+- Live iPhone Shortcut forwarding, signed-in review decisions, non-admin RLS, and concurrent same-reference approval remain pending live validation.
