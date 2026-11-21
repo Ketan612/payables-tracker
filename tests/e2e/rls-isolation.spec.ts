@@ -37,6 +37,7 @@ test("RLS isolates financial and profile data between two authenticated users",a
  let secondaryUserId:string|undefined;
  let ownerToken:string|undefined;
  let secondaryToken:string|undefined;
+ let secondaryBankId:string|undefined;
  const created:{table:string;id:string}[]=[];
  try{
   const createUser=await request.post(supabaseUrl+"/auth/v1/admin/users",{
@@ -94,6 +95,7 @@ test("RLS isolates financial and profile data between two authenticated users",a
   const ownRows=await expectOk(own,"User B own-row insert");
   expect(ownRows).toHaveLength(1);
   expect(ownRows[0].account_name).toBe(marker+" user-b");
+  secondaryBankId=ownRows[0].id;
   const ownRead=await rest(request,secondaryToken,"bank_accounts","GET","select=id,account_name&account_name=eq."+encodeURIComponent(marker+" user-b"));
   const ownReadRows=await expectOk(ownRead,"User B own-row read");
   expect(ownReadRows).toHaveLength(1);
@@ -102,6 +104,9 @@ test("RLS isolates financial and profile data between two authenticated users",a
    for(const item of created){
     await rest(request,ownerToken,item.table,"DELETE","id=eq."+item.id).catch(()=>undefined);
    }
+  }
+  if(secondaryToken&&secondaryBankId){
+   await rest(request,secondaryToken,"bank_accounts","DELETE","id=eq."+secondaryBankId).catch(()=>undefined);
   }
   if(secondaryUserId){
    await request.delete(supabaseUrl+"/auth/v1/admin/users/"+secondaryUserId,{
