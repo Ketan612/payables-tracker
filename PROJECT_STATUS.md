@@ -376,3 +376,44 @@ These issues contain scope and acceptance criteria. Use them as the active struc
 3. Complete Physical Cash controlled UI E2E for opening balance, cash expenses, cash card payments and settlements; investigate the single account-less manual_out and unconfirmed signup as test/legacy candidates without modifying either.
 4. Complete live iPhone forwarding and authenticated non-admin RLS checks (these require an actual device/session).
 5. Confirm Render `/health` in a normal browser/client and finish safe production smoke checks. Main remains manual-only for E2E; a user-side GitHub Actions workflow_dispatch is still required for a main run if desired.
+
+## PR37 verification update — 2026-11-22
+
+### Latest candidate verification
+- PR: https://github.com/Ketan612/payables-tracker/pull/37
+- Branch: `fix/sms-event-source-linkage`
+- Tested head SHA: `a6b0a0f6a723afff260e28997edfe78e427760c2` (matches PR37 head at verification).
+- GitHub Actions run: https://github.com/Ketan612/payables-tracker/actions/runs/44948965134
+- Run conclusion: **success**; browser job completed successfully.
+- SMS parser regression: **7/7 passed**, including impossible dates (31-Feb, 31-Apr, non-leap 29-Feb) and valid leap-day (29-Feb-2024).
+- Playwright: **16/16 passed** (one worker, approximately 2.1 minutes).
+- Artifact: [Playwright report, screenshots and videos — 14723854902](https://github.com/Ketan612/payables-tracker/actions/runs/44948965134/artifacts/14723854902), 39,139,867 bytes; uploaded successfully. Artifact expiry shown as 2026-12-05.
+- Workflow log warnings: Node.js 20 action-runtime deprecation and Node module-type/URL deprecation warnings; they did not fail the run. Track action-runtime updates separately, not as a blocker for PR37 functionality.
+- Confirmed Supabase `sms_capture_events.source_record_id` exists as a UUID column, matching the PR code/admin query.
+- PR37 remains OPEN and DRAFT, not merged. No production Edge Function deploy or production data mutation was made by this verification.
+- PR37 includes seven files, including a tracker update. Its tracker text was written before this final E2E result and is now superseded by this section; refresh the PR tracker snapshot before merge or ensure main receives the latest verified status.
+
+### What the green run proves — and does not prove
+- It proves the candidate commit passed the seven parser unit tests and all 16 existing Playwright browser scenarios, and that the full report/video artifact uploaded.
+- The parser tests do not exercise the live Supabase Edge Function event insertion paths. Existing E2E suite passing does not by itself prove every new `source_record_id` outcome (posted, needs_review, cashbook_write_failed, reference duplicate, uniqueness-race duplicate) against the deployed Edge Function.
+- The workflow tested the PR branch commit against the configured Supabase test accounts/service credentials. It is not a production deployment verification.
+- PR37 can move from draft to review only after a focused code review and targeted integration tests for the new event-linkage paths. Keep production deployment separate.
+
+### Remaining work estimate for final handoff
+1. **PR37 review and targeted SMS integration tests (2–4 hours engineering):** inspect event writes and admin query against the real schema; exercise posted/review/failure/duplicate paths in a controlled test environment; verify event.source_record_id points to the expected inbox row; check duplicate replay does not create another Cash Book movement. If these pass, mark PR ready, create a fresh main backup, merge, deploy the versioned Supabase Edge Function and verify deployed version/logging. Do not deploy before targeted integration tests.
+2. **Physical Cash/custom-category UI acceptance (2–3 hours):** controlled E2E create/edit/reload for opening balance, cash expense, cash-funded card payment, cash settlement, custom category persistence, and cross-user isolation. Existing database integrity checks were read-only and clean for the audited relationships, but do not replace these UI workflows.
+3. **Legacy/test-account reconciliation (30–60 minutes plus owner confirmation):** identify the one `manual_out` cash movement without account_id and the unconfirmed signup lacking a profile. Do not alter either record until its test/legacy status is established.
+4. **Device and operational acceptance (30–60 minutes plus user/device time):** run one controlled iPhone Shortcut SMS forward; verify resulting inbox/event/Cash Book record; check Render `/health` in a normal browser and confirm `database_configured: true`; complete safe production smoke checks.
+5. **Release closeout (1–2 hours):** fresh main backup, PR merge evidence, Supabase Edge Function deployment/version check, Vercel production SHA/status, Render deployed SHA/health, update issue acceptance evidence, and final status file.
+
+Planning estimate: **about 1 working day of engineering plus access/device-dependent checks**, assuming targeted integration and UI tests pass without new defects. If any test exposes a defect, add a fix-and-rerun cycle; no fixed handoff date is promised.
+
+### Final handoff gate
+- [ ] PR37 focused review completed and targeted Edge Function event-link tests pass.
+- [ ] PR37 ready, backup created, merge approved and exact main SHA recorded.
+- [ ] Supabase Edge Function deployed from the reviewed source and live version verified.
+- [ ] Physical Cash/custom-category UI acceptance and two-user isolation pass.
+- [ ] Legacy account-less movement and unconfirmed signup disposition recorded without unsafe cleanup.
+- [ ] Controlled iPhone Shortcut test passes.
+- [ ] Vercel production and Render deployment/health verified on expected release.
+- [ ] Production smoke test and issue closeout complete.
