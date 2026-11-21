@@ -114,7 +114,29 @@ test("complete authenticated E2E journey across all implemented modules",async({
  await expect(page.locator("#transactions")).toContainText(marker+" Cash credit");
  await expect(page.locator("#closing")).toContainText("2,650");
  await expect(page.locator("#transactions .ledger-table tbody tr")).toHaveCount(2);
- await captureCheckpoint(page,testInfo,"02-cash-book-opening-debit-credit");
+
+ // Edit a Cash Book credit and verify that the running and closing balances recalculate.
+ const creditRow=page.locator("#transactions .ledger-table tbody tr").filter({hasText:marker+" Cash credit"});
+ await creditRow.locator("[data-edit-txn]").click();
+ await expect(page.locator("#editTxnDialog")).toBeVisible();
+ await expect(page.locator("#editTxnDate")).toHaveValue(today);
+ await page.locator("#editTxnAmount").fill("200");
+ await page.locator("#editTxnForm button[type=submit]").click();
+ await expect(page.locator("#editTxnDialog")).not.toBeVisible();
+ await expect(page.locator("#closing")).toContainText("2,725");
+ await expect(page.locator("#transactions .ledger-table tbody tr").filter({hasText:marker+" Cash credit"}).locator(".running")).toContainText("2,725");
+
+ // Month navigation must isolate history and restore the selected month's ledger.
+ const currentMonth=await page.locator("#monthSelect").inputValue();
+ const previousMonth=new Date(Number(currentMonth.slice(0,4)),Number(currentMonth.slice(5,7))-2,1);
+ const previousMonthValue=previousMonth.getFullYear()+"-"+String(previousMonth.getMonth()+1).padStart(2,"0");
+ await page.locator("#monthSelect").fill(previousMonthValue);
+ await expect(page.locator("#transactions")).toContainText("No transactions for this month yet.");
+ await expect(page.locator("#transactions .ledger-table tbody tr")).toHaveCount(0);
+ await page.locator("#monthSelect").fill(currentMonth);
+ await expect(page.locator("#transactions .ledger-table tbody tr")).toHaveCount(2);
+ await expect(page.locator("#closing")).toContainText("2,725");
+ await captureCheckpoint(page,testInfo,"02-cash-book-opening-debit-credit-edit-history");
 
  // Personal expense with a bank payment and a person-linked payable.
  await page.goto("/");
@@ -185,8 +207,31 @@ test("complete authenticated E2E journey across all implemented modules",async({
  await payableButton.click();
  await expect(page.locator("#settlementDlg")).toBeVisible();
  await expect(page.locator("#settlementOutstanding")).toContainText("250");
- await page.locator("#settlementAmount").fill("100");
  await page.locator("#settlementPaymentMethod").selectOption("cash");
+
+ // Invalid zero/negative values must be blocked by form constraints; overpayment
+ // must be rejected by application validation before the settlement RPC is called.
+ let payableSettlementRpcCount=0;
+ page.on("request",request=>{
+  if(request.url().includes("/rest/v1/rpc/record_payable_settlement")&&request.method()==="POST")payableSettlementRpcCount++;
+ });
+ await page.locator("#settlementAmount").fill("0");
+ expect(await page.locator("#settlementForm").evaluate(form=>(form as HTMLFormElement).checkValidity())).toBeFalsy();
+ await page.locator("#settlementForm button[type=submit]").click();
+ await expect(page.locator("#settlementDlg")).toBeVisible();
+ expect(payableSettlementRpcCount).toBe(0);
+ await page.locator("#settlementAmount").fill("-1");
+ expect(await page.locator("#settlementForm").evaluate(form=>(form as HTMLFormElement).checkValidity())).toBeFalsy();
+ await page.locator("#settlementForm button[type=submit]").click();
+ await expect(page.locator("#settlementDlg")).toBeVisible();
+ expect(payableSettlementRpcCount).toBe(0);
+ const overpaymentDialogStart=dialogMessages.length;
+ await page.locator("#settlementAmount").fill("250.01");
+ await page.locator("#settlementForm button[type=submit]").click();
+ await expect.poll(()=>dialogMessages.slice(overpaymentDialogStart).some(x=>x.message.includes("cannot exceed the current outstanding amount"))).toBeTruthy();
+ await expect(page.locator("#settlementDlg")).toBeVisible();
+ expect(payableSettlementRpcCount).toBe(0);
+ await page.locator("#settlementAmount").fill("100");
  const partialSettlementRequest=page.waitForResponse(response=>response.url().includes("/rest/v1/rpc/record_payable_settlement")&&response.request().method()==="POST");
  await page.locator("#settlementForm button[type=submit]").click();
  const partialSettlementResponse=await partialSettlementRequest;
