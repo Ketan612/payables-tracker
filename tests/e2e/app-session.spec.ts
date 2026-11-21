@@ -185,6 +185,17 @@ test("complete authenticated E2E journey across all implemented modules",async({
  await payableButton.click();
  await expect(page.locator("#settlementDlg")).toBeVisible();
  await expect(page.locator("#settlementOutstanding")).toContainText("250");
+ // An overpayment must be rejected in the UI without calling the settlement RPC.
+ let settlementRpcCount=0;
+ page.on("request",request=>{
+  if(request.url().includes("/rest/v1/rpc/record_payable_settlement")&&request.method()==="POST")settlementRpcCount++;
+ });
+ await page.locator("#settlementAmount").fill("250.01");
+ await page.locator("#settlementPaymentMethod").selectOption("cash");
+ await page.locator("#settlementForm button[type=submit]").click();
+ await expect.poll(()=>dialogMessages.some(x=>x.message.includes("cannot exceed the current outstanding amount"))).toBeTruthy();
+ expect(settlementRpcCount,"Overpayment must not reach the database RPC").toBe(0);
+ await expect(page.locator("#settlementDlg")).toBeVisible();
  await page.locator("#settlementAmount").fill("100");
  await page.locator("#settlementPaymentMethod").selectOption("cash");
  const partialSettlementRequest=page.waitForResponse(response=>response.url().includes("/rest/v1/rpc/record_payable_settlement")&&response.request().method()==="POST");
