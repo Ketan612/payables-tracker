@@ -376,3 +376,15 @@ These issues contain scope and acceptance criteria. Use them as the active struc
 3. Complete Physical Cash controlled UI E2E for opening balance, cash expenses, cash card payments and settlements; investigate the single account-less manual_out and unconfirmed signup as test/legacy candidates without modifying either.
 4. Complete live iPhone forwarding and authenticated non-admin RLS checks (these require an actual device/session).
 5. Confirm Render `/health` in a normal browser/client and finish safe production smoke checks. Main remains manual-only for E2E; a user-side GitHub Actions workflow_dispatch is still required for a main run if desired.
+
+## Current session update — 2026-11-22 (consolidated pending work)
+
+- Issue #32 closed as completed after PR36 release.
+- Read-only Supabase audit completed for active project `magxbczgrxeypryjborr`; detailed findings are recorded in the audit section above and comments on issues #33–#35.
+- PR #37 opened as draft: https://github.com/Ketan612/payables-tracker/pull/37.
+- Branch: `fix/sms-event-source-linkage`; latest implementation commit before this tracker update: `83e4a1043d4e22b15d604d5527df9a3aa71d11b7`.
+- PR37 changes: source inbox ID added to posted, needs_review, cashbook_write_failed, reference-duplicate and unique-constraint duplicate event records; admin monitor selects and displays the inbox record ID; parser regression tests cover invalid calendar dates and leap-day; SMS QA documentation corrected; E2E concurrency group isolated per git ref.
+- Validation: parser tests passed in branch workflow runs on the prior candidate commits. Earlier runs were cancelled by subsequent pushes while work was still being consolidated. The full browser E2E run visible at the last check was still in progress on commit `f103531129dd5cc6c8204e2bcec0ab67cf145363`; it does not include the final duplicate-event linkage change at `83e4a104...`. A final run on the latest PR head is required before marking PR37 ready.
+- No PR37 changes have been merged. No Supabase Edge Function deployment, schema change, Render/Vercel setting change, or production data write was made.
+- Issues #33, #34 and #35 remain open. Live iPhone Shortcut forwarding, authenticated approval/rejection/retry and concurrent duplicate-reference checks, non-admin RLS session verification, UI workflows for Physical Cash/categories, the account-less legacy manual_out row, the unconfirmed signup/profile discrepancy, and Render `/health` response remain pending.
+- Next action: allow the final latest-head branch E2E run to complete; inspect the parser count, all Playwright results and complete artifact; then review PR37. Do not merge or deploy the Edge Function until the final run and release backup gates pass.
