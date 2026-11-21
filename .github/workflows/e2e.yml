@@ -1,9 +1,9 @@
 name: Payables Tracker E2E
 on:
   push:
-    branches: [main, 'test/**']
+    branches: [main, test-env, 'test/**']
   pull_request:
-    branches: [main]
+    branches: [main, test-env]
   workflow_dispatch:
   schedule:
     - cron: "30 2 * * *"

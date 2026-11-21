@@ -1,4 +1,4 @@
-const sb=supabase.createClient("https://magxbczgrxeypryjborr.supabase.co","sb_publishable_o3SjG1KCygJ99RuamTJdsQ_RIkHJ-gX");
+const sb=supabase.createClient("https://magxbczgrxeypryjborr.supabase.co","sb_publishable_o3SjG1KCygJ99RuamTJdsQ_RIkHJ-gX",{auth:{storageKey:"sb-magxbczgrxeypryjborr-auth-token",storage:window.payablesAuthStorage(),persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const ADMIN_EMAIL="ketansoni8@gmail.com";
 const $=id=>document.getElementById(id);
 const OUTCOME_CLASSES=new Set(["posted","duplicate","needs_review","invalid_token","cashbook_write_failed","invalid_request","missing_token","invalid_message"]);
@@ -9,6 +9,7 @@ const esc=value=>String(value??"—").replace(/[&<>"']/g,char=>({
 }[char]));
 
 async function logout(){
+ window.payablesSessionPolicy.stop();
  try{await sb.auth.signOut({scope:"local"})}catch(error){console.warn("Local sign-out failed",error)}
  try{localStorage.removeItem("sb-magxbczgrxeypryjborr-auth-token")}catch(error){console.warn("Could not clear cached auth token",error)}
  location.replace("index.html");
@@ -23,6 +24,7 @@ async function guard(){
   document.body.innerHTML="<main><section class='panel'><h2>Access denied</h2><p>This page is restricted to the configured administrator.</p><a href='index.html'>Return to dashboard</a></section></main>";
   return false;
  }
+ window.payablesSessionPolicy.start(sb,user.id);
  $("email").textContent=user.email||"Administrator";
  $("logout").onclick=logout;
  sb.auth.onAuthStateChange((event,nextSession)=>{

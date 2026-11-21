@@ -1,4 +1,4 @@
-const CACHE_NAME = "payables-shell-v7";
+const CACHE_NAME = "payables-shell-v8";
 const SHELL_ASSETS = [
   "./offline.html",
   "./manifest.json",
@@ -12,7 +12,8 @@ const SHELL_ASSETS = [
   "./sms-capture.css",
   "./sms-capture.js",
   "./sms-admin.js",
-  "./pwa.js"
+  "./pwa.js",
+  "./session-policy.js?v=mobile-session-20261121"
 ];
 
 self.addEventListener("message", (event) => {
@@ -61,7 +62,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  const isShellAsset = SHELL_ASSETS.some((asset) => url.pathname.endsWith(asset.replace("./", "")));
+  const isShellAsset = SHELL_ASSETS.some((asset) => url.pathname.endsWith(asset.split("?")[0].replace("./", "")));
   if (!isShellAsset) return;
 
   event.respondWith(

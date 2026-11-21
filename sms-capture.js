@@ -2,12 +2,13 @@ function loginRedirectForCurrentPage() {
  const requested = location.pathname.split("/").filter(Boolean).pop() + location.search + location.hash;
  location.replace("index.html?returnTo=" + encodeURIComponent(requested));
 }
-const $=id=>document.getElementById(id);let user,accounts=[],latestToken="";const SUPABASE_URL="https://magxbczgrxeypryjborr.supabase.co",SUPABASE_KEY="sb_publishable_o3SjG1KCygJ99RuamTJdsQ_RIkHJ-gX";if(!window.supabase?.createClient){const el=$("signedInEmail");if(el)el.textContent="Supabase SDK failed to load. Check connection and refresh.";throw new Error("Supabase JavaScript SDK unavailable");}const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{storageKey:"sb-magxbczgrxeypryjborr-auth-token",persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+const $=id=>document.getElementById(id);let user,accounts=[],latestToken="";const SUPABASE_URL="https://magxbczgrxeypryjborr.supabase.co",SUPABASE_KEY="sb_publishable_o3SjG1KCygJ99RuamTJdsQ_RIkHJ-gX";if(!window.supabase?.createClient){const el=$("signedInEmail");if(el)el.textContent="Supabase SDK failed to load. Check connection and refresh.";throw new Error("Supabase JavaScript SDK unavailable");}const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{storageKey:"sb-magxbczgrxeypryjborr-auth-token",storage:window.payablesAuthStorage(),persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const esc=s=>String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmt=v=>"₹"+Number(v||0).toLocaleString("en-IN",{minimumFractionDigits:2});
 async function forceLocalLogout(){
+ window.payablesSessionPolicy.stop();
  try{const {error}=await sb.auth.signOut({scope:"local"});if(error)console.warn("Remote/local sign-out returned an error:",error.message)}catch(error){console.warn("Sign-out request failed; clearing this browser session locally:",error)}
- try{localStorage.removeItem("sb-magxbczgrxeypryjborr-auth-token")}catch(_){}
+ try{localStorage.removeItem("sb-magxbczgrxeypryjborr-auth-token");sessionStorage.removeItem("sb-magxbczgrxeypryjborr-auth-token")}catch(_){}
  location.replace("index.html");
 }
 async function auth(){
@@ -38,6 +39,7 @@ async function auth(){
   }
   if(!verified)throw new Error("Supabase did not return an authenticated user.");
   user=verified;
+  window.payablesSessionPolicy.start(sb,user.id);
   setStatus(user.email||"Authenticated user","success");
   sb.auth.onAuthStateChange((event,nextSession)=>{
    if(event==="SIGNED_OUT"||(nextSession?.user?.id&&nextSession.user.id!==user.id)){

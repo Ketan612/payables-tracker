@@ -63,6 +63,8 @@ test("complete authenticated E2E journey across all implemented modules",async({
  // Cash Book account, opening balance, debit and credit all entered via UI.
  await page.goto("/cashbook.html");
  await expect(page.locator("#signedInEmail")).toContainText(new RegExp(email,"i"));
+ if(email.toLowerCase()==="ketansoni8@gmail.com") await expect(page.locator("#cashbookAdminLink")).toBeVisible();
+ else await expect(page.locator("#cashbookAdminLink")).toBeHidden();
  await expect(page.locator("#accountSelect option")).not.toHaveCount(0);
  await page.locator("#addAccount").click();
  await page.locator("#accountName").fill(cashName);
@@ -392,6 +394,20 @@ test("complete authenticated E2E journey across all implemented modules",async({
  await page.goto("/cashbook.html");
  await page.locator("#accountSelect").selectOption({label:cashName});
  await expect(page.locator("#transactions .ledger-table tbody tr").filter({hasText:"E2E Store"})).toHaveCount(1);
+
+ // A transaction SMS without an explicit date must never be auto-posted using today's date.
+ const noDateReference=String(Date.now()+3);
+ const noDateMessage="Dear UPI user A/C "+smsIdentifier+" debited by 13.00 trf to E2E Missing Date UPI Ref No "+noDateReference+".";
+ const noDateCapture=await page.request.post(captureUrl,{headers:captureHeaders,data:{message:noDateMessage,sender:"SBI"}});
+ expect(noDateCapture.ok(),"Missing-date SMS capture failed: "+noDateCapture.status()+" "+await noDateCapture.text()).toBeTruthy();
+ const noDateResult=await noDateCapture.json();
+ expect(noDateResult.status).toBe("needs_review");
+ expect(noDateResult.parsed.date).toBeNull();
+ expect(noDateResult.reason).toContain("date");
+ await page.goto("/sms-capture.html");
+ const noDateItem=page.locator("#inbox article.item").filter({hasText:noDateReference});
+ await expect(noDateItem).toContainText("Needs review");
+ await expect(noDateItem).toContainText(/date/i);
 
  // An unmapped identifier is held for manual review and can be approved to Cash Book.
  await page.goto("/sms-capture.html");
