@@ -415,3 +415,5 @@ test("payables month and type filters show only matching transactions",async({pa
  await expect(page.locator("#list")).toContainText(marker+" October Personal");
  await expect(page.locator("#list")).toContainText(marker+" November Common");
 });
+
+// CI retry marker: rerun month/type filter regression on current workflow configuration.
