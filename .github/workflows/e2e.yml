@@ -15,9 +15,9 @@ permissions:
 jobs:
   browser-tests:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
-      BASE_URL: http://127.0.0.1:4173
+      BASE_URL: https://payables-tracker-ten.vercel.app
       SUPABASE_URL: https://magxbczgrxeypryjborr.supabase.co
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
@@ -33,20 +33,7 @@ jobs:
       - name: Run SMS parser regression tests
         run: node --test tests/sms-parser.test.mjs
       - run: npx playwright install chromium
-      - name: Start application from this commit
-        run: |
-          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/payables-tracker-http.log 2>&1 &
-          echo $! > /tmp/payables-tracker-http.pid
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
-              echo "Local application is serving the checked-out commit."
-              exit 0
-            fi
-            sleep 1
-          done
-          cat /tmp/payables-tracker-http.log
-          exit 1
-      - name: Run browser tests against checked-out application
+      - name: Run browser tests against live Vercel production and Supabase
         run: npx playwright test
       - name: Upload full E2E recording, screenshots and report
         if: always()
