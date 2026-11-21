@@ -277,3 +277,20 @@ These issues contain scope and acceptance criteria. Use them as the active struc
 - Artifact listing currently empty because upload step has not run.
 - No pass/fail conclusion yet. Do not merge PR31 or interpret parser success as full E2E success.
 - Next action: poll run `44947553597`; after completion inspect browser step conclusion, logs and uploaded artifact. Confirm request payload `opening_balance: 2600` and persisted ₹2,600 display.
+
+
+## PR31 full E2E verification — 2026-11-22 (PASS)
+
+- Workflow run: https://github.com/Ketan612/payables-tracker/actions/runs/44947553597
+- Browser job: https://github.com/Ketan612/payables-tracker/actions/runs/44947553597/job/136978095669
+- Tested branch: `fix/cashbook-opening-balance-race`
+- Tested commit: `1da2d419043b977ca11cd95a5ca6e27fbd531ed0`
+- Job conclusion: **success**. All workflow steps completed, including report upload.
+- SMS parser regression: **5/5 passed**.
+- Playwright browser suite: **16/16 passed** in 2.4 minutes.
+- Complete authenticated E2E journey passed, including Cash Book opening balance, Payables, shared expense, partial/full settlements, credit card outstanding/payment history, SMS auto-post, unmapped SMS review/approval, SMS rejection/token management, and the admin monitor denial for non-admin.
+- Other passed coverage: transaction validation/edit/refresh persistence; rapid repeated submit creates one record; Payables filters; Physical Cash/custom category; PWA manifest/install/service worker/mobile/offline checks; two-user RLS isolation.
+- Critical regression assertion independently verified in the tested source `tests/e2e/app-session.spec.ts`: wait for successful POST to `/rest/v1/cashbook_opening_balances`, assert `postDataJSON().opening_balance === 2600`, then assert `#openingDisplay` contains `2,600` and closing balance contains `2,600`. The test passed in the 16/16 suite. This confirms the outgoing request and UI assertion; backend persistence is exercised by the authenticated app flow, though no separate direct database query was performed.
+- Artifact: [Playwright report, screenshots and videos — 14724322922](https://github.com/Ketan612/payables-tracker/actions/runs/44947553597/artifacts/14724322922), 37,768,465 bytes, 63 files. Downloaded and inspected archive contents; includes the full authenticated journey video, named screenshots for dashboard/Cash Book/Payables/settlements/cards/SMS review and approval, plus per-test videos/screenshots.
+- PR31 remains open/draft and **not merged**. No production data or deployment was changed by this validation.
+- Next release gates: review PR diff; create and verify a fresh backup of current `main`; then merge only after that backup is confirmed. After merge, verify Vercel production and Render commit/health. Continue pending SMS live-device/duplicate and Physical Cash edge-case validation as separate follow-up work.
