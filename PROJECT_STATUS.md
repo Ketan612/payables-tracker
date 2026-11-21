@@ -334,3 +334,45 @@ These issues contain scope and acceptance criteria. Use them as the active struc
 - Default workflow: read the current status and evidence; inspect dependencies; plan the complete related task; implement changes together on the appropriate branch; run and diagnose tests; produce one consolidated E2E recording/report where supported; create/verify a fresh main backup before production merge; merge only after validation; verify Vercel, Render and application behaviour; then update this file with verified outcomes.
 - Ask the user only when a genuine user-only action or explicit authorization is required (for example, account verification, a manual GitHub Actions dispatch unavailable through the connected tools, or a consequential production decision). Do not ask for step-by-step confirmations for routine work already covered by the user's request and standing release rules.
 - Continue to respect safety gates: no unapproved production data/settings changes, no merge of unvalidated code, and never report an unverified test/deployment/health check as successful.
+
+## Consolidated pending-work audit — 2026-11-22
+
+### Backlog status refresh
+- GitHub issue #32 (Cash Book opening-balance race) closed as completed after PR36 release and verified PR31 candidate E2E evidence: parser 5/5, Playwright 16/16, artifact 14724322922.
+- Issues #33 (SMS integration), #34 (Physical Cash/custom categories), and #35 (operational verification) remain open. Added current production audit evidence and gaps as comments to each issue.
+- Current Supabase project: `payables-tracker`, ref `magxbczgrxeypryjborr`, region `ap-south-1`, status `ACTIVE_HEALTHY`. All queries below were read-only; no production rows, schema, secrets, or function deployments were changed.
+
+### SMS capture — database and function audit
+- Production counts: `sms_capture_inbox` 253 rows — 100 posted, 39 needs_review, 50 duplicate, 64 ignored.
+- `sms_capture_events` 261 rows — 59 duplicate, 59 posted, 140 needs_review, 1 cashbook_write_failed, 1 invalid_token, 1 rejected.
+- No repeated `(user_id, message_hash)` groups were found. Database unique index `sms_capture_inbox_user_id_message_hash_key` enforces this.
+- Database uniqueness guards verified: active inbox reference per user and SMS reference per user in Cash Book movements.
+- Current `service_role` has INSERT/SELECT/UPDATE privileges on `cash_movements`; migration history includes the SMS service-role access grant. Active `sms-capture` Edge Function is ACTIVE version 17, updated 2026-11-21.
+- One historical `cashbook_write_failed` event exists on 2026-11-19: `permission denied for table cash_movements`. Current grants are present and no later cashbook_write_failed event is recorded. Treat this as a historical failure, not proof of a current outage.
+- Event traceability gap found in current function source: duplicate-review events include `source_record_id`, but posted, needs_review and cashbook_write_failed event inserts omit it. Consequently most event rows cannot be joined to their inbox record from the event table. This should be corrected and regression-tested on a branch before deployment.
+- Current event-link audit: duplicate outcome has 59 events, 50 linked to duplicate inbox rows; posted outcome has 59 events, 58 with no source link; needs_review has 140 events with no source link. One historical write-failure event has no source link.
+- Still pending: controlled signed-in approve/reject/retry tests, same-reference concurrent approval, live iPhone Shortcut forwarding, actual account mapping verification, and non-admin RLS test using a real non-admin session.
+
+### Physical Cash and categories — read-only integrity checks
+- 6 profiles; each has exactly one Physical Cash account. No missing or duplicate Physical Cash account among profile owners.
+- 25 custom expense categories exist; no duplicate category names per user were found.
+- No duplicate Cash Book opening-balance keys `(user_id, account_id, month)` were found.
+- Active cash-paid expense/shared-expense transactions: 0 missing payment accounts, 0 missing linked Cash Book movements, and 0 duplicate expense movement groups.
+- Cash card payments: 104 rows, all have a payment account. Cash card-bill payments: 4 rows, all have a payment account.
+- Cash settlement batches: 4 rows, all have an account. Cash settlements: 4 rows, all have an account.
+- One `manual_out` Cash Book movement has no `account_id`; record-level review is needed before classifying it as legacy data or a defect.
+- One unconfirmed auth signup created 2026-11-02 has no profile row but has one bank account and seven categories, with no transactions or cash movements. It may be a test signup or manually altered profile. Do not delete or backfill it automatically; confirm intent before any repair.
+- UI-level create/edit/reload, cash-funded settlement/card-payment journeys, new-user/existing-user provisioning and cross-user RLS E2E remain pending.
+
+### Operational checks
+- Render service remains configured on `main`, auto-deploy on commit; latest recorded deployment `dep-dc106q8s00ms7380aqf0` was LIVE on `e5e5260730ab84c82c648ab8115892d8f5303911`, with successful startup logs.
+- Direct access to `https://payables-tracker.onrender.com/health` was attempted but unavailable from the current network client. Actual health JSON and `database_configured` remain unverified.
+- Vercel production was previously verified READY on PR36 merge commit `c59b6124d26e4072ae07968e6d5fd81cf277de73`.
+- No Render/Vercel settings, deployment, Supabase schema, secrets, or production data were changed in this audit.
+
+### Next consolidated execution order
+1. Create a focused branch for SMS observability: include `source_record_id` in posted/needs_review/cashbook_write_failed and other post-inbox outcomes; make event-to-inbox correlation consistent; add tests for invalid date, duplicate, failed-write and retry/approval outcomes; refresh stale `SMS-CAPTURE-QA.md` statements that claim the Edge Function is not versioned in the repository.
+2. Run parser regression and full branch E2E once; inspect one complete recording/report. Do not deploy the Edge Function until its code and tests pass and its production-safe behavior is reviewed.
+3. Complete Physical Cash controlled UI E2E for opening balance, cash expenses, cash card payments and settlements; investigate the single account-less manual_out and unconfirmed signup as test/legacy candidates without modifying either.
+4. Complete live iPhone forwarding and authenticated non-admin RLS checks (these require an actual device/session).
+5. Confirm Render `/health` in a normal browser/client and finish safe production smoke checks. Main remains manual-only for E2E; a user-side GitHub Actions workflow_dispatch is still required for a main run if desired.
