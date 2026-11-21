@@ -1,7 +1,7 @@
 name: Payables Tracker E2E
 on:
   push:
-    branches-ignore: [main]
+    branches: [main]
   workflow_dispatch:
 concurrency:
   group: payables-e2e-${{ github.ref }}
