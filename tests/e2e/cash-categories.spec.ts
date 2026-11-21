@@ -2,6 +2,8 @@ import {test,expect,Page} from "@playwright/test";
 
 const email=process.env.TEST_USER_EMAIL!;
 const password=process.env.TEST_USER_PASSWORD!;
+const supabaseUrl=process.env.SUPABASE_URL!;
+const serviceRoleKey=process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 async function establishAuthenticatedSession(page:Page){
   await page.goto("/");
@@ -14,7 +16,7 @@ async function establishAuthenticatedSession(page:Page){
 }
 
 test.beforeAll(()=>{
-  if(!email||!password) throw new Error("TEST_USER_EMAIL and TEST_USER_PASSWORD are required.");
+  if(!email||!password||!supabaseUrl||!serviceRoleKey) throw new Error("Supabase URL, service role key, and E2E user credentials are required.");
 });
 
 test("users can add expense categories and cash expenses post to Physical Cash",async({page},testInfo)=>{
@@ -69,6 +71,7 @@ test("users can add expense categories and cash expenses post to Physical Cash",
   const expenseResponse=await expenseResponsePromise;
   const expenseBody=await expenseResponse.text();
   expect(expenseResponse.ok(),"Cash expense save failed: "+expenseResponse.status()+" "+expenseBody).toBeTruthy();
+  const expenseId=JSON.parse(expenseBody) as string;
   await expect(page.locator("#dlg")).not.toBeVisible();
   await page.locator("#statusF").selectOption("all");
   await expect(page.locator("#list")).toContainText(description);
@@ -81,6 +84,26 @@ test("users can add expense categories and cash expenses post to Physical Cash",
   const cashRow=page.locator("#transactions .ledger-table tbody tr").filter({hasText:description});
   await expect(cashRow).toHaveCount(1);
   await expect(cashRow.locator(".debit")).toContainText("125.00");
+
+  // Editing the source expense must update its linked Cash Book movement.
+  const updateResponse=await page.request.patch(
+    supabaseUrl+"/rest/v1/transactions?id=eq."+expenseId,
+    {
+      headers:{
+        apikey:serviceRoleKey,
+        Authorization:"Bearer "+serviceRoleKey,
+        "Content-Type":"application/json",
+        Prefer:"return=minimal"
+      },
+      data:{amount:175}
+    }
+  );
+  expect(updateResponse.ok(),"Updating the source expense failed: "+updateResponse.status()+" "+await updateResponse.text()).toBeTruthy();
+  await page.reload();
+  await expect(page.locator("#accountSelect")).toHaveValue(await page.locator("#accountSelect option").filter({hasText:"Physical Cash"}).getAttribute("value"));
+  const updatedCashRow=page.locator("#transactions .ledger-table tbody tr").filter({hasText:description});
+  await expect(updatedCashRow).toHaveCount(1);
+  await expect(updatedCashRow.locator(".debit")).toContainText("175.00");
 
   expect(dialogs,"The category and cash-payment workflow should not raise application alerts").toEqual([]);
   await page.screenshot({path:testInfo.outputPath("physical-cash-custom-category.png"),fullPage:true,animations:"disabled"});
