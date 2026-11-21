@@ -70,13 +70,20 @@ async function load(){
   .gte("created_at",since).order("created_at",{ascending:false}).limit(500);
  if(error){$("status").textContent="Could not load events: "+error.message;return}
  all=data||[];
- const reviewResult=await sb.from("sms_capture_inbox")
-  .select("id,user_id,sms_sender,account_identifier,reference_number,parsed_amount,parsed_direction,status,review_decision,parse_reason,reviewed_at")
-  .not("reviewed_at","is",null).gte("reviewed_at",since).order("reviewed_at",{ascending:false}).limit(500);
+ const [reviewResult,pendingResult]=await Promise.all([
+  sb.from("sms_capture_inbox")
+   .select("id,user_id,sms_sender,account_identifier,reference_number,parsed_amount,parsed_direction,status,review_decision,parse_reason,reviewed_at")
+   .not("reviewed_at","is",null).gte("reviewed_at",since).order("reviewed_at",{ascending:false}).limit(500),
+  sb.from("sms_capture_inbox").select("id",{count:"exact",head:true}).eq("status","needs_review")
+ ]);
  if(reviewResult.error){$("status").textContent="Integration events loaded, but review decisions failed to load: "+reviewResult.error.message;reviews=[];draw();return}
+ if(pendingResult.error){$("status").textContent="Integration events loaded, but pending-review count failed: "+pendingResult.error.message;return}
  reviews=reviewResult.data||[];
+ $("pendingReview").textContent=String(pendingResult.count??0);
+ const successful=all.filter(item=>["posted","duplicate","needs_review"].includes(item.outcome)&&Number(item.http_status)>=200&&Number(item.http_status)<300).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+ $("lastSuccess").textContent=successful?new Date(successful.created_at).toLocaleString("en-IN",{timeZone:"Asia/Kolkata"}):"No success in period";
  draw();
- $("status").textContent=all.length+" integration event(s) and "+reviews.length+" review decision(s) loaded. Last refreshed "+new Date().toLocaleTimeString("en-IN");
+ $("status").textContent=all.length+" integration event(s), "+reviews.length+" review decision(s), and "+(pendingResult.count??0)+" pending review item(s). Last refreshed "+new Date().toLocaleTimeString("en-IN");
 }
 
 $("refresh").onclick=()=>load().catch(error=>{$("status").textContent="Could not load events: "+(error?.message||String(error))});
