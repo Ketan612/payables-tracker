@@ -308,14 +308,9 @@
         </label>
         <label>Category
           <select id="cat">
-            <option>Other</option>
-            <option>Loan / EMI</option>
-            <option>Credit card</option>
-            <option>Shopping</option>
-            <option>Subscription</option>
-            <option>Food</option>
-            <option>Fuel</option>
+            <option value="Other">Other</option>
           </select>
+          <button type="button" class="secondary" id="manageCategories">＋ Add / manage categories</button>
         </label>
       </div>
       <div id="sharedFields" hidden>
@@ -488,7 +483,23 @@
     </form>
   </dialog>
   
-    <!-- Add/edit bank account dialog -->
+    <!-- User-managed expense categories -->
+  <dialog id="categoriesDlg">
+    <form id="categoryForm">
+      <h2>Expense categories</h2>
+      <p class="hint">Choose a default category or add categories that match your spending.</p>
+      <div id="categoryList"></div>
+      <label>New category name
+        <input id="newCategoryName" type="text" maxlength="40" minlength="2" placeholder="e.g. Medical, Travel, Gifts" required>
+      </label>
+      <div class="actions">
+        <button type="button" class="secondary" id="cancelCategories">Close</button>
+        <button type="submit">Add category</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Add/edit bank account dialog -->
   <dialog id="bankAccountDlg">
     <form id="bankAccountForm">
       <h2 id="bankAccountFormTitle">Add bank account</h2>
