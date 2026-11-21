@@ -62,7 +62,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  const isShellAsset = SHELL_ASSETS.some((asset) => url.pathname.endsWith(asset.replace("./", "")));
+  const isShellAsset = SHELL_ASSETS.some((asset) => url.pathname.endsWith(asset.split("?")[0].replace("./", "")));
   if (!isShellAsset) return;
 
   event.respondWith(

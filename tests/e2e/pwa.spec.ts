@@ -160,12 +160,14 @@ test("browser and installed PWA use separate auth persistence and inactivity pol
   await appPage.close();
 });
 
-test("installed app session policy is included in the offline shell cache", async ({ page }) => {
+test("installed app can load its session policy from the offline shell cache", async ({ page }) => {
   await page.goto("/");
-  const cached = await page.evaluate(async () => {
-    await navigator.serviceWorker.ready;
-    const response = await caches.match(new URL("./session-policy.js?v=mobile-session-20261121", location.href).toString());
-    return !!response;
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await page.context().setOffline(true);
+  const result = await page.evaluate(async () => {
+    const response = await fetch("./session-policy.js?v=mobile-session-20261121");
+    return { ok: response.ok, source: await response.text() };
   });
-  expect(cached).toBe(true);
+  expect(result.ok).toBe(true);
+  expect(result.source).toContain("payablesAuthStorage");
 });
