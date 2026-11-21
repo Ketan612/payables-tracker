@@ -56,10 +56,10 @@ test("RLS isolates financial and profile data between two authenticated users",a
   expect(secondarySession.user.id).not.toBe(ownerId);
 
   const records=[
-   {table:"bank_accounts",payload:{account_name:marker+" bank",institution_name:"E2E",account_type:"bank",notes:marker}},
-   {table:"payment_cards",payload:{card_name:marker+" card",issuer:"E2E",notes:marker}},
-   {table:"people",payload:{name:marker+" person",notes:marker}},
-   {table:"emi_schedules",payload:{lender_name:"E2E",loan_name:marker+" emi",installment_amount:10,first_due_date:"2026-12-01",notes:marker}}
+   {table:"bank_accounts",payload:{user_id:ownerId,account_name:marker+" bank",institution_name:"E2E",account_type:"bank",notes:marker}},
+   {table:"payment_cards",payload:{user_id:ownerId,card_name:marker+" card",issuer:"E2E",notes:marker}},
+   {table:"people",payload:{user_id:ownerId,name:marker+" person",notes:marker}},
+   {table:"emi_schedules",payload:{user_id:ownerId,lender_name:"E2E",loan_name:marker+" emi",installment_amount:10,first_due_date:"2026-12-01",notes:marker}}
   ];
   for(const item of records){
    const response=await rest(request,ownerToken,item.table,"POST","select=id",item.payload);
@@ -70,7 +70,8 @@ test("RLS isolates financial and profile data between two authenticated users",a
 
   // User B must not read any User A rows in the core personal-data tables.
   for(const item of records){
-   const response=await rest(request,secondaryToken,item.table,"GET","select=*&"+(item.table==="emi_schedules"?"loan_name":"id")+"=like.*"+encodeURIComponent(marker)+"*");
+   const filterColumn=({bank_accounts:"account_name",payment_cards:"card_name",people:"name",emi_schedules:"loan_name"} as Record<string,string>)[item.table];
+   const response=await rest(request,secondaryToken,item.table,"GET","select=*&"+filterColumn+"=like.*"+encodeURIComponent(marker)+"*");
    const rows=await expectOk(response,"Cross-user read check for "+item.table);
    expect(rows,"Other user must not see "+item.table+" rows").toEqual([]);
   }
@@ -89,7 +90,7 @@ test("RLS isolates financial and profile data between two authenticated users",a
   expect(spoof.status(),"Spoofed user_id insert must be rejected by RLS").toBe(403);
 
   // User B can still create and read their own data.
-  const own=await rest(request,secondaryToken,"bank_accounts","POST","select=id,account_name",{account_name:marker+" user-b",account_type:"bank"});
+  const own=await rest(request,secondaryToken,"bank_accounts","POST","select=id,account_name",{user_id:secondarySession.user.id,account_name:marker+" user-b",account_type:"bank"});
   const ownRows=await expectOk(own,"User B own-row insert");
   expect(ownRows).toHaveLength(1);
   expect(ownRows[0].account_name).toBe(marker+" user-b");
