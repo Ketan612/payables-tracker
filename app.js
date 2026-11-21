@@ -28,6 +28,7 @@ let people = [];
 let accounts = [];
 let transactionSplits = [];
 let transactionSettlements = [];
+let transactionCreateInProgress = false;
 let settlements = [];
 let transactionsLoadVersion = 0;
 let transactionSplitsLoadVersion = 0;
@@ -2903,6 +2904,13 @@ $("#form").onsubmit = async e => {
     };
   }
 
+  // Guard the create RPC against rapid repeated submissions. The lock is set
+  // synchronously before the first await, so a second submit event cannot race.
+  if (transactionCreateInProgress) return;
+  transactionCreateInProgress = true;
+  const submitButton = $("#form").querySelector('[type="submit"]');
+  if (submitButton) submitButton.disabled = true;
+
   try {
     const { data, error } = await supabaseClient.rpc(
       functionName,
@@ -2926,6 +2934,9 @@ $("#form").onsubmit = async e => {
   } catch (error) {
     console.error("Unexpected transaction save error:", error);
     alert("Unable to save transaction. Please try again.");
+  } finally {
+    transactionCreateInProgress = false;
+    if (submitButton) submitButton.disabled = false;
   }
 };
 $("#list").onclick = async e => {
