@@ -264,3 +264,16 @@ These issues contain scope and acceptance criteria. Use them as the active struc
 - Therefore execution is **user-reported started, but not independently visible/verified yet**. No test outcome is claimed.
 - Await the Actions run ID or run URL to inspect jobs, logs and the full Playwright artifact. Validate parser tests, complete browser suite, opening-balance upsert payload = 2600, persisted ₹2,600 display, and video/screenshots/trace.
 - Keep PR31 unmerged until the full run completes successfully.
+
+
+## PR31 E2E run 44947553597 — 2026-11-22 (in progress)
+
+- Run: https://github.com/Ketan612/payables-tracker/actions/runs/44947553597
+- Job: https://github.com/Ketan612/payables-tracker/actions/runs/44947553597/job/136978095669
+- Job ID: `136978095669`; job name `browser-tests`.
+- Current status at inspection: job `in_progress`; Playwright browser step `in_progress`.
+- Completed successfully: checkout, Node setup, npm install, SMS parser regression tests, Chromium install, application startup.
+- Pending: Playwright browser suite completion and upload of full Playwright report/screenshots/video/trace.
+- Artifact listing currently empty because upload step has not run.
+- No pass/fail conclusion yet. Do not merge PR31 or interpret parser success as full E2E success.
+- Next action: poll run `44947553597`; after completion inspect browser step conclusion, logs and uploaded artifact. Confirm request payload `opening_balance: 2600` and persisted ₹2,600 display.
