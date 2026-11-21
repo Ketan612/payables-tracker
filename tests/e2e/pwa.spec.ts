@@ -164,7 +164,7 @@ test("installed app session policy is included in the offline shell cache", asyn
   await page.goto("/");
   const cached = await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
-    const response = await caches.match(new URL("./session-policy.js", location.href).toString());
+    const response = await caches.match(new URL("./session-policy.js?v=mobile-session-20261121", location.href).toString());
     return !!response;
   });
   expect(cached).toBe(true);

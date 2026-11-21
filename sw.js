@@ -13,7 +13,7 @@ const SHELL_ASSETS = [
   "./sms-capture.js",
   "./sms-admin.js",
   "./pwa.js",
-  "./session-policy.js"
+  "./session-policy.js?v=mobile-session-20261121"
 ];
 
 self.addEventListener("message", (event) => {
