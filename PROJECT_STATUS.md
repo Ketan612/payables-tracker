@@ -187,3 +187,25 @@ Run 44946108610 was cancelled when the tracker commit triggered a newer run; its
 - **2026-11-22 (PR31 investigation):** Inspected run 44936121486 Playwright evidence; identified the sole failing browser test as the opening-balance save in the authenticated journey. The async redraw overwrote the editor and request sent zero. Fix and payload assertion added in PR31. Run 44946108610 was cancelled after a newer PR commit; run 44946212950 parser tests passed and browser tests were running at last check. No production merge.
 - **2026-11-22 (plan refresh):** Replaced the stale one-line next action with a prioritized P0–P3 plan, explicit SMS/Physical Cash/custom-category/deployment checklists, and release definition of done. Added PR31 status and validation evidence.
 - **Standing instruction:** Update this same file at the end of every Payables Tracker project chat/session, including status-only conversations.
+
+
+## Product feature tracking — operating model (decision 2026-11-22)
+
+Keep `PROJECT_STATUS.md`. It is the durable project handoff, architecture/operational notes, release history, verified deployment/test evidence, and current next-action summary. **Do not use it as the only feature backlog**: a long checklist in Markdown is difficult to prioritize, assign, filter, and update as features move through development.
+
+Recommended split of responsibilities:
+- **GitHub Issues:** one issue per feature, enhancement, bug, or technical task. Each issue should capture problem/user value, scope, acceptance criteria, priority, dependencies, and test expectations.
+- **GitHub Projects board (recommended feature roadmap):** one row/card per issue, with workflow status (Backlog → Ready → In Progress → In Review → Testing → Done), priority (P0–P3), area/module (SMS, Cash Book, Physical Cash, Categories, Cards, Settlements, Admin/Monitoring, Platform/Infra), target release, and blocked/dependency indicator. Link each issue to its PR and relevant Actions run/artifact.
+- **Pull Requests:** implementation and code review record; link back to the issue. PR merge is not by itself proof of release—retain deployment verification separately.
+- **Milestones/releases:** group issues by planned release/version; close only when acceptance criteria and release checks are complete.
+- **PROJECT_STATUS.md:** retain the high-level current snapshot, decisions, release gates, important risks, exact main/backup/deployment SHAs, test evidence, and next action. Link to the board and key issues once established; avoid duplicating every backlog item here.
+
+Operating rules:
+1. Every planned feature gets an issue before implementation; no feature exists only as a chat message or checkbox.
+2. Every issue has explicit acceptance criteria and a priority. Keep unprioritized ideas in Backlog.
+3. Update the board as work changes state; link branch/PR, CI run, recording/artifact, and deployment evidence.
+4. Mark Done only after acceptance criteria pass and the intended environment is verified.
+5. Keep production backup/merge/deployment gates in this status file and the release checklist; never infer production completion from a green preview.
+6. Review the board at the start of each planning session and refresh this file at the end of every project chat.
+
+**Implementation status:** This is the agreed tracking recommendation, not yet an implemented GitHub Projects board. No board, issue set, or labels were created in this session. Next step, once approved, is to set up the board and migrate the current P0–P3 items into individual linked issues without losing their existing evidence.
