@@ -33,15 +33,17 @@ This is the active execution queue. Work top-to-bottom; do not skip validation g
 - [x] Confirm root cause from the trace/network request: asynchronous Cash Book redraw overwrote the edit field; Supabase received `opening_balance: 0`.
 - [x] Implement guard against rewriting the input while the editor is open.
 - [x] Add regression assertion that the upsert request contains 2600.
-- [ ] Wait for PR31 workflow run 44946212950 to finish; parser tests passed, browser E2E was running at last check.
-- [ ] Review all browser-test results, screenshots, traces and artifact. Confirm the full authenticated journey passes and the displayed balance is ₹2,600.
+- [x] Verify main run 44946700141 completed: parser passed, browser E2E failed 15/16; failure still shows ₹0.00 after entering 2600 on main.
+- [x] Confirm artifact 14723697034 uploaded with screenshots, video, trace and report.
+- [ ] Trigger a fresh full validation specifically on PR31's latest head; prior PR31 runs 44946108610 and 44946212950 were cancelled and do not validate the fix.
+- [ ] Review PR31's browser results, screenshots, traces and artifact. Confirm the outgoing Supabase upsert contains 2600 and persisted UI displays ₹2,600.
 - [ ] If any test fails, diagnose and fix on the same focused branch; rerun the complete suite.
 - [ ] Review PR31 diff and merge only after all required checks pass and the production backup is verified.
 - [ ] After merge, verify the exact main commit, production Vercel deployment and Render deployment/branch. Do not assume preview Ready means production is updated.
 
 PR31 details: https://github.com/Ketan612/payables-tracker/pull/31  
 Branch: `fix/cashbook-opening-balance-race`; latest known head `d75fbf430953aa35a92308103524262be3bfbc0f` (verify latest PR head before acting).  
-Run 44946108610 was cancelled when the tracker commit triggered a newer run; its parser tests passed. Run 44946212950 is the current validation run; parser tests passed and browser tests were in progress at the last check. PR31 remains open/draft and is not merged.
+Run 44946108610 was cancelled when the tracker commit triggered a newer run; its parser tests passed. Run 44946212950 was cancelled; parser tests passed before cancellation, but browser E2E did not complete. Main run 44946700141 subsequently failed 15/16 browser tests on the same opening-balance assertion, but it tested main without PR31. Artifact 14723697034 contains the full report/video/trace. PR31 remains open/draft and is not merged.
 
 ### P1 — Complete SMS integration validation
 - [ ] Test invalid and malformed dates; ensure no guessed transaction date is stored.
@@ -221,9 +223,21 @@ These issues contain scope and acceptance criteria. Use them as the active struc
 
 ## Latest workflow status — 2026-11-22
 
-- Latest repository workflow run at the time of this update: [44946563275](https://github.com/Ketan612/payables-tracker/actions/runs/44946563275), workflow **Payables Tracker E2E**, branch `main`, commit `4a810f2e99b69610cbcf94ea90fc5292dc8cef67`.
-- Status: **in progress**. Parser regression step passed. Application startup passed. Browser E2E step is currently running; artifact upload is pending. Do not report this run as passed until it completes and its artifact is reviewed.
+- Latest completed repository workflow run: [44946700141](https://github.com/Ketan612/payables-tracker/actions/runs/44946700141), workflow **Payables Tracker E2E**, branch `main`, commit `48495ded5ee0a749887fa31493071cb9eacd891e`.
+- Status: **failed**. Parser regression passed; app startup passed; browser E2E failed (15/16 passed). The authenticated journey entered 2600 but `#openingDisplay` remained ₹0.00 at test line 102. This run used main, so it does not validate PR31's fix.
+- Full Playwright artifact uploaded: [artifact 14723697034](https://github.com/Ketan612/payables-tracker/actions/runs/44946700141/artifacts/14723697034), 18.3 MB; includes report, screenshots, video and trace.
+- The preceding main run [44946563275](https://github.com/Ketan612/payables-tracker/actions/runs/44946563275) was cancelled after a newer main commit triggered another run.
 - PR31 validation run [44946212950](https://github.com/Ketan612/payables-tracker/actions/runs/44946212950) is **cancelled**, not passed. Parser tests had passed before cancellation; browser result is not a valid completion.
 - PR31 remains open/draft and unmerged. PR #31 link: https://github.com/Ketan612/payables-tracker/pull/31
 - This latest main run was triggered by the documentation/status update commit, not by PR31 code. It is a useful current-main workflow result but does not replace PR31 branch validation.
 - Next action: monitor run 44946563275 to completion; then rerun/validate PR31 separately on its latest head, inspect the full E2E recording/report, and only then proceed to backup/release gates.
+
+
+## Verification update — 2026-11-22 (latest CI check)
+
+- Verified latest completed main run 44946700141: conclusion `failure`; parser regression succeeded; browser E2E failed 15/16.
+- Exact failure: `tests/e2e/app-session.spec.ts` line 102; after filling opening balance with `2600` and clicking save, `#openingDisplay` stayed `₹0.00` for 15 seconds.
+- Artifact 14723697034 successfully uploaded (18,284,698 bytes), containing Playwright report, screenshots, video and trace.
+- This run's SHA is main commit `48495ded5ee0a749887fa31493071cb9eacd891e`; it does not include PR31. Do not use it as evidence for or against the PR31 code fix.
+- PR31 head remains `d75fbf430953aa35a92308103524262be3bfbc0f`, open/draft/unmerged. Its last known workflow run 44946212950 was cancelled, so PR31 still needs a fresh completed full E2E run.
+- Next action: trigger and monitor a fresh workflow on PR31 head; verify request payload `opening_balance: 2600`, persisted ₹2,600 display, all browser tests, and full artifact before backup/merge.
