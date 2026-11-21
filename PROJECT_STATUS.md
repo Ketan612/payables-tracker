@@ -1,106 +1,125 @@
 # Payables Tracker — Project Status & Handoff
 
-> **Single source of truth:** Update this file after every meaningful development, test, deployment, or release session. When starting a new chat, read this file first and continue from the **Next action** section.
+> **Single source of truth:** Keep this file current after every project chat/session. At the end of each project chat, update this same file with verified status, decisions, test/deployment evidence, and the next action. When starting a new chat, read this file first.
 >
 > Last updated: 2026-11-22  
 > Repository: `Ketan612/payables-tracker`
 
-## Current release status
+## Current production status
 
-| Area | Latest known status | Notes |
+| Area | Latest verified status | Evidence / notes |
 |---|---|---|
-| PR21 | Merged to `main` | Merge commit reported as `43dd6120acd77f174d0fc2f182553ac1935c797a` |
-| Post-merge E2E | Passed (12/12) | GitHub Actions run reported: `44870875458`; artifact: `14693444330` |
-| Vercel | Reported ready | Deployment was reported against the PR21 merge commit |
-| Render | Reported live | Deployment was reported against the PR21 merge commit |
-| SMS parser correction | Commit identified; PR #25 | Commit `b382211e512a8f70b49d2568bae4bd9cdfeec371`; PR body says do not promote until parser regression and full E2E pass |
-| SMS live forwarding | Pending validation | Real-device forwarding and end-to-end persistence not yet confirmed |
-| Admin integration dashboard | Deferred | Future admin-only visibility for success, failure, duplicate and pending events |
+| PR21 | Merged to `main` | Merge commit `43dd6120acd77f174d0fc2f182553ac1935c797a`; prior E2E run 44870875458 passed |
+| ICICI SMS parser fix (PR25) | Included in production `main` | PR25 merged to `test-env`; subsequently included in validated release PR28 to `main` |
+| SMS parser regression tests | Passed 5/5 | Explicit ICICI ₹9,140 debit, beneficiary direction, ordinary debit/credit, ambiguous transfer review, missing-date manual review |
+| Validated release PR28 | Merged to `main` | Merge commit `fce88745b8a0b1c4a0caeb7d893db2b77ba5488f`; test-env workflow run 44885131579 passed; PR28 records 14/14 browser E2E |
+| SMS admin monitoring (PR29) | Merged to `main` | Merge commit `4ad8e7b35ade0c7b3d41143383ac1bb29ee5734d`; production E2E run 44916710779 passed |
+| Physical Cash + custom categories (PR30) | Merged to `main` | PR30 merged; feature-branch E2E run 44923581217 passed |
+| Latest main E2E | **Failed** | Run 44936121486; parser regression step passed, browser E2E step failed. Investigate before declaring production regression suite green |
+| Vercel | Latest checks seen as Ready | PR28 and PR25 Vercel previews reported Ready; verify latest production deployment separately |
+| Render | Previously reported live | Re-verify current deployment/branch before relying on this status |
+| Live iPhone SMS forwarding | Pending real-device validation | End-to-end device forwarding and resulting record persistence not yet verified |
 
-**Verification note:** PR21 and deployment details are carried forward from the previous handoff and have not been freshly re-verified in this session. PR #25's commit diff and PR description were inspected; no workflow run was returned for that commit. Do not assume the parser correction is in `main`.
+**Important correction to the previous handoff:** PR #25 was merged into `test-env`, not directly into `main`. Its parser fix was later included in PR #28, which promoted the validated `test-env` snapshot to `main`. The parser is present in the current `main` tree. PR25's first workflow run failed in browser E2E, but the subsequent test-env run 44885131579 passed both parser tests and browser E2E.
 
 ## Next action — do this first
 
-**Validate PR #25's SMS parser fix and its CI before considering merge.**
+**Investigate the latest main-branch browser E2E failure (run 44936121486).**
 
-1. Open [PR #25](https://github.com/Ketan612/payables-tracker/pull/25) and verify its current state, head branch and latest commit.
-2. Run `node --test tests/sms-parser.test.mjs` on the PR branch and capture the actual result.
-3. Confirm the test cases cover:
-   - ICICI debit SMS with explicit date: ₹9,140, direction `out`, date `2026-11-21`, account suffix `157`, UPI reference `750372998883`, beneficiary `CHETAN RAVINDRA`.
-   - ICICI debit with no transaction date: date remains null and reason says manual review required.
-   - Account credit with beneficiary described as debited.
-   - Ambiguous transfer with both debit/credit words and no account context remains in review.
-4. Review parser edge cases and confirm duplicate handling is independently tested at the integration/database layer (the parser tests alone do not prove duplicate persistence protection).
-5. Run the complete E2E suite on the same PR head.
-6. Only if parser tests, full E2E and review all pass, promote through the test-branch/preview/`main` process.
-7. Verify production deployment and update this file with final PR, commit, CI and deployment IDs.
+1. Open [GitHub Actions run 44936121486](https://github.com/Ketan612/payables-tracker/actions/runs/44936121486) and inspect the Playwright report/artifact.
+2. Identify the exact failing test, assertion, screenshot and trace; do not infer the root cause from the summary alone.
+3. Re-run the failing test against the exact main commit `f540851b96e9496b30b047b6c32fb7d4b1c6fb7a` or current main head, preserving test data safely.
+4. Determine whether the failure is flaky, test-environment/data-state related, or a real regression introduced by PR29/PR30.
+5. If reproducible, fix on a dedicated test branch and add/adjust regression coverage.
+6. Run parser regression tests and full E2E again.
+7. Verify Vercel and Render production deployments after any fix. Do not merge further changes until the failure is understood.
 
-## PR #25 — findings from 2026-11-22
+## Latest verified PRs and release evidence
 
-- PR title: `fix: parse ICICI account debit with credited beneficiary`.
-- PR URL: https://github.com/Ketan612/payables-tracker/pull/25
-- Commit: `b382211e512a8f70b49d2568bae4bd9cdfeec371`.
-- Commit message indicates account-context parsing, debit/credit direction prioritization, UPI reference parsing, parser tests and CI integration.
-- Changed files include:
-  - `.github/workflows/e2e.yml`
-  - `supabase/functions/sms-capture/index.ts`
-  - `supabase/functions/sms-capture/sms-parser.js`
-  - `tests/sms-parser.test.mjs`
-- Five parser regression tests are added, including the exact ICICI ₹9,140 message and missing-date manual-review behavior.
-- The PR description says its branch is based on the current `test-env` head and explicitly says not to promote until parser tests and full E2E pass.
-- Workflow/status lookup for this commit returned no workflow runs; combined status showed a successful Vercel check only. Parser CI and full E2E are therefore **not yet verified**.
+### PR #25 — ICICI SMS parser correction
+- URL: https://github.com/Ketan612/payables-tracker/pull/25
+- Merged into `test-env`; merge commit `b382211e512a8f70b49d2568bae4bd9cdfeec371`.
+- Parser change prioritizes the account holder's explicit debit/credit action over beneficiary wording, extracts ICICI-style dates, UPI reference and beneficiary, and routes missing/ambiguous dates/direction to review.
+- Initial workflow run 44884487315: parser regression step passed; browser E2E failed.
+- Later test-env workflow run 44885131579: parser regression step passed and browser E2E passed.
+- PR25 itself was not a direct production merge.
+
+### PR #28 — validated test-env snapshot promoted to main
+- URL: https://github.com/Ketan612/payables-tracker/pull/28
+- Merge commit: `fce88745b8a0b1c4a0caeb7d893db2b77ba5488f`.
+- PR description records parser regression 5/5 and full browser E2E 14/14 passed.
+- Test-env run: https://github.com/Ketan612/payables-tracker/actions/runs/44885131579
+- Recording/report artifact: https://github.com/Ketan612/payables-tracker/actions/runs/44885131579/artifacts/14699836162
+- Production backup before release: `backup/main-before-icici-cashbook-release-20261121`, SHA `eceb30a679b4d883c1045265eae298590edde416`.
+
+### PR #29 — SMS admin monitoring improvements
+- URL: https://github.com/Ketan612/payables-tracker/pull/29
+- Merged to `main`; merge commit `4ad8e7b35ade0c7b3d41143383ac1bb29ee5734d`.
+- Added live pending manual-review count, latest successful capture timestamp, admin-only access coverage and non-admin RLS isolation.
+- Main E2E run 44916710779 passed.
+
+### PR #30 — Physical Cash ledger and custom expense categories
+- URL: https://github.com/Ketan612/payables-tracker/pull/30
+- Merged to `main`; PR metadata shows merge completed.
+- Added system-managed Physical Cash account, safe linked cash-history backfill, user-scoped custom expense categories and RLS/E2E coverage.
+- Feature branch E2E run 44923581217 passed.
+- The later main run 44936121486 failed in browser tests; root cause is not yet known.
 
 ## SMS integration validation checklist
 
-- [ ] Verify PR #25 state, head branch and latest commit
-- [ ] Run parser regression tests and record result
-- [ ] Explicit-date ICICI SMS parsed correctly
-- [ ] Missing-date SMS routed to manual review
-- [ ] Invalid-date SMS routed to manual review
-- [ ] Duplicate SMS handled safely and observably at integration/database level
-- [ ] Account mapping verified
-- [ ] Transaction/review persistence verified
-- [ ] Approval and rejection flows verified
+- [x] Parser correction merged into production through PR28
+- [x] ICICI explicit-date ₹9,140 debit parser regression
+- [x] Beneficiary wording does not reverse account debit/credit
+- [x] Ambiguous debit/credit without account context routed to review
+- [x] Missing transaction date is not guessed; manual review required
+- [ ] Invalid-date handling independently covered and verified
+- [ ] Duplicate SMS handling verified at integration/database level
+- [ ] Account mapping verified with live test account
+- [ ] Transaction/review persistence verified end-to-end
+- [ ] Approval and rejection flows verified end-to-end
 - [ ] Live iPhone SMS forwarding verified
-- [ ] Full E2E regression passed on PR head
-- [ ] Production deployment verified
+- [ ] Admin monitor success/failure/duplicate/pending event behavior verified in production
 
-## Deferred work
+## Deferred / follow-up work
 
-### Admin integration monitoring
-
-Build an admin-only dashboard/event log to track:
-- Triggered/received integration events
-- Successful processing
-- Failed processing and useful error details
-- Duplicate detections
-- Pending/manual-review records
-
-This is intentionally deferred until the SMS parser and end-to-end capture flow are validated.
+- Complete live iPhone SMS forwarding validation.
+- Confirm duplicate event visibility and persistence in SMS review/admin monitoring.
+- Continue validating admin monitoring metrics and RLS behavior.
+- Confirm Physical Cash account behavior for cash expenses, card payments and person settlements after production merge.
+- Verify custom category creation, persistence, editing and user isolation after production merge.
 
 ## Release and branch rules
 
-- Active development/testing branch documented in README: `test/e2e-stabilization`.
-- PR #25 description references `test-env`; verify the actual head branch rather than assuming it is the same as the README's documented branch.
 - Production branch: `main`.
-- Validate changes on the test branch and its Vercel preview before production promotion.
-- Keep production data/schema safe; do not make unrelated schema or production-data changes during frontend-only work.
-- Avoid unnecessary changes to already-verified PR21 functionality.
-- Prefer one focused change at a time, with tests and evidence recorded before moving on.
+- Test branch used for recent validated snapshot: `test-env`.
+- Also documented in README: `test/e2e-stabilization`; confirm which test branch is active for each new task rather than assuming.
+- Validate changes on test branch and Vercel preview before production promotion.
+- Before a production promotion, create/verify a main backup and record its branch/SHA.
+- Keep production data/schema safe; do not make unrelated schema or production-data changes.
+- Do not treat a Vercel preview being Ready as proof that production deployment is correct.
+- One focused change at a time; record exact branch, commit, workflow run, artifact and deployment evidence.
+- At the end of every project chat, update this file. Do not create multiple competing status files.
 
 ## Latest evidence / identifiers
 
 | Item | Value |
 |---|---|
-| PR21 merge commit (reported) | `43dd6120acd77f174d0fc2f182553ac1935c797a` |
-| GitHub Actions run (reported) | `44870875458` |
-| E2E artifact (reported) | `14693444330` |
-| E2E result (reported) | 12/12 passed |
-| PR #25 parser commit | `b382211e512a8f70b49d2568bae4bd9cdfeec371` |
-| PR #25 parser CI | Not verified; no workflow run returned for commit |
-| PR #25 Vercel check | Success (check only; deployment correctness not yet verified) |
+| PR21 merge commit | `43dd6120acd77f174d0fc2f182553ac1935c797a` |
+| PR21 E2E run | `44870875458` — passed |
+| PR25 parser commit | `b382211e512a8f70b49d2568bae4bd9cdfeec371` |
+| PR25 initial workflow | `44884487315` — parser tests passed; browser E2E failed |
+| PR28 release commit | `fce88745b8a0b1c4a0caeb7d893db2b77ba5488f` |
+| PR28 validated test-env run | `44885131579` — parser tests + browser E2E passed |
+| PR28 recorded parser/E2E counts | 5/5 parser; 14/14 browser E2E |
+| PR29 merge commit | `4ad8e7b35ade0c7b3d41143383ac1bb29ee5734d` |
+| PR29 main E2E run | `44916710779` — passed |
+| PR30 feature E2E run | `44923581217` — passed |
+| Latest main workflow run | `44936121486` — browser E2E failed; parser step passed |
+| Latest known main commit at tracker read | `f540851b96e9496b30b047b6c32fb7d4b1c6fb7a` |
 
 ## Session update log
 
 - **2026-11-21:** Created this handoff tracker from the PR21 merged-chat summary.
-- **2026-11-22:** Read the tracker first, located PR #25 and inspected its commit diff. Confirmed the parser fix and five regression tests are present. PR description requires parser tests and full E2E before promotion. CI run status and current PR head/state still need verification.
+- **2026-11-22:** Located PR25; inspected parser diff and tests.
+- **2026-11-22 (status refresh):** Verified PR25 merged to test-env; found initial browser E2E failure and subsequent successful test-env run 44885131579. Verified PR28 promoted parser fix to main with 5/5 parser and 14/14 browser E2E. Verified PR29 and PR30 merged; PR29 main E2E and PR30 feature E2E passed. Found latest main run 44936121486 fails at browser E2E while parser tests pass. Next action is inspect the Playwright artifact and identify the exact failing test.
+- **Standing instruction:** Update this same file at the end of every Payables Tracker project chat/session, including status-only conversations.
