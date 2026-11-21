@@ -51,8 +51,8 @@ function draw(){
   const time=new Date(item.created_at).toLocaleString("en-IN",{timeZone:"Asia/Kolkata"});
   const outcome=String(item.outcome??"unknown");
   const outcomeClass=OUTCOME_CLASSES.has(outcome)?outcome:"unknown";
-  return "<tr><td>"+esc(time)+"</td><td><span class='pill "+outcomeClass+"'>"+esc(outcome.replace(/_/g," "))+"</span></td><td>"+esc(item.user_id)+"</td><td>"+esc(item.sender)+"</td><td>"+esc(item.account_identifier)+"</td><td>"+esc(fmtAmount(item.amount,item.direction))+"</td><td>"+esc(item.reference_number)+"</td><td>"+esc(item.http_status)+"</td><td>"+esc(item.detail)+"</td></tr>";
- }).join("")||"<tr><td colspan='9' class='empty'>No events found for this filter.</td></tr>";
+  return "<tr><td>"+esc(time)+"</td><td><span class='pill "+outcomeClass+"'>"+esc(outcome.replace(/_/g," "))+"</span></td><td>"+esc(item.user_id)+"</td><td>"+esc(item.sender)+"</td><td>"+esc(item.account_identifier)+"</td><td>"+esc(fmtAmount(item.amount,item.direction))+"</td><td>"+esc(item.reference_number)+"</td><td>"+esc(item.source_record_id)+"</td><td>"+esc(item.http_status)+"</td><td>"+esc(item.detail)+"</td></tr>";
+ }).join("")||"<tr><td colspan='10' class='empty'>No events found for this filter.</td></tr>";
  const reviewRows=reviews.map(item=>{
   const time=new Date(item.reviewed_at).toLocaleString("en-IN",{timeZone:"Asia/Kolkata"});
   const accepted=item.review_decision==="accepted"||item.review_decision==="accepted_duplicate"||item.status==="posted";
@@ -66,7 +66,7 @@ async function load(){
  const hours=Number($("period").value);
  const since=new Date(Date.now()-hours*3600000).toISOString();
  const {data,error}=await sb.from("sms_capture_events")
-  .select("id,user_id,event_type,outcome,request_id,sender,account_identifier,reference_number,amount,direction,http_status,detail,created_at")
+  .select("id,user_id,event_type,outcome,request_id,sender,account_identifier,reference_number,amount,direction,http_status,detail,source_record_id,created_at")
   .gte("created_at",since).order("created_at",{ascending:false}).limit(500);
  if(error){$("status").textContent="Could not load events: "+error.message;return}
  all=data||[];
