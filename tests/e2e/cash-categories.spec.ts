@@ -1,4 +1,4 @@
-import {test,expect,Page} from "@playwright/test";
+import {test,expect,Page,request} from "@playwright/test";
 
 const email=process.env.TEST_USER_EMAIL!;
 const password=process.env.TEST_USER_PASSWORD!;
@@ -90,19 +90,20 @@ test("users can add expense categories and cash expenses post to Physical Cash",
   await expect(cashRow.locator(".debit")).toContainText("125.00");
 
   // Editing the source expense must update its linked Cash Book movement.
-  const updateResponse=await page.request.patch(
-    supabaseUrl+"/rest/v1/transactions?id=eq."+expenseId,
-    {
-      headers:{
-        apikey:serviceRoleKey,
-        Authorization:"Bearer "+serviceRoleKey,
-        "Content-Type":"application/json",
-        Prefer:"return=minimal"
-      },
-      data:{amount:175}
+  const api=await request.newContext({
+    extraHTTPHeaders:{
+      apikey:serviceRoleKey,
+      Authorization:"Bearer "+serviceRoleKey,
+      "Content-Type":"application/json",
+      Prefer:"return=minimal"
     }
+  });
+  const updateResponse=await api.patch(
+    supabaseUrl+"/rest/v1/transactions?id=eq."+expenseId,
+    {data:{amount:175}}
   );
   expect(updateResponse.ok(),"Updating the source expense failed: "+updateResponse.status()+" "+await updateResponse.text()).toBeTruthy();
+  await api.dispose();
   await page.reload();
   await page.locator("#accountSelect").selectOption({label:"Physical Cash"});
   const updatedCashRow=page.locator("#transactions .ledger-table tbody tr").filter({hasText:description});
