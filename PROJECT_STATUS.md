@@ -189,7 +189,7 @@ Run 44946108610 was cancelled when the tracker commit triggered a newer run; its
 - **Standing instruction:** Update this same file at the end of every Payables Tracker project chat/session, including status-only conversations.
 
 
-## Product feature tracking — operating model (decision 2026-11-22)
+## Product feature tracking — proposed operating model (2026-11-22)
 
 Keep `PROJECT_STATUS.md`. It is the durable project handoff, architecture/operational notes, release history, verified deployment/test evidence, and current next-action summary. **Do not use it as the only feature backlog**: a long checklist in Markdown is difficult to prioritize, assign, filter, and update as features move through development.
 
@@ -208,4 +208,4 @@ Operating rules:
 5. Keep production backup/merge/deployment gates in this status file and the release checklist; never infer production completion from a green preview.
 6. Review the board at the start of each planning session and refresh this file at the end of every project chat.
 
-**Implementation status:** This is the agreed tracking recommendation, not yet an implemented GitHub Projects board. No board, issue set, or labels were created in this session. Next step, once approved, is to set up the board and migrate the current P0–P3 items into individual linked issues without losing their existing evidence.
+**Implementation status:** This is the proposed tracking recommendation, not yet an implemented GitHub Projects board. No board, issue set, or labels were created in this session. Next step, once approved, is to set up the board and migrate the current P0–P3 items into individual linked issues without losing their existing evidence.
