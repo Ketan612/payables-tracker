@@ -134,3 +134,41 @@ test("iPhone-sized layouts keep form controls at a non-zooming text size", async
     expect(result.undersizedControls, `iOS auto-zoom risk on ${route}`).toEqual([]);
   }
 });
+
+test("browser and installed PWA use separate auth persistence and inactivity policies", async ({ browser }) => {
+  const browserPage = await browser.newPage();
+  await browserPage.goto("/");
+  const browserPolicy = await browserPage.evaluate(() => ({
+    usesSessionStorage: window.payablesAuthStorage() === window.sessionStorage,
+    idleTimeoutMs: window.payablesSessionPolicy.getIdleTimeoutMs()
+  }));
+  expect(browserPolicy.usesSessionStorage).toBe(true);
+  expect(browserPolicy.idleTimeoutMs).toBe(30 * 60 * 1000);
+  await browserPage.close();
+
+  const appPage = await browser.newPage();
+  await appPage.addInitScript(() => {
+    Object.defineProperty(navigator, "standalone", { configurable: true, value: true });
+  });
+  await appPage.goto("/");
+  const appPolicy = await appPage.evaluate(() => ({
+    usesLocalStorage: window.payablesAuthStorage() === window.localStorage,
+    idleTimeoutMs: window.payablesSessionPolicy.getIdleTimeoutMs()
+  }));
+  expect(appPolicy.usesLocalStorage).toBe(true);
+  expect(appPolicy.idleTimeoutMs).toBe(15 * 24 * 60 * 60 * 1000);
+  await appPage.close();
+});
+
+test("installed app can load its session policy from the offline shell cache", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+  await page.context().setOffline(true);
+  const result = await page.evaluate(async () => {
+    const response = await fetch("./session-policy.js?v=mobile-session-20261121");
+    return { ok: response.ok, source: await response.text() };
+  });
+  expect(result.ok).toBe(true);
+  expect(result.source).toContain("payablesAuthStorage");
+});

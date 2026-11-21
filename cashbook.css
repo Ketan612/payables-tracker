@@ -152,3 +152,6 @@
 /* iOS Safari automatically zooms focused controls below 16px. Keep the page at device scale. */
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 @media(max-width:760px){input,select,textarea{font-size:16px!important}}
+
+/* Preserve the semantic hidden state even when header link styles set display. */
+.cashbook-header #cashbookAdminLink[hidden]{display:none!important}
