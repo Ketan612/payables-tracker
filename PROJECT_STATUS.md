@@ -417,3 +417,9 @@ Planning estimate: **about 1 working day of engineering plus access/device-depen
 - [ ] Controlled iPhone Shortcut test passes.
 - [ ] Vercel production and Render deployment/health verified on expected release.
 - [ ] Production smoke test and issue closeout complete.
+
+### Latest documentation-only head check — 2026-11-22
+- To avoid a merge conflict on the shared handoff file, PR37's `PROJECT_STATUS.md` was synchronized to the current main copy (the file contents now match main).
+- This produced PR branch head `f727b8370c2fb21561943d2476cac32f58f3af92`; application/function/test code is unchanged from the fully validated commit `a6b0a0f6a723afff260e28997edfe78e427760c2`.
+- A new workflow run for the documentation-only head is running: [44949340100](https://github.com/Ketan612/payables-tracker/actions/runs/44949340100). At the latest check it had completed checkout and was installing dependencies; parser and Playwright steps had not started.
+- PR37 remains draft/open and not merged. GitHub reported it mergeable at the latest PR metadata check. The full 7/7 + 16/16 validation on the unchanged application code is already green on run 44948965134; run 44949340100 is a fresh latest-head confirmation.
