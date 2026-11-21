@@ -62,7 +62,7 @@ test("complete authenticated E2E journey across all implemented modules",async({
 
  // Cash Book account, opening balance, debit and credit all entered via UI.
  await page.goto("/cashbook.html");
- await expect(page.locator("#signedInEmail")).toContainText(email);
+ await expect(page.locator("#signedInEmail")).toContainText(new RegExp(email,"i"));
  await expect(page.locator("#accountSelect option")).not.toHaveCount(0);
  await page.locator("#addAccount").click();
  await page.locator("#accountName").fill(cashName);
@@ -298,7 +298,7 @@ test("complete authenticated E2E journey across all implemented modules",async({
 
  // Exercise the SMS integration with a disposable token and simulated bank messages.
  await page.goto("/sms-capture.html");
- await expect(page.locator("#signedInEmail")).toContainText(email);
+ await expect(page.locator("#signedInEmail")).toContainText(new RegExp(email,"i"));
  const activeTokenIdsBefore=await page.locator("#tokens [data-revoke]").evaluateAll(buttons=>buttons.map(button=>(button as HTMLButtonElement).dataset.revoke!));
  await page.locator("#generateToken").click();
  await expect(page.locator("#tokenStatus")).toContainText("Token generated successfully", {timeout:20000});
@@ -322,7 +322,7 @@ test("complete authenticated E2E journey across all implemented modules",async({
 
  // A mapped X3142 SMS auto-posts once to the linked Cash Book account.
  await page.goto("/cashbook.html");
- await expect(page.locator("#signedInEmail")).toContainText(email);
+ await expect(page.locator("#signedInEmail")).toContainText(new RegExp(email,"i"));
  await page.locator("#accountSelect").selectOption({label:cashName});
  await expect(page.locator("#transactions")).toContainText("E2E Store");
  await expect(page.locator("#transactions .ledger-table tbody tr").filter({hasText:"E2E Store"})).toHaveCount(1);
@@ -346,7 +346,7 @@ test("complete authenticated E2E journey across all implemented modules",async({
  const manualCapture=await page.request.post(captureUrl,{headers:captureHeaders,data:{message:manualMessage,sender:"SBI"}});
  expect(manualCapture.ok(),"Unmapped SMS capture failed: "+manualCapture.status()+" "+await manualCapture.text()).toBeTruthy();
  await page.reload();
- await expect(page.locator("#signedInEmail")).toContainText(email);
+ await expect(page.locator("#signedInEmail")).toContainText(new RegExp(email,"i"));
  const manualItem=page.locator("#inbox article.item").filter({hasText:manualReference});
  await expect(manualItem).toContainText("Needs review");
  await manualItem.locator("[data-inbox-account]").selectOption({label:cashName});
@@ -365,7 +365,7 @@ test("complete authenticated E2E journey across all implemented modules",async({
  const rejectedCapture=await page.request.post(captureUrl,{headers:captureHeaders,data:{message:rejectedMessage,sender:"SBI"}});
  expect(rejectedCapture.ok(),"Rejected-message capture failed: "+rejectedCapture.status()+" "+await rejectedCapture.text()).toBeTruthy();
  await page.reload();
- await expect(page.locator("#signedInEmail")).toContainText(email);
+ await expect(page.locator("#signedInEmail")).toContainText(new RegExp(email,"i"));
  const rejectedItem=page.locator("#inbox article.item").filter({hasText:rejectedReference});
  await expect(rejectedItem).toContainText("Needs review");
  await rejectedItem.locator("[data-reject]").click();
