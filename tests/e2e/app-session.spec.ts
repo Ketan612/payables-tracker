@@ -579,3 +579,11 @@ test("payables month and type filters show only matching transactions",async({pa
 });
 
 // CI retry marker: rerun month/type filter regression on current main.
+
+
+test("non-admin users are denied access to the SMS integration monitor",async({page})=>{
+ test.skip(email.toLowerCase()==="ketansoni8@gmail.com","The configured E2E account is the administrator.");
+ await establishAuthenticatedSession(page);
+ await page.goto("/sms-admin.html");
+ await expect(page.getByRole("heading",{name:"Access denied"})).toBeVisible();
+});
