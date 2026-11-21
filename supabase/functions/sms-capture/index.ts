@@ -3,30 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS","Content-Type":"application/json"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:cors});
 const sha=async(s:string)=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)))).map(b=>b.toString(16).padStart(2,"0")).join("");
-const months:Record<string,number>={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
-function parseSms(raw:string){
- const text=raw.replace(/\s+/g," ").trim();
- const amountPatterns=[/(?:debited|credited)\s+(?:by|with|for)?\s*(?:INR|Rs\.?|₹)?\s*([0-9,]+(?:\.\d{1,2})?)/i,/(?:INR|Rs\.?|₹)\s*([0-9,]+(?:\.\d{1,2})?)/i,/\b([0-9,]+(?:\.\d{1,2})?)\s*(?:INR|rupees?)\b/i];
- let rawAmount:string|null=null;for(const p of amountPatterns){const m=text.match(p);if(m){rawAmount=m[1];break}}
- const amount=rawAmount?Number(rawAmount.replace(/,/g,"")):null;
- const debit=/\b(debited|debit|spent|paid|purchase|withdrawn|sent|trf to|transferred to)\b/i.test(text);
- const credit=/\b(credited|credit|received|refund|cashback|deposited)\b/i.test(text);
- const direction=debit&&!credit?"out":credit&&!debit?"in":null;
- const acct=text.match(/(?:A\/?C|account|acct)\s*(?:no\.?|number)?\s*[:#-]?\s*([Xx*•-]*\d{2,})/i);
- const accountIdentifier=acct?(acct[1].match(/\d+/g)||[]).join("")||null:null;
- const ref=text.match(/\b(?:ref(?:erence)?\s*(?:no\.?|number)?|refno|utr)\s*[:#-]?\s*(\d{6,})/i);
- const referenceNumber=ref?.[1]||null;
- let date=null;
- const namedDate=text.match(/\b(\d{1,2})\s*([A-Za-z]{3})\s*(\d{2,4})\b/);
- const numericDate=text.match(/\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b/);
- if(namedDate){let d=+namedDate[1],m=months[namedDate[2].toLowerCase()],y=+namedDate[3];if(y<100)y+=2000;const dt=new Date(Date.UTC(y,m-1,d));if(m&&dt.getUTCFullYear()===y&&dt.getUTCMonth()===m-1&&dt.getUTCDate()===d)date=dt.toISOString().slice(0,10);}
- else if(numericDate){const parts=numericDate[1].split(/[/-]/).map(Number);let d,m,y;if(parts[0]>12){d=parts[0];m=parts[1];y=parts[2]}else{m=parts[0];d=parts[1];y=parts[2]}if(y<100)y+=2000;const dt=new Date(Date.UTC(y,m-1,d));if(dt.getUTCFullYear()===y&&dt.getUTCMonth()===m-1&&dt.getUTCDate()===d)date=dt.toISOString().slice(0,10)}
- // Never invent a transaction date. Missing dates are routed to manual review.
-
- const merchant=text.match(/\b(?:trf\s+to|transfer(?:red)?\s+to|sent\s+to|towards|at|merchant)\s+([A-Z0-9 ._'-]{2,45}?)(?=\s+(?:Ref(?:no|erence)?|UPI|on\s+date|dated|for\s+|\b[A/C]|\bif\s+not)|$)/i);
- const description=merchant?merchant[1].trim().replace(/[. ]+$/,""):text.slice(0,120);
- return {amount,direction,date,description,account_identifier:accountIdentifier,reference_number:referenceNumber,reason:!amount||amount<=0?"Amount not confidently parsed":!direction?"Could not determine debit/credit":!date?"Transaction date not found; manual review required":null};
-}
+import { parseSms } from "./sms-parser.js";
 Deno.serve(async req=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
  if(req.method!=="POST")return json({error:"POST only"},405);
