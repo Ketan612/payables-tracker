@@ -436,3 +436,17 @@ Planning estimate: **about 1 working day of engineering plus access/device-depen
 - The green run 44949340100 tested head `f727b8370c2fb21561943d2476cac32f58f3af92`, not the new fix commit. The prior code run 44948965134 tested `a6b0a0f6a723afff260e28997edfe78e427760c2` and passed 7/7 parser plus 16/16 Playwright, but neither includes the latest one-line traceability correction.
 - Targeted live Edge Function path tests (posted, needs_review, cashbook_write_failed, reference duplicate, exact-message duplicate, database uniqueness race, and no duplicate Cash Book movement) are still not evidenced. No production Edge Function deployment, production data mutation, main merge, or Vercel/Render setting change was made in this session.
 - Next action: establish a clean branch from current main, carry forward PR37's reviewed source changes including commit 73a58e0, add/execute targeted Edge Function integration coverage in a controlled test environment, run one complete parser + Playwright workflow and inspect its artifact. Only then create a fresh main backup and consider merge/deploy.
+
+
+## PR38 clean-main rebuild — 2026-11-22
+
+- Created clean branch `fix/sms-event-traceability-clean-main` directly from current main commit `2cd41b9d3bcc0c614eb8b492ff4cf461dd93e0e9`.
+- Ported six PR37 files onto the clean branch: `.github/workflows/e2e.yml`, `SMS-CAPTURE-QA.md`, `sms-admin.html`, `sms-admin.js`, `supabase/functions/sms-capture/index.ts`, and `tests/sms-parser.test.mjs`.
+- Latest branch head: `543c91bacf70492182f58eed0ef71174bf62f31b`. Compare to main: **6 commits ahead, 0 behind**.
+- Created replacement draft PR #38: https://github.com/Ketan612/payables-tracker/pull/38. PR38 is OPEN/DRAFT and not merged.
+- Source includes the final Cash Book unique-reference duplicate event fix: `source_record_id: inbox.id`. The parser regression additions cover impossible calendar dates and valid leap-day dates; admin monitor includes Inbox record ID.
+- Prior PR37 workflow evidence (7/7 parser, 16/16 Playwright) applies to earlier PR37 commits only, not this clean branch head.
+- Latest commit combined status reports a Vercel check failure due deployment rate limit (>100 deployments/day). This is an external preview/deployment quota failure, not evidence of application E2E failure. No successful E2E run for PR38 head has been confirmed through the available workflow lookup.
+- Targeted Supabase Edge Function integration tests for posted, needs_review, cashbook_write_failed, duplicate reference, exact-message duplicate, database uniqueness collision, and prevention of duplicate Cash Book movements are still not evidenced. Do not merge or deploy until these and a clean-head full E2E run are verified.
+- PR37 remains open/draft and superseded by PR38; it has not been merged. No main merge, production Edge Function deployment, production data mutation, Vercel setting change, or Render setting change was made.
+- Next action: obtain a workflow result for exact PR38 head `543c91b`; inspect parser/browser steps and complete recording artifact. Add/execute targeted Edge Function test coverage in a controlled test environment. If the GitHub Actions workflow did not trigger for the API-created branch commits, trigger the branch workflow through a supported GitHub Actions dispatch mechanism; do not treat the Vercel status as the E2E result.
