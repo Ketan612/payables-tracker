@@ -38,3 +38,21 @@ test("missing transaction date is never guessed", () => {
   assert.equal(parsed.date, null);
   assert.equal(parsed.reason, "Transaction date not found; manual review required");
 });
+
+test("invalid calendar dates are rejected instead of rolled into another month", () => {
+  for (const message of [
+    "A/c XX3142 debited Rs 50 on 31-Feb-2026",
+    "A/c XX3142 debited Rs 50 on 31/04/2026",
+    "A/c XX3142 debited Rs 50 on 29-Feb-2025"
+  ]) {
+    const parsed = parseSms(message);
+    assert.equal(parsed.date, null, message);
+    assert.equal(parsed.reason, "Transaction date not found; manual review required", message);
+  }
+});
+
+test("valid leap-day dates are retained", () => {
+  const parsed = parseSms("A/c XX3142 debited Rs 50 on 29-Feb-2024");
+  assert.equal(parsed.date, "2024-02-29");
+  assert.equal(parsed.reason, null);
+});
