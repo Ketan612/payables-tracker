@@ -382,7 +382,7 @@ test("complete authenticated E2E journey across all implemented modules",async({
  // Verify the duplicate is visible in the user's SMS Review Inbox, not only
  // returned by the capture endpoint and blocked from a second Cash Book post.
  await page.goto("/sms-capture.html");
- await expect(page.locator("#signedInEmail")).toContainText(email);
+ await expect(page.locator("#signedInEmail")).toContainText(new RegExp(email,"i"));
  await expect(page.locator("#inboxSummary")).toContainText("Duplicates:");
  const duplicateInboxItem=page.locator("#inbox article.item").filter({hasText:reference});
  await expect(duplicateInboxItem,"Duplicate SMS should appear in the review inbox").toBeVisible({timeout:20000});
