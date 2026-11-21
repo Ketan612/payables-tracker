@@ -490,3 +490,35 @@ test("transaction validation, edit and refresh persistence",async({page})=>{
  await expect(persistedRow).toContainText("57.25");
  await expect(page.locator("#list")).not.toContainText(marker+" invalid");
 });
+
+test("rapid repeated transaction submit creates only one record",async({page})=>{
+ await establishAuthenticatedSession(page);
+ const marker="E2E-DOUBLE-SUBMIT-"+Date.now();
+ const today=new Date().toISOString().slice(0,10);
+ const createRequests:string[]=[];
+ page.on("request",request=>{
+  if(request.url().includes("/rest/v1/rpc/create_expense_v1")&&request.method()==="POST")createRequests.push(request.url());
+ });
+ await page.locator("#add").click();
+ await page.locator("#desc").fill(marker);
+ await page.locator("#amt").fill("31.75");
+ await page.locator("#transactionDate").fill(today);
+ // Dispatch two submit events synchronously to exercise the race window before
+ // the first Supabase RPC resolves (a normal double-click may be throttled).
+ await page.locator("#form").evaluate(form=>{
+  (form as HTMLFormElement).requestSubmit();
+  (form as HTMLFormElement).requestSubmit();
+ });
+ await expect(page.locator("#dlg")).not.toBeVisible({timeout:20000});
+ await expect.poll(()=>createRequests.length,{timeout:10000}).toBe(1);
+ await page.locator("#statusF").selectOption("all");
+ const matchingRows=page.locator("#list .item").filter({hasText:marker});
+ await expect(matchingRows).toHaveCount(1);
+ await expect(matchingRows.first()).toContainText("31.75");
+ await page.reload();
+ await expect(page.locator("html")).toHaveAttribute("data-dashboard-ready","true",{timeout:30000});
+ await page.locator("#statusF").selectOption("all");
+ await expect(page.locator("#list .item").filter({hasText:marker})).toHaveCount(1);
+});
+
+// CI retry marker: rerun duplicate-submit regression on current workflow configuration.
