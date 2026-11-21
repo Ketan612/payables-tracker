@@ -98,7 +98,11 @@ test("complete authenticated E2E journey across all implemented modules",async({
  await expect(page.locator("#closing")).toContainText("0.00");
  await page.locator("#editOpening").click();
  await page.locator("#opening").fill("2600");
+ const openingSave=page.waitForResponse(response=>response.url().includes("/rest/v1/cashbook_opening_balances")&&response.request().method()==="POST");
  await page.locator("#saveOpening").click();
+ const openingSaveResponse=await openingSave;
+ expect(openingSaveResponse.ok(),"Opening balance save failed: "+openingSaveResponse.status()).toBeTruthy();
+ expect(openingSaveResponse.request().postDataJSON().opening_balance).toBe(2600);
  await expect(page.locator("#openingDisplay")).toContainText("2,600");
  await expect(page.locator("#closing")).toContainText("2,600");
  await page.locator("#addTxn").click();
