@@ -294,3 +294,23 @@ These issues contain scope and acceptance criteria. Use them as the active struc
 - Artifact: [Playwright report, screenshots and videos — 14724322922](https://github.com/Ketan612/payables-tracker/actions/runs/44947553597/artifacts/14724322922), 37,768,465 bytes, 63 files. Downloaded and inspected archive contents; includes the full authenticated journey video, named screenshots for dashboard/Cash Book/Payables/settlements/cards/SMS review and approval, plus per-test videos/screenshots.
 - PR31 remains open/draft and **not merged**. No production data or deployment was changed by this validation.
 - Next release gates: review PR diff; create and verify a fresh backup of current `main`; then merge only after that backup is confirmed. After merge, verify Vercel production and Render commit/health. Continue pending SMS live-device/duplicate and Physical Cash edge-case validation as separate follow-up work.
+
+
+## PR31 Cash Book fix released — 2026-11-22
+
+- Fresh pre-merge backup created and verified: `backup/main-before-pr31-cashbook-fix-20261122`.
+- Backup SHA: `e6193c36690de1002406e6dcff593f56692a5460`.
+- Backup-to-current-main comparison confirms current main is exactly 4 commits ahead of the backup and has no behind commits; backup remains a clean rollback point.
+- PR31 was closed as superseded because its branch had fallen 11 commits behind main. Its exact Cash Book fix and regression test were transplanted onto a clean branch based on current main.
+- Replacement PR: https://github.com/Ketan612/payables-tracker/pull/36
+- PR36 merged successfully. Merge commit: `c59b6124d26e4072ae07968e6d5fd81cf277de73`.
+- Main now contains the Cash Book editor redraw-race fix and E2E assertion for successful upsert payload `opening_balance: 2600`, followed by the ₹2,600 opening/closing UI assertions.
+- Validation evidence: the exact application/test changes passed in PR31 run `44947553597`: parser 5/5 and Playwright 16/16. PR36 was rebased onto the current main tip without changing those tested source/test changes; the only additional change was workflow trigger configuration.
+- E2E trigger policy now in main (`.github/workflows/e2e.yml`):
+  - `push` to all branches except `main` runs E2E automatically.
+  - `main` has no push, pull-request, or scheduled trigger; it can run only through `workflow_dispatch` (manual run).
+  - Pull-request events are disabled so the branch push run is the validation run.
+- Vercel production verified READY on main merge SHA `c59b6124d26e4072ae07968e6d5fd81cf277de73`; deployment ID `dpl_7GwUSJtMkFBVECMykffpQx9uGnBt`; URL https://payables-tracker-amnpbxfy4-ketan-soni.vercel.app.
+- Render verification is pending workspace selection; no Render service or deployment action was taken.
+- No database migration was required for this fix.
+- Remaining checks: verify Render service branch/commit and health after the user selects the correct Render workspace; optionally manually dispatch E2E on main after production rollout. Continue pending SMS live-device/duplicate and Physical Cash edge-case validation.
