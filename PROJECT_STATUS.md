@@ -40,7 +40,7 @@ This is the active execution queue. Work top-to-bottom; do not skip validation g
 - [ ] After merge, verify the exact main commit, production Vercel deployment and Render deployment/branch. Do not assume preview Ready means production is updated.
 
 PR31 details: https://github.com/Ketan612/payables-tracker/pull/31  
-Branch: `fix/cashbook-opening-balance-race`; latest known head `d75fbf430953aa35a9230819e03bce83bdac53a` (verify latest PR head before acting).  
+Branch: `fix/cashbook-opening-balance-race`; latest known head `d75fbf430953aa35a92308103524262be3bfbc0f` (verify latest PR head before acting).  
 Run 44946108610 was cancelled when the tracker commit triggered a newer run; its parser tests passed. Run 44946212950 is the current validation run; parser tests passed and browser tests were in progress at the last check. PR31 remains open/draft and is not merged.
 
 ### P1 — Complete SMS integration validation
@@ -86,7 +86,7 @@ Run 44946108610 was cancelled when the tracker commit triggered a newer run; its
 ### PR #31 — Cash Book opening-balance race fix (not merged)
 - URL: https://github.com/Ketan612/payables-tracker/pull/31
 - Branch: `fix/cashbook-opening-balance-race`
-- Latest known head at this update: `d75fbf430953aa35a9230819e03bce83bdac53a` (confirm current PR head before merging).
+- Latest known head at this update: `d75fbf430953aa35a92308103524262be3bfbc0f` (confirm current PR head before merging).
 - Status: open, draft; no production merge/deployment.
 - Root cause: asynchronous Cash Book redraw could overwrite the opening-balance input after the editor opened. The failed test trace showed the request sent `opening_balance: 0` despite the intended ₹2,600 entry; Supabase accepted the zero.
 - Fix: preserve the input while editing, await the post-save redraw and surface refresh errors; regression test asserts the outgoing upsert contains 2600.
@@ -176,7 +176,7 @@ Run 44946108610 was cancelled when the tracker commit triggered a newer run; its
 | Latest main workflow run | `44936121486` — parser passed; 15/16 browser tests passed; opening-balance race identified |
 | PR31 validation run 1 | `44946108610` — parser passed; browser job cancelled when newer commit triggered another run |
 | PR31 validation run 2 | `44946212950` — parser passed; browser E2E in progress at last check |
-| PR31 latest known head | `d75fbf430953aa35a9230819e03bce83bdac53a` |
+| PR31 latest known head | `d75fbf430953aa35a92308103524262be3bfbc0f` |
 | Latest known main commit at tracker read | `f540851b96e9496b30b047b6c32fb7d4b1c6fb7a` |
 
 ## Session update log
