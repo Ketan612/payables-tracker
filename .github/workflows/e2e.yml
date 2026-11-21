@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 20
     env:
       BASE_URL: http://127.0.0.1:4173
-      SUPABASE_URL: https://magxbczgrxeyprjyborr.supabase.co
+      SUPABASE_URL: https://magxbczgrxeypryjborr.supabase.co
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
       TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
