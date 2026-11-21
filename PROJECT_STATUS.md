@@ -327,3 +327,10 @@ These issues contain scope and acceptance criteria. Use them as the active struc
 - Direct external HTTP verification of `/health` was not possible through the available network access in this session, so endpoint response and database_configured value remain unconfirmed. No secrets were read.
 - No Render configuration, environment variable, service, or deployment setting was changed.
 - Remaining operational follow-up: if needed, confirm `https://payables-tracker.onrender.com/health` in a normal browser/client and check `database_configured: true`.
+
+## Operating preference — consolidated execution (2026-11-22)
+
+- User clarified that related Payables Tracker work should be handled end-to-end in one consolidated execution, rather than pausing for approval after each small step or asking the user to say "next".
+- Default workflow: read the current status and evidence; inspect dependencies; plan the complete related task; implement changes together on the appropriate branch; run and diagnose tests; produce one consolidated E2E recording/report where supported; create/verify a fresh main backup before production merge; merge only after validation; verify Vercel, Render and application behaviour; then update this file with verified outcomes.
+- Ask the user only when a genuine user-only action or explicit authorization is required (for example, account verification, a manual GitHub Actions dispatch unavailable through the connected tools, or a consequential production decision). Do not ask for step-by-step confirmations for routine work already covered by the user's request and standing release rules.
+- Continue to respect safety gates: no unapproved production data/settings changes, no merge of unvalidated code, and never report an unverified test/deployment/health check as successful.
