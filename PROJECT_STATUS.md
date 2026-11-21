@@ -24,15 +24,22 @@
 
 ## Next action — do this first
 
-**Investigate the latest main-branch browser E2E failure (run 44936121486).**
+**Validate and review PR #31 (Cash Book opening-balance race fix).**
 
-1. Open [GitHub Actions run 44936121486](https://github.com/Ketan612/payables-tracker/actions/runs/44936121486) and inspect the Playwright report/artifact.
-2. Identify the exact failing test, assertion, screenshot and trace; do not infer the root cause from the summary alone.
-3. Re-run the failing test against the exact main commit `f540851b96e9496b30b047b6c32fb7d4b1c6fb7a` or current main head, preserving test data safely.
-4. Determine whether the failure is flaky, test-environment/data-state related, or a real regression introduced by PR29/PR30.
-5. If reproducible, fix on a dedicated test branch and add/adjust regression coverage.
-6. Run parser regression tests and full E2E again.
-7. Verify Vercel and Render production deployments after any fix. Do not merge further changes until the failure is understood.
+1. Review PR #31 and its full E2E workflow result; require parser tests and all browser tests to pass.
+2. Confirm the opening-balance regression assertion proves the request sends 2600 and the UI displays ₹2,600.
+3. Review the PR diff and preserve the production backup/release discipline before any merge.
+4. Do not merge PR #31 or change production deployments until the validation is green and the production backup is verified.
+
+### PR #31 — Cash Book opening-balance race fix (validation pending)
+- URL: https://github.com/Ketan612/payables-tracker/pull/31
+- Branch: `fix/cashbook-opening-balance-race`
+- Head commit: `253650ed3ce72b3a77538fc0a4c75d95458c0df7`
+- Root cause confirmed from Playwright trace for run 44936121486: an asynchronous Cash Book `draw()` refresh could complete after the opening-balance editor was opened and overwrite the user's typed value. The trace shows the upsert request sent `opening_balance: 0` even though the test had filled 2600; Supabase returned HTTP 201, so the zero was saved.
+- Fix: do not rewrite the opening-balance input while the editor is visible; await the post-save redraw and surface refresh errors.
+- Regression assertion: full authenticated E2E journey now checks that the Supabase upsert request payload contains `opening_balance: 2600` before checking the displayed balance.
+- PR is draft and not merged. No production code or deployment changed.
+- PR validation run 44946108610 was started; parser tests passed, browser E2E was still running at the last check. Updating this handoff file on the PR branch will trigger a fresh PR validation run.
 
 ## Latest verified PRs and release evidence
 
@@ -122,4 +129,5 @@
 - **2026-11-21:** Created this handoff tracker from the PR21 merged-chat summary.
 - **2026-11-22:** Located PR25; inspected parser diff and tests.
 - **2026-11-22 (status refresh):** Verified PR25 merged to test-env; found initial browser E2E failure and subsequent successful test-env run 44885131579. Verified PR28 promoted parser fix to main with 5/5 parser and 14/14 browser E2E. Verified PR29 and PR30 merged; PR29 main E2E and PR30 feature E2E passed. Found latest main run 44936121486 fails at browser E2E while parser tests pass. Next action is inspect the Playwright artifact and identify the exact failing test.
+- **2026-11-22 (failure investigation and fix):** Inspected run 44936121486 logs, screenshot and trace. Identified the sole failing test as the full authenticated E2E journey at `tests/e2e/app-session.spec.ts:102`; Supabase received an opening-balance upsert payload of 0 instead of 2600 because a pending async redraw overwrote the open editor. Implemented guard + awaited redraw in `cashbook.js`, added a request-payload regression assertion, and opened draft PR31. Validation run 44946108610 had parser tests pass; browser tests were still running at the last check. No merge or production deployment performed.
 - **Standing instruction:** Update this same file at the end of every Payables Tracker project chat/session, including status-only conversations.
