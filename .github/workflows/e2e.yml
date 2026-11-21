@@ -26,8 +26,8 @@ jobs:
         with:
           node-version: 22
       - run: npm install
-      - name: Run SMS parser regression tests
-        run: node --test tests/sms-parser.test.mjs
+      - name: Run SMS parser and event traceability regression tests
+        run: node --test tests/sms-parser.test.mjs tests/sms-event-traceability.test.mjs
       - run: npx playwright install chromium
       - name: Start application from this commit
         run: |
