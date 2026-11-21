@@ -254,3 +254,13 @@ These issues contain scope and acceptance criteria. Use them as the active struc
 - The available GitHub connection exposes workflow inspection and job rerun actions, but no workflow-dispatch action. Therefore a new manual `workflow_dispatch` run could not be submitted from this session. Do not claim a test was started or passed.
 - Next action: use GitHub Actions → Payables Tracker E2E → Run workflow, select branch `fix/cashbook-opening-balance-race`, and run the full suite. Then inspect the browser result and uploaded Playwright artifact. Keep PR31 unmerged until all checks pass.
 - Main workflow-control commit is configuration-only; no application code, Supabase schema, or production data was changed.
+
+
+## Manual PR31 workflow check-in — 2026-11-22
+
+- User reported that the manual workflow was started for PR31.
+- PR31 head re-verified as `1da2d419043b977ca11cd95a5ca6e27fbd531ed0`; PR remains open/draft/unmerged.
+- The GitHub connection's commit-workflow lookup (which only returns pull-request-triggered runs) returned no run for this head. Combined commit status currently shows Vercel success only; no GitHub Actions result/run ID is exposed yet.
+- Therefore execution is **user-reported started, but not independently visible/verified yet**. No test outcome is claimed.
+- Await the Actions run ID or run URL to inspect jobs, logs and the full Playwright artifact. Validate parser tests, complete browser suite, opening-balance upsert payload = 2600, persisted ₹2,600 display, and video/screenshots/trace.
+- Keep PR31 unmerged until the full run completes successfully.
