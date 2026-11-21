@@ -341,3 +341,61 @@ begin
   execute v_new;
 end;
 $migration$;
+
+
+-- Keep the Cash Book in sync when an existing cash-paid expense is edited.
+create or replace function public.sync_cash_expense_movement_on_update()
+returns trigger
+language plpgsql
+security definer
+set search_path to 'public', 'pg_temp'
+as $function$
+declare
+  v_cash_account_id uuid;
+begin
+  if new.transaction_kind not in ('expense', 'shared_expense') then
+    return new;
+  end if;
+
+  if new.payment_method = 'cash' and new.status <> 'cancelled' then
+    v_cash_account_id := public.ensure_physical_cash_account(new.user_id);
+
+    update public.cash_movements
+    set account_id = v_cash_account_id,
+        movement_date = new.transaction_date,
+        direction = 'out',
+        amount = new.amount,
+        movement_type = 'other',
+        description = 'Expense - ' || new.title
+    where user_id = new.user_id
+      and transaction_id = new.id
+      and movement_type = 'other'
+      and description like 'Expense - %';
+
+    if not found then
+      insert into public.cash_movements (
+        user_id, account_id, movement_date, direction, amount,
+        movement_type, transaction_id, description
+      ) values (
+        new.user_id, v_cash_account_id, new.transaction_date, 'out',
+        new.amount, 'other', new.id, 'Expense - ' || new.title
+      );
+    end if;
+  else
+    delete from public.cash_movements
+    where user_id = new.user_id
+      and transaction_id = new.id
+      and movement_type = 'other'
+      and description like 'Expense - %';
+  end if;
+
+  return new;
+end;
+$function$;
+
+drop trigger if exists trg_sync_cash_expense_movement_on_update on public.transactions;
+create trigger trg_sync_cash_expense_movement_on_update
+after update of payment_method, payment_account_id, amount, transaction_date, title, status
+on public.transactions
+for each row
+execute function public.sync_cash_expense_movement_on_update();
