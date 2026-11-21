@@ -1,7 +1,7 @@
 name: Payables Tracker E2E
 on:
-  pull_request:
-    branches: [main, test-env]
+  push:
+    branches-ignore: [main]
   workflow_dispatch:
 concurrency:
   group: payables-e2e-shared-test-account
