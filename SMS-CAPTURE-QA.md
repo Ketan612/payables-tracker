@@ -124,3 +124,20 @@ Never mark the module ready from static UI checks or a Vercel `READY` deployment
 - One historical `cashbook_write_failed` event (2026-11-19) reported `permission denied for table cash_movements`. Current service_role INSERT/SELECT/UPDATE grants were present during the audit; no later write-failure event was found.
 - Event traceability gap identified: posted, needs_review, and cashbook_write_failed events did not consistently include the originating inbox row ID. The source-link regression fix is being validated on a feature branch; it is not considered released until the full branch workflow passes and the Edge Function deployment is separately verified.
 - Live iPhone Shortcut forwarding, signed-in review decisions, non-admin RLS, and concurrent same-reference approval remain pending live validation.
+
+## Event-to-inbox traceability acceptance matrix — 2026-11-22
+
+Run these cases only against a controlled test project/account. For each captured event, assert that `sms_capture_events.source_record_id` resolves to the intended `sms_capture_inbox.id`; do not use production financial records for destructive or retry tests.
+
+| Scenario | Expected event outcome | Expected source record |
+|---|---|---|
+| Successful automatic Cash Book posting | `posted` | Newly inserted inbox row |
+| Parser/account ambiguity or missing required data | `needs_review` | Newly inserted review inbox row |
+| Cash Book movement insert fails | `cashbook_write_failed` | Newly inserted review inbox row |
+| Existing active inbox reference | `duplicate` | Newly inserted duplicate inbox row |
+| Exact same SMS arrives again and duplicate review row is inserted | `duplicate` | Newly inserted duplicate review row |
+| Exact same SMS arrives again but duplicate review insert fails | `duplicate` | Existing original inbox row |
+| Inbox uniqueness collision (23505) | `duplicate` | Existing matching inbox row when it can be resolved |
+| Cash Book unique-reference collision (23505) | `duplicate` | Newly inserted inbox row retained as duplicate |
+
+Also assert that replaying the same reference never creates a second Cash Book movement. Record the request ID, event ID, inbox ID, movement count before/after, and test-project identifier for each case. A parser/browser E2E pass alone does not satisfy this Edge Function integration matrix.
