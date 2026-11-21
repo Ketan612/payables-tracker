@@ -379,6 +379,16 @@ test("complete authenticated E2E journey across all implemented modules",async({
  const duplicateResponseText=await duplicateCapture.text();
  expect(duplicateCapture.ok()||duplicateCapture.status()===409,"Duplicate SMS capture request failed: "+duplicateCapture.status()+" "+duplicateResponseText).toBeTruthy();
  expect(duplicateResponseText.toLowerCase()).toContain("duplicate");
+ // Verify the duplicate is visible in the user's SMS Review Inbox, not only
+ // returned by the capture endpoint and blocked from a second Cash Book post.
+ await page.goto("/sms-capture.html");
+ await expect(page.locator("#signedInEmail")).toContainText(email);
+ await expect(page.locator("#inboxSummary")).toContainText("Duplicates:");
+ const duplicateInboxItem=page.locator("#inbox article.item").filter({hasText:reference});
+ await expect(duplicateInboxItem,"Duplicate SMS should appear in the review inbox").toBeVisible({timeout:20000});
+ await expect(duplicateInboxItem).toContainText("Duplicate");
+ await expect(duplicateInboxItem).toContainText("78.00");
+ await expect(duplicateInboxItem).toContainText("Duplicate detected.");
  await page.goto("/cashbook.html");
  await page.locator("#accountSelect").selectOption({label:cashName});
  await expect(page.locator("#transactions .ledger-table tbody tr").filter({hasText:"E2E Store"})).toHaveCount(1);
