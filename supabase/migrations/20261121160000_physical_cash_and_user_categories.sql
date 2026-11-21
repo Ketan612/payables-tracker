@@ -334,7 +334,7 @@ begin
   v_new := replace(v_def,
     '    -- Bank account is mandatory.',
     '    IF p_payment_method = ''cash'' THEN' || chr(10) ||
-    '        p_account_id := coalesce(p_account_id, public.ensure_physical_cash_account(v_user_id));' || chr(10) ||
+    '        p_account_id := public.ensure_physical_cash_account(v_user_id);' || chr(10) ||
     '    END IF;' || chr(10) || chr(10) ||
     '    -- Bank account is mandatory.');
   if v_new = v_def then raise exception 'Could not patch record_person_settlement'; end if;
