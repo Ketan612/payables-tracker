@@ -1,4 +1,4 @@
-const CACHE_NAME = "payables-shell-v7";
+const CACHE_NAME = "payables-shell-v8";
 const SHELL_ASSETS = [
   "./offline.html",
   "./manifest.json",
@@ -12,7 +12,8 @@ const SHELL_ASSETS = [
   "./sms-capture.css",
   "./sms-capture.js",
   "./sms-admin.js",
-  "./pwa.js"
+  "./pwa.js",
+  "./session-policy.js"
 ];
 
 self.addEventListener("message", (event) => {

@@ -159,3 +159,13 @@ test("browser and installed PWA use separate auth persistence and inactivity pol
   expect(appPolicy.idleTimeoutMs).toBe(15 * 24 * 60 * 60 * 1000);
   await appPage.close();
 });
+
+test("installed app session policy is included in the offline shell cache", async ({ page }) => {
+  await page.goto("/");
+  const cached = await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+    const response = await caches.match(new URL("./session-policy.js", location.href).toString());
+    return !!response;
+  });
+  expect(cached).toBe(true);
+});
