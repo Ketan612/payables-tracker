@@ -32,6 +32,8 @@ test("users can add expense categories and cash expenses post to Physical Cash",
   const description=marker+" Cash Expense";
   const today=new Date().toISOString().slice(0,10);
 
+  await page.locator("#add").click();
+  await expect(page.locator("#dlg")).toBeVisible();
   await expect(page.locator("#cat option").filter({hasText:"Other"})).toHaveCount(1);
   await page.locator("#manageCategories").click();
   await expect(page.locator("#categoriesDlg")).toBeVisible();
