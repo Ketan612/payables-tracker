@@ -49,7 +49,7 @@ test("users can add expense categories and cash expenses post to Physical Cash",
   // The category must still be available after a fresh application load.
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-dashboard-ready","true",{timeout:30000});
-  await expect(page.locator("#cat option").filter({label:categoryName})).toHaveCount(1);
+  await expect(page.locator("#cat option").filter({hasText:categoryName})).toHaveCount(1);
 
   // A Cash payment automatically uses the system-managed Physical Cash account.
   await page.locator("#add").click();
@@ -70,12 +70,13 @@ test("users can add expense categories and cash expenses post to Physical Cash",
   const expenseBody=await expenseResponse.text();
   expect(expenseResponse.ok(),"Cash expense save failed: "+expenseResponse.status()+" "+expenseBody).toBeTruthy();
   await expect(page.locator("#dlg")).not.toBeVisible();
+  await page.locator("#statusF").selectOption("all");
   await expect(page.locator("#list")).toContainText(description);
 
   // Verify the transaction created a debit against the dedicated Cash Book account.
   await page.goto("/cashbook.html");
   await expect(page.locator("#signedInEmail")).toContainText(new RegExp(email,"i"));
-  await expect(page.locator("#accountSelect option").filter({label:"Physical Cash"})).toHaveCount(1);
+  await expect(page.locator("#accountSelect option").filter({hasText:"Physical Cash"})).toHaveCount(1);
   await page.locator("#accountSelect").selectOption({label:"Physical Cash"});
   const cashRow=page.locator("#transactions .ledger-table tbody tr").filter({hasText:description});
   await expect(cashRow).toHaveCount(1);
