@@ -92,9 +92,9 @@ test("RLS isolates financial and profile data between two authenticated users",a
   expect(ownReadRows).toHaveLength(1);
 
   // Admin integration telemetry must remain invisible to an authenticated non-admin.
-  const adminEvents=await rest(request,secondaryToken,"sms_capture_events","GET","select=id&limit=1");
+  const adminEvents=await rest(request,ownerToken,"sms_capture_events","GET","select=id&limit=1");
   const adminEventRows=await expectOk(adminEvents,"Non-admin SMS event visibility check");
-  expect(adminEventRows,"Non-admin must not read administrator integration events").toEqual([]);
+  expect(adminEventRows,"Non-admin test account must not read administrator integration events").toEqual([]);
  }finally{
   if(ownerToken){
    for(const item of created){
