@@ -72,7 +72,8 @@ test("event traceability coverage includes every required capture outcome", () =
   }
 });
 
-\ntest("duplicate reconciliation only considers messages still awaiting review", async () => {
+
+test("duplicate reconciliation only considers messages still awaiting review", async () => {
   const app = await readFile(new URL("../sms-capture.js", import.meta.url), "utf8");
   assert.match(
     app,
