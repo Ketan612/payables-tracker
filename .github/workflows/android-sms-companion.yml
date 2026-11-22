@@ -53,31 +53,47 @@ jobs:
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           set -euo pipefail
-          APK="android-sms-companion/app/build/outputs/apk/release/app-release-unsigned.apk"
-          if [ ! -f "$APK" ]; then
-            APK="android-sms-companion/app/build/outputs/apk/release/app-release.apk"
-          fi
+          APK="$(find android-sms-companion/app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' ! -name '*unsigned*' -print -quit)"
           AAB="android-sms-companion/app/build/outputs/bundle/release/app-release.aab"
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
-          test -x "$APKSIGNER"
-          test -f "$APK"
-          test -f "$AAB"
-          KEYSTORE_FP="$(keytool -list -v -keystore "$KEYSTORE_PATH" -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD" | awk '/SHA256:/{print $2; exit}' | tr -d ':')"
-          APK_FP="$("$APKSIGNER" verify --print-certs "$APK" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print $2; exit}' | tr -d ':')"
-          test -n "$KEYSTORE_FP"
-          test -n "$APK_FP"
+          if [ -z "$APK" ] || [ ! -f "$APK" ]; then
+            echo "No signed release APK found."
+            find android-sms-companion/app/build/outputs/apk/release -maxdepth 1 -type f -printf '%f\n' || true
+            exit 1
+          fi
+          if [ ! -f "$AAB" ]; then
+            echo "Release App Bundle not found."
+            exit 1
+          fi
+          KEYSTORE_RAW="$(keytool -list -v -keystore "$KEYSTORE_PATH" -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD" | sed -n 's/^[[:space:]]*SHA256: //p' | head -n 1)"
+          APK_RAW="$("$APKSIGNER" verify --print-certs "$APK" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -n 1)"
+          KEYSTORE_FP="$(printf '%s' "$KEYSTORE_RAW" | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')"
+          APK_FP="$(printf '%s' "$APK_RAW" | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')"
+          if [ -z "$KEYSTORE_FP" ] || [ -z "$APK_FP" ]; then
+            echo "Could not extract the keystore or APK SHA-256 fingerprint."
+            echo "Keystore fingerprint extracted: $([ -n "$KEYSTORE_FP" ] && echo yes || echo no)"
+            echo "APK fingerprint extracted: $([ -n "$APK_FP" ] && echo yes || echo no)"
+            exit 1
+          fi
+          echo "Keystore certificate SHA-256: $KEYSTORE_FP"
+          echo "APK certificate SHA-256: $APK_FP"
           if [ "$KEYSTORE_FP" != "$APK_FP" ]; then
             echo "APK signer fingerprint does not match the configured keystore certificate."
             exit 1
           fi
           jarsigner -verify "$AAB" >/dev/null
-          AAB_FP="$(keytool -printcert -jarfile "$AAB" | awk '/SHA256:/{print $2; exit}' | tr -d ':')"
+          AAB_RAW="$(keytool -printcert -jarfile "$AAB" | sed -n 's/^[[:space:]]*SHA256: //p' | head -n 1)"
+          AAB_FP="$(printf '%s' "$AAB_RAW" | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')"
+          if [ -z "$AAB_FP" ]; then
+            echo "Could not extract the AAB signer SHA-256 fingerprint."
+            exit 1
+          fi
+          echo "AAB certificate SHA-256: $AAB_FP"
           if [ "$KEYSTORE_FP" != "$AAB_FP" ]; then
             echo "AAB signer fingerprint does not match the configured keystore certificate."
             exit 1
           fi
-          echo "APK and AAB signatures verified."
-          echo "Signing certificate SHA-256: $KEYSTORE_FP"
+          echo "APK and AAB signatures verified against the configured keystore."
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
