@@ -1,7 +1,9 @@
 package com.payablestracker.sms
 import android.Manifest
 import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
 import android.view.Gravity
@@ -51,8 +53,26 @@ class MainActivity : Activity() {
                 }
             }
         })
+        root.addView(TextView(this).apply {
+            text = "SMS DATA DISCLOSURE"
+            textSize = 14f
+            setPadding(0, 20, 0, 6)
+        })
+        root.addView(TextView(this).apply {
+            text = "When you opt in and grant SMS access, this app receives newly arriving SMS messages (not your existing inbox or history). It locally filters for bank/UPI credit and debit transaction alerts and attempts to exclude OTP/authentication and other non-transaction messages. Matching SMS text and sender address are sent over HTTPS to your Payables Tracker account for transaction capture, duplicate detection, account mapping, and Cash Book/review processing. SMS data is not used for advertising or sold. Filtering is best-effort; review captured entries. You can stop future forwarding by turning off consent."
+            textSize = 13f
+            setPadding(0, 0, 0, 8)
+        })
+        root.addView(TextView(this).apply {
+            text = "Read the Android SMS Companion Privacy Notice"
+            textSize = 14f
+            setPadding(0, 0, 0, 10)
+            setOnClickListener {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PRIVACY_URL)))
+            }
+        })
         consentToggle = CheckBox(this).apply {
-            text = "I agree: monitor incoming bank/UPI credit and debit alerts only. Matching SMS text and sender will be sent over HTTPS to my Payables Tracker account. OTP and non-transaction messages are filtered out. I can stop forwarding by unchecking this box."
+            text = "I have read the disclosure and agree to forward matching new transaction SMS to my Payables Tracker account."
             textSize = 13f
             isChecked = TokenStore.hasConsent(this@MainActivity)
             setOnCheckedChangeListener { _, accepted ->
@@ -67,7 +87,7 @@ class MainActivity : Activity() {
                 if (TokenStore.get(this@MainActivity).isNullOrBlank()) {
                     status.text = "Save your Android token first."
                 } else if (!consentToggle.isChecked) {
-                    status.text = "Please review and accept the SMS forwarding disclosure first."
+                    status.text = "Please read and accept the SMS data disclosure first."
                 } else if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.RECEIVE_SMS)
                     != PackageManager.PERMISSION_GRANTED) {
                     ActivityCompat.requestPermissions(
@@ -92,7 +112,7 @@ class MainActivity : Activity() {
         status.text = when {
             !hasToken -> "Setup incomplete: enter and save your Android token."
             !consentToggle.isChecked -> "Forwarding is paused until you accept the disclosure."
-            !hasPermission -> "SMS permission is unavailable. RECEIVE_SMS is hard-restricted by Android; an APK installed outside an allowlisting installer may not be granted this permission."
+            !hasPermission -> "SMS permission is unavailable. Install through an approved distribution route that allows this restricted permission."
             else -> "Connected. Listening for incoming credit/debit transaction SMS."
         }
     }
@@ -102,5 +122,8 @@ class MainActivity : Activity() {
         if (requestCode == REQUEST_SMS) refreshStatus()
     }
 
-    companion object { private const val REQUEST_SMS = 4102 }
+    companion object {
+        private const val REQUEST_SMS = 4102
+        private const val PRIVACY_URL = "https://payables-tracker-ten.vercel.app/privacy-android-sms.html"
+    }
 }
