@@ -7,8 +7,11 @@ import java.net.URL
 
 class SmsForwardWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
-        val message = inputData.getString(KEY_MESSAGE) ?: return Result.failure()
-        val sender = inputData.getString(KEY_SENDER).orEmpty()
+        if (!TokenStore.hasConsent(applicationContext)) return Result.failure()
+        val encryptedMessage = inputData.getString(KEY_MESSAGE) ?: return Result.failure()
+        val encryptedSender = inputData.getString(KEY_SENDER).orEmpty()
+        val message = runCatching { TokenStore.decryptQueuedValue(encryptedMessage) }.getOrElse { return Result.failure() }
+        val sender = runCatching { TokenStore.decryptQueuedValue(encryptedSender) }.getOrDefault("")
         // Never put the long-lived capture token in WorkManager's persisted input database.
         val token = TokenStore.get(applicationContext) ?: return Result.failure()
         return try {
