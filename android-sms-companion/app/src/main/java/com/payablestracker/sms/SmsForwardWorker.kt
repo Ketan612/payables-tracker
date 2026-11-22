@@ -25,7 +25,12 @@ class SmsForwardWorker(context: Context, params: WorkerParameters) : CoroutineWo
             val payload = """{"message":${jsonString(message)},"sender":${jsonString(sender)}}"""
             connection.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
             val status = connection.responseCode
+            val responseStream = if (status in 200..299) connection.inputStream else connection.errorStream
+            responseStream?.use { it.readBytes() }
+            connection.disconnect()
             if (status in 200..299) Result.success()
+            else if (status == 401 || status == 403 || status in 400..499) Result.failure()
+            else Result.retry()
             else if (status == 401 || status == 403 || status in 400..499) Result.failure()
             else Result.retry()
         } catch (_: Exception) { Result.retry() }
