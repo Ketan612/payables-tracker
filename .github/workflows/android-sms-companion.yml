@@ -45,6 +45,39 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: gradle :app:assembleRelease :app:bundleRelease
+      - name: Verify release signatures and certificate fingerprint
+        if: env.HAS_RELEASE_SIGNING == 'true'
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/payables-tracker-release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          APK="android-sms-companion/app/build/outputs/apk/release/app-release-unsigned.apk"
+          if [ ! -f "$APK" ]; then
+            APK="android-sms-companion/app/build/outputs/apk/release/app-release.apk"
+          fi
+          AAB="android-sms-companion/app/build/outputs/bundle/release/app-release.aab"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
+          test -x "$APKSIGNER"
+          test -f "$APK"
+          test -f "$AAB"
+          KEYSTORE_FP="$(keytool -list -v -keystore "$KEYSTORE_PATH" -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD" | awk '/SHA256:/{print $2; exit}' | tr -d ':')"
+          APK_FP="$("$APKSIGNER" verify --print-certs "$APK" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print $2; exit}' | tr -d ':')"
+          test -n "$KEYSTORE_FP"
+          test -n "$APK_FP"
+          if [ "$KEYSTORE_FP" != "$APK_FP" ]; then
+            echo "APK signer fingerprint does not match the configured keystore certificate."
+            exit 1
+          fi
+          jarsigner -verify "$AAB" >/dev/null
+          AAB_FP="$(keytool -printcert -jarfile "$AAB" | awk '/SHA256:/{print $2; exit}' | tr -d ':')"
+          if [ "$KEYSTORE_FP" != "$AAB_FP" ]; then
+            echo "AAB signer fingerprint does not match the configured keystore certificate."
+            exit 1
+          fi
+          echo "APK and AAB signatures verified."
+          echo "Signing certificate SHA-256: $KEYSTORE_FP"
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
