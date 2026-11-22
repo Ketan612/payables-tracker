@@ -65,3 +65,5 @@ jobs:
       - name: Remove temporary signing material
         if: always()
         run: rm -f "$RUNNER_TEMP/payables-tracker-release.jks"
+
+# Signing secrets are read at step scope; release artifacts are emitted when all four are configured.
