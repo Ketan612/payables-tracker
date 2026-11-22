@@ -1,57 +1,32 @@
 name: Payables Tracker E2E
+
 on:
   push:
-    branches: [main]
+    branches: ["**"]
   pull_request:
     branches: [main]
   workflow_dispatch:
+
 concurrency:
   group: payables-e2e-${{ github.ref }}
   cancel-in-progress: true
+
 permissions:
   contents: read
+
 jobs:
-  browser-tests:
+  safe-regressions:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    env:
-      BASE_URL: http://127.0.0.1:4173
-      SUPABASE_URL: https://magxbczgrxeypryjborr.supabase.co
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
-      TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
-      TEST_USER_B_EMAIL: ${{ secrets.TEST_USER_B_EMAIL }}
-      TEST_USER_B_PASSWORD: ${{ secrets.TEST_USER_B_PASSWORD }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm install
-      - name: Run SMS parser and event traceability regression tests
+      - name: Run isolated parser and event traceability tests
         run: node --test tests/sms-parser.test.mjs tests/sms-event-traceability.test.mjs
-      - run: npx playwright install chromium
-      - name: Start application from this commit
-        run: |
-          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/payables-tracker-http.log 2>&1 &
-          echo $! > /tmp/payables-tracker-http.pid
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
-              echo "Local application is serving the checked-out commit."
-              exit 0
-            fi
-            sleep 1
-          done
-          cat /tmp/payables-tracker-http.log
-          exit 1
-      - name: Run browser tests against checked-out application
-        run: npx playwright test
-      - name: Upload full E2E recording, screenshots and report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: |
-            playwright-report/
-            test-results/
-          retention-days: 14
+
+# Browser tests are intentionally not run in CI until the frontend can target a
+# dedicated isolated Supabase project. Current app bundles point at production
+# and the browser suite creates, edits, settles and captures records.
