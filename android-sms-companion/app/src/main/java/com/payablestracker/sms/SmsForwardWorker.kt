@@ -31,8 +31,6 @@ class SmsForwardWorker(context: Context, params: WorkerParameters) : CoroutineWo
             if (status in 200..299) Result.success()
             else if (status == 401 || status == 403 || status in 400..499) Result.failure()
             else Result.retry()
-            else if (status == 401 || status == 403 || status in 400..499) Result.failure()
-            else Result.retry()
         } catch (_: Exception) { Result.retry() }
     }
     private fun jsonString(value: String): String = buildString {
