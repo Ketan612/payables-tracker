@@ -1,6 +1,11 @@
 name: Android Play Internal Testing Package
 on:
   workflow_dispatch:
+  push:
+    branches: [prep/google-play-internal-testing]
+    paths:
+      - ".github/workflows/android-play-internal-testing.yml"
+      - "android-sms-companion/**"
 permissions:
   contents: read
 jobs:
