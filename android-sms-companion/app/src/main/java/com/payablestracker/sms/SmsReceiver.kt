@@ -21,7 +21,7 @@ class SmsReceiver : BroadcastReceiver() {
             .groupBy { it.originatingAddress.orEmpty() to it.timestampMillis }
         grouped.forEach { (identity, segments) ->
             val sender = identity.first
-            val body = segments.sortedBy { it.indexOnIcc }.joinToString("") { it.messageBody.orEmpty() }.trim()
+            val body = segments.joinToString("") { it.messageBody.orEmpty() }.trim()
             if (body.length !in 5..4000 || !isTransactionAlert(body)) return@forEach
 
             val digest = MessageDigest.getInstance("SHA-256")
