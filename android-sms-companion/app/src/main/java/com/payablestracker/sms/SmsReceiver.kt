@@ -27,8 +27,8 @@ class SmsReceiver : BroadcastReceiver() {
             val digest = MessageDigest.getInstance("SHA-256")
                 .digest((sender + "|" + body + "|" + identity.second).toByteArray())
                 .joinToString("") { "%02x".format(it) }
-            val input = Data.Builder().putString(SmsForwardWorker.KEY_MESSAGE, body)
-                .putString(SmsForwardWorker.KEY_SENDER, sender).build()
+            val input = Data.Builder().putString(SmsForwardWorker.KEY_MESSAGE, TokenStore.encryptQueuedValue(body))
+                .putString(SmsForwardWorker.KEY_SENDER, TokenStore.encryptQueuedValue(sender)).build()
             val request = OneTimeWorkRequestBuilder<SmsForwardWorker>()
                 .setInputData(input)
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
