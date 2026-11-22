@@ -9,7 +9,8 @@ class SmsForwardWorker(context: Context, params: WorkerParameters) : CoroutineWo
     override suspend fun doWork(): Result {
         val message = inputData.getString(KEY_MESSAGE) ?: return Result.failure()
         val sender = inputData.getString(KEY_SENDER).orEmpty()
-        val token = inputData.getString(KEY_TOKEN) ?: return Result.failure()
+        // Never put the long-lived capture token in WorkManager's persisted input database.
+        val token = TokenStore.get(applicationContext) ?: return Result.failure()
         return try {
             val endpoint = BuildConfig.SUPABASE_URL.trimEnd('/') + "/functions/v1/sms-capture/capture"
             val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
@@ -43,6 +44,5 @@ class SmsForwardWorker(context: Context, params: WorkerParameters) : CoroutineWo
     companion object {
         const val KEY_MESSAGE = "sms_message"
         const val KEY_SENDER = "sms_sender"
-        const val KEY_TOKEN = "capture_token"
     }
 }
