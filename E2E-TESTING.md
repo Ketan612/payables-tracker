@@ -1,27 +1,34 @@
 # Payables Tracker browser testing
-Playwright end-to-end tests run against the deployed application using a dedicated Supabase test user, never the production owner's account.
 
-## Required GitHub Actions secrets
-- `SUPABASE_SERVICE_ROLE_KEY`: Supabase service-role key. Used only by the CI provisioning script; never commit or expose it in frontend code.
-- `TEST_USER_EMAIL`: Dedicated test-only email address.
-- `TEST_USER_PASSWORD`: Strong password for that test account.
+## Safety boundary
 
-The workflow creates the test user if absent. If it exists, it resets that dedicated test user's password. Use an account that is never used for real financial records.
+The browser suite under `tests/e2e` performs real Supabase writes: it creates accounts, cards, people, expenses, payables, settlements, SMS tokens and inbox events. The frontend currently has the production Supabase URL and publishable key embedded in its JavaScript bundles.
 
-## Run locally
+**Do not run the browser suite against production.** CI currently runs only backend-independent parser and event-traceability regression tests. The browser suite is retained as test code but is intentionally excluded from GitHub Actions until the app supports runtime Supabase URL/key injection and a dedicated isolated test project is configured.
+
+Do not use a real personal finance account as an E2E user. Do not point browser tests at the production Supabase project, even if a separate test login is used.
+
+## Re-enabling browser E2E safely
+
+Before enabling browser tests:
+
+1. Add runtime Supabase configuration (URL, publishable key and auth storage namespace) consumed consistently by `app.js`, `cashbook.js`, `sms-capture.js`, `sms-admin.js` and every other Supabase client.
+2. Provision a separate Supabase test project with schema/migrations matching the app. It must be isolated from production and contain no real financial records.
+3. Configure CI-only test project URL/key and dedicated test users as repository secrets.
+4. Ensure all test-created records, SMS tokens, mappings, cash movements and settlement records are cleaned in a `finally` block, and assert cleanup succeeded.
+5. Add a Person Ledger browser test covering opening the person detail, transaction scrolling, totals, mobile layout and reopening/closing the shared detail dialog.
+6. Enable the browser job only after a run against the isolated backend passes and the test database is verified clean afterward.
+
+## Current safe CI coverage
+
+GitHub Actions runs:
+
 ```bash
-npm install
-npx playwright install chromium
-TEST_USER_EMAIL=... TEST_USER_PASSWORD=... BASE_URL=https://payables-tracker-ten.vercel.app npx playwright test
+node --test tests/sms-parser.test.mjs tests/sms-event-traceability.test.mjs
 ```
 
-## Current coverage
-- Login and authenticated navigation across Dashboard, Cash Book and SMS Capture.
-- Session persistence after direct navigation and refresh.
-- SMS reminder preference control loads for the authenticated user.
-- Browser JavaScript errors on Cash Book and SMS Capture.
-- Mobile viewport overflow check.
+The Playwright tests remain available for development against a dedicated test backend only. They must not be run locally against production either.
 
-Tests intentionally do not add, approve, reject or delete financial records. Add mutation tests only with explicit fixtures and cleanup scoped to the dedicated test user.
+## Migration history
 
-GitHub Actions runs on pushes, pull requests, manual dispatch and daily at 08:00 IST. HTML reports, traces, screenshots and videos are uploaded as a 14-day artifact.
+The connected production database reports 22 applied migrations. The repository currently contains only 3 migration SQL files. Do not run `supabase db push`, reset, repair migration history, or mark migrations applied until the missing SQL files have been recovered and compared with the live schema. Reconstructing a migration ledger from names alone is unsafe.
