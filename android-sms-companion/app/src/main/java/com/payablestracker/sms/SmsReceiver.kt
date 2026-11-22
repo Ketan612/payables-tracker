@@ -14,7 +14,7 @@ import java.security.MessageDigest
 class SmsReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
-        if (TokenStore.get(context).isNullOrBlank()) return
+        if (TokenStore.get(context).isNullOrBlank() || !TokenStore.hasConsent(context)) return
 
         // A long SMS can arrive as multiple PDUs. Reassemble segments before forwarding.
         val grouped = Telephony.Sms.Intents.getMessagesFromIntent(intent)
