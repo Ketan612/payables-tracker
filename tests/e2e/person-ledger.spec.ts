@@ -60,9 +60,7 @@ test("Person Ledger opens, shows aligned totals, scrolls independently and reset
   expect(dimensions.dialogRight).toBeLessThanOrEqual(dimensions.viewportWidth+1);
   expect(["auto","scroll"]).toContain(dimensions.wrapOverflowY);
 
-  await dialog.locator("button[aria-label='Close'],button[data-close],.dialog-close").first().click().catch(async()=>{
-    await page.keyboard.press("Escape");
-  });
+  await page.locator("#closeBalanceDetail").click();
   await expect(dialog).not.toBeVisible();
   await expect(dialog).not.toHaveClass(/person-ledger-open/);
 });
