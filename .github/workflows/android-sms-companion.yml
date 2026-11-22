@@ -1,0 +1,116 @@
+name: Android SMS Companion
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "android-sms-companion/**"
+      - ".github/workflows/android-sms-companion.yml"
+  push:
+    branches: [feature/android-sms-bridge]
+    paths:
+      - "android-sms-companion/**"
+      - ".github/workflows/android-sms-companion.yml"
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      HAS_RELEASE_SIGNING: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Run notification transaction-filter unit tests
+        working-directory: android-sms-companion
+        run: gradle :app:testDebugUnitTest
+      - name: Build debug APK
+        working-directory: android-sms-companion
+        run: gradle :app:assembleDebug
+      - name: Decode release keystore
+        if: env.HAS_RELEASE_SIGNING == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/payables-tracker-release.jks"
+      - name: Build signed release APK and App Bundle
+        if: env.HAS_RELEASE_SIGNING == 'true'
+        working-directory: android-sms-companion
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/payables-tracker-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: gradle :app:assembleRelease :app:bundleRelease
+      - name: Verify release signatures and certificate fingerprint
+        if: env.HAS_RELEASE_SIGNING == 'true'
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/payables-tracker-release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          APK_DIR="android-sms-companion/app/build/outputs/apk/release"
+          AAB="android-sms-companion/app/build/outputs/bundle/release/app-release.aab"
+          echo "Release APK files:"
+          find "$APK_DIR" -maxdepth 1 -type f -name '*.apk' -printf '%p\n'
+          APK="$(find "$APK_DIR" -maxdepth 1 -type f -name '*.apk' -print -quit)"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
+          if [ -z "$APK" ] || [ ! -f "$APK" ] || [ ! -f "$AAB" ]; then
+            echo "Expected release APK/AAB output is missing."
+            exit 1
+          fi
+          KEYSTORE_RAW="$(keytool -list -v -keystore "$KEYSTORE_PATH" -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD" | sed -n 's/^[[:space:]]*SHA256: //p' | head -n 1)"
+          APK_VERIFY_OUTPUT="$("$APKSIGNER" verify --print-certs "$APK" 2>&1)"
+          echo "APK signature verification output:"
+          printf '%s\n' "$APK_VERIFY_OUTPUT"
+          APK_RAW="$(printf '%s\n' "$APK_VERIFY_OUTPUT" | grep -i 'SHA-256 digest:' | head -n 1 | sed 's/.*SHA-256 digest:[[:space:]]*//I')"
+          KEYSTORE_FP="$(printf '%s' "$KEYSTORE_RAW" | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')"
+          APK_FP="$(printf '%s' "$APK_RAW" | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')"
+          if [ -z "$KEYSTORE_FP" ] || [ -z "$APK_FP" ]; then
+            echo "Unable to extract signing fingerprints."
+            exit 1
+          fi
+          echo "Keystore certificate SHA-256: $KEYSTORE_FP"
+          echo "APK certificate SHA-256: $APK_FP"
+          if [ "$KEYSTORE_FP" != "$APK_FP" ]; then
+            echo "APK signer fingerprint does not match the configured keystore certificate."
+            exit 1
+          fi
+          jarsigner -verify "$AAB" >/dev/null
+          AAB_RAW="$(keytool -printcert -jarfile "$AAB" | sed -n 's/^[[:space:]]*SHA256: //p' | head -n 1)"
+          AAB_FP="$(printf '%s' "$AAB_RAW" | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')"
+          if [ -z "$AAB_FP" ] || [ "$KEYSTORE_FP" != "$AAB_FP" ]; then
+            echo "AAB signer fingerprint is missing or does not match the configured keystore certificate."
+            exit 1
+          fi
+          echo "AAB certificate SHA-256: $AAB_FP"
+          echo "APK and AAB signatures verified against the configured keystore."
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: payables-sms-companion-debug
+          path: android-sms-companion/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload signed release artifacts
+        if: env.HAS_RELEASE_SIGNING == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: payables-sms-companion-release
+          path: |
+            android-sms-companion/app/build/outputs/apk/release/*.apk
+            android-sms-companion/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+          retention-days: 14
+      - name: Remove temporary signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/payables-tracker-release.jks"
+
+# Signing secrets are read at step scope; release artifacts are emitted when all four are configured.

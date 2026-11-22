@@ -93,12 +93,12 @@ test("SMS review frontend invalidates stale service-worker and script caches", a
   const serviceWorker = await readFile(new URL("../sw.js", import.meta.url), "utf8");
 
   assert.ok(
-    html.includes("sms-capture.js?v=sms-review-reject-fix-20261122"),
+    html.includes("sms-capture.js?v=android-companion-20261122"),
     "SMS Capture page must request the versioned review script",
   );
   assert.match(
     serviceWorker,
-    /const CACHE_NAME = "payables-shell-v9-sms-review-fix";/,
+    /const CACHE_NAME = "payables-shell-v10-android-sms-companion";/,
     "service worker cache version must change so old shell caches are retired",
   );
 });
