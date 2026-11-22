@@ -1,0 +1,66 @@
+name: Android Play Internal Testing Package
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-play-internal:
+    runs-on: ubuntu-latest
+    env:
+      HAS_RELEASE_SIGNING: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: prep/google-play-internal-testing
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Require dedicated release signing credentials
+        run: |
+          if [ "$HAS_RELEASE_SIGNING" != "true" ]; then
+            echo "::error::Configure all four ANDROID_KEYSTORE_* GitHub Actions secrets before building a Play upload bundle."
+            exit 1
+          fi
+      - name: Run Android unit tests
+        working-directory: android-sms-companion
+        run: gradle :app:testDebugUnitTest
+      - name: Build signed Play upload bundle
+        working-directory: android-sms-companion
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/payables-tracker-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$ANDROID_KEYSTORE_PATH"
+          gradle :app:bundleRelease
+      - name: Verify bundle signature
+        working-directory: android-sms-companion
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/payables-tracker-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          AAB="app/build/outputs/bundle/release/app-release.aab"
+          test -s "$AAB"
+          jarsigner -verify "$AAB" >/dev/null
+          KEY_FP="$(keytool -list -v -keystore "$ANDROID_KEYSTORE_PATH" -alias "$ANDROID_KEY_ALIAS" -storepass "$ANDROID_KEYSTORE_PASSWORD" | sed -n 's/^[[:space:]]*SHA256: //p' | head -n 1 | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')"
+          AAB_FP="$(keytool -printcert -jarfile "$AAB" | sed -n 's/^[[:space:]]*SHA256: //p' | head -n 1 | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')"
+          test -n "$KEY_FP" && test "$KEY_FP" = "$AAB_FP"
+          echo "AAB signature verified against configured upload keystore."
+      - name: Upload Play internal-testing bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: payables-sms-companion-play-internal-aab
+          path: android-sms-companion/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 14
+      - name: Remove temporary signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/payables-tracker-release.jks"
