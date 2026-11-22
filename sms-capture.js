@@ -270,7 +270,7 @@ $("generateAndroidToken").onclick=async()=>{
   $("tokenValue").value=token;$("tokenBox").hidden=false;
   status.textContent="Android token created. Copy it now and paste it into the Android companion. It cannot be recovered later.";
   status.className="status success";
-  await loadTokens();
+  try{await loadTokens()}catch(refreshError){status.textContent="Android token was created and is shown below. Token list refresh failed: "+(refreshError?.message||String(refreshError));status.className="status success"}
  }catch(error){
   status.textContent="Android token generation failed: "+(error?.message||String(error));
   status.className="status error";
