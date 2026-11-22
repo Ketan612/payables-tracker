@@ -27,6 +27,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
+      - name: Run notification transaction-filter unit tests
+        working-directory: android-sms-companion
+        run: gradle :app:testDebugUnitTest
       - name: Build debug APK
         working-directory: android-sms-companion
         run: gradle :app:assembleDebug

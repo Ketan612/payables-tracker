@@ -1,52 +1,22 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="robots" content="index,follow">
-  <title>Payables Tracker Android SMS Companion — Privacy Notice</title>
-  <style>
-    body{font:16px/1.65 system-ui,-apple-system,Segoe UI,sans-serif;max-width:820px;margin:40px auto;padding:0 20px;color:#172033}
-    h1,h2{line-height:1.25} h1{font-size:2rem} h2{margin-top:2rem}
-    .note{background:#f3f6fa;padding:16px;border-radius:12px}
-  </style>
-</head>
-<body>
-  <main>
-    <h1>Payables Tracker Android SMS Companion — Privacy Notice</h1>
-    <p><strong>Effective date:</strong> 22 November 2026</p>
-    <p>This notice explains the Android SMS Companion's handling of SMS data. The companion is an optional component of Payables Tracker, a personal-finance and money-management application.</p>
-
-    <h2>What the companion accesses</h2>
-    <p>Only after you enter a device capture token, review the in-app disclosure, give affirmative consent, and grant Android SMS permission, the companion receives newly arriving SMS messages through Android's SMS_RECEIVED broadcast. It does not read or upload your existing SMS inbox or message history.</p>
-    <p>The companion locally checks new messages for transaction-like content, including amount and credit/debit transaction wording, and excludes messages identified as OTP or authentication messages. Filtering is a best-effort rule, not a guarantee that every message will be classified correctly.</p>
-
-    <h2>What is transmitted and why</h2>
-    <p>For a message that matches the local transaction filter, the companion sends the SMS text and originating sender address to the Payables Tracker SMS Capture service over HTTPS. This supports transaction capture, account mapping, duplicate detection, and the Cash Book or review workflow in your Payables Tracker account.</p>
-    <p>The companion does not send SMS messages, access contacts, or use SMS content for advertising. SMS content is not sold. The companion does not intentionally transmit OTP/authentication messages or non-matching messages.</p>
-
-    <h2>On-device security and control</h2>
-    <p>The device capture token and queued message payloads are encrypted using Android Keystore-backed encryption. Network requests use HTTPS. You can pause future forwarding by turning off consent in the companion. Revoking or rotating the device token from Payables Tracker also prevents that token from authorizing future capture requests.</p>
-    <p>Already transmitted transaction data may remain in your Payables Tracker account and its review or ledger records until you manage or delete it through the application and applicable account controls.</p>
-
-    <h2>Service providers and processing</h2>
-    <p>Transaction data is sent to the Supabase-hosted Payables Tracker backend configured for your account. The backend performs the authoritative parsing, duplicate checks, account mapping, and ledger/review processing. Data is processed to provide the feature you enabled and is not used for unrelated advertising or profiling.</p>
-
-    <h2>Your choices</h2>
-    <ul>
-      <li>Do not enable SMS forwarding if you do not want this processing.</li>
-      <li>Turn off the consent control to stop future forwarding.</li>
-      <li>Revoke or rotate the Android capture token in Payables Tracker to disable that device token.</li>
-      <li>Use the Payables Tracker account controls to manage transaction records already captured.</li>
-      <li>Uninstall the companion to stop its operation on the device.</li>
-    </ul>
-
-    <h2>Children</h2>
-    <p>The companion is designed for adults managing their own personal financial records and is not intended for children.</p>
-
-    <h2>Changes and contact</h2>
-    <p>This notice may be updated when the companion's data practices change. For privacy questions or account-data requests, use the support/contact channel provided within your Payables Tracker account or service.</p>
-    <p class="note">Important: SMS filtering is designed to limit capture to transaction alerts, but message formats vary by bank and payment provider. Review captured entries in Payables Tracker before relying on them for financial decisions.</p>
-  </main>
-</body>
-</html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="index,follow">
+<title>Payables Tracker Android Notification Companion — Privacy Notice</title>
+<style>body{font:16px/1.65 system-ui,-apple-system,Segoe UI,sans-serif;max-width:820px;margin:40px auto;padding:0 20px;color:#172033}h1,h2{line-height:1.25}h1{font-size:2rem}h2{margin-top:2rem}.note{background:#f3f6fa;padding:16px;border-radius:12px}</style></head>
+<body><main>
+<h1>Payables Tracker Android Notification Companion — Privacy Notice</h1>
+<p><strong>Effective date:</strong> 22 November 2026</p>
+<p>This notice explains the optional Android notification capture feature in Payables Tracker.</p>
+<h2>What the companion accesses</h2>
+<p>After you enter a device capture token, review the in-app disclosure, give affirmative consent, and enable Android Notification Access, Android can deliver notification content to this app. Notification Access is a broad operating-system capability. The companion's implementation checks the package name first and processes notification content only when it comes from Android's currently selected default SMS app. It does not request SMS inbox permission, read the SMS provider, or retrieve existing message history.</p>
+<p>The feature can capture only notifications that the default SMS app actually posts and makes available. It cannot capture messages whose notifications are disabled, suppressed, hidden, or omitted by that app. Notification formats vary. Local filtering looks for transaction amounts and credit/debit language and attempts to exclude OTP/authentication messages; this is best-effort, not a guarantee.</p>
+<h2>What is transmitted and why</h2>
+<p>For a notification matching the local transaction filter, the companion sends the visible notification text and conversation title over HTTPS to the Payables Tracker SMS Capture service. This supports transaction capture, account mapping, duplicate detection, and Cash Book/review processing. Notification content is not used for advertising or sold.</p>
+<h2>On-device security and control</h2>
+<p>The device capture token and queued notification payloads are encrypted using Android Keystore-backed encryption. Network requests use HTTPS. Turn off consent in the companion or revoke its Notification Access in Android settings to stop future capture. Revoking or rotating the device token also prevents that token from authorizing future requests.</p>
+<p>Already transmitted transaction data may remain in your Payables Tracker account until managed or deleted through the applicable account controls.</p>
+<h2>Service providers</h2>
+<p>Transaction data is sent to the Supabase-hosted Payables Tracker backend configured for your account. The backend performs authoritative parsing, duplicate checks, account mapping, and ledger/review processing.</p>
+<h2>Your choices</h2><ul><li>Do not enable the feature if you do not want this processing.</li><li>Turn off consent to stop future forwarding.</li><li>Revoke Notification Access in Android settings.</li><li>Revoke or rotate the device token in Payables Tracker.</li><li>Uninstall the companion to stop its operation.</li></ul>
+<h2>Changes and contact</h2><p>This notice may be updated when data practices change. For privacy questions or account-data requests, use the support/contact channel provided within your Payables Tracker account.</p>
+<p class="note">Review captured entries in Payables Tracker. Message formats and filtering behavior vary by bank, messaging app, and Android device.</p>
+</main></body></html>
