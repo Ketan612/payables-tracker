@@ -375,23 +375,8 @@ small {
    Balance Details Dialog
 ================================ */
 
-#balanceDetailDlg {
-  max-height: 85vh;
-  overflow-y: auto;
-}
-
 #balanceDetailSummary {
   margin: 12px 0 18px;
-}
-
-#balanceDetailTransactions {
-  display: grid;
-  gap: 8px;
-}
-
-#balanceDetailDlg h3 {
-  font-size: 14px;
-  margin: 18px 0 10px;
 }
 
 /* ==============================
@@ -518,155 +503,6 @@ small {
   background: #f1f4f8; color: #475569; font-size: 11px;
   font-weight: 600; cursor: pointer;
 }
-
-/* =========================================
-   PERSON LEDGER DIALOG
-========================================= */
-
-#balanceDetailDlg {
-  width: min(96vw, 1050px); max-width: 1050px; max-height: 90dvh;
-  padding: 22px; overflow: hidden; border: 1px solid #e2e8f0;
-  border-radius: 18px; background: #fff; color: #1e293b;
-  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2);
-}
-
-#balanceDetailDlg::backdrop { background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(3px); }
-
-#balanceDetailDlg > div {
-  display: flex; flex-direction: column; min-height: 0; max-height: calc(90dvh - 44px);
-}
-
-#balanceDetailTitle {
-  flex: 0 0 auto; margin: 0 0 16px; color: #172033;
-  font-size: 21px; font-weight: 750; overflow-wrap: anywhere;
-}
-
-.person-ledger-summary {
-  display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between;
-  gap: 20px; margin: 0 0 18px; padding: 18px 20px;
-  border: 1px solid #e2e8f0; border-radius: 14px; background: #f8fafc;
-}
-
-.person-ledger-summary > div:first-child { display: flex; min-width: 0; flex-direction: column; gap: 5px; }
-.person-ledger-summary small { color: #64748b; font-size: 11px; font-weight: 650; letter-spacing: 0.45px; }
-.person-ledger-summary > div:first-child > strong {
-  font-size: 27px; font-weight: 800; font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
-}
-.person-ledger-summary > div:first-child > span { color: #64748b; font-size: 12px; }
-.person-ledger-breakdown { display: flex; flex: 0 0 auto; gap: 28px; }
-.person-ledger-breakdown div { display: flex; flex-direction: column; gap: 6px; }
-.person-ledger-breakdown strong { color: #1e293b; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
-
-#balanceDetailTransactions {
-  min-height: 0; flex: 1 1 auto; overflow: auto; overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-}
-
-#balanceDetailDlg h3 { margin: 0 0 10px; color: #263449; font-size: 15px; }
-.person-ledger-table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.person-ledger-table { width: 100%; min-width: 720px; }
-
-.person-ledger-table-head, .person-ledger-table-row, .person-ledger-total {
-  display: grid;
-  grid-template-columns: minmax(190px, 2fr) minmax(105px, 1fr) minmax(105px, 1fr) minmax(115px, 1fr) minmax(130px, 1.2fr);
-  align-items: center; gap: 12px;
-}
-
-.person-ledger-table-head {
-  min-height: 42px; padding: 10px 12px; border-bottom: 1px solid #e2e8f0;
-  color: #64748b; font-size: 11px; font-weight: 700;
-}
-.person-ledger-table-row { min-height: 64px; padding: 11px 12px; border-bottom: 1px solid #edf1f5; }
-.person-ledger-transaction { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; gap: 5px; }
-.person-ledger-transaction strong { color: #263449; font-size: 12px; font-weight: 650; overflow-wrap: anywhere; }
-.ledger-reference { padding: 0; border: 0; background: transparent; color: #3766b5; font-size: 10px; font-weight: 600; cursor: pointer; }
-.person-ledger-amount { color: #334155; font-size: 12px; font-weight: 650; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.person-ledger-amount.pending { color: #dc2626; }
-.person-ledger-action { display: flex; justify-content: flex-start; }
-.person-ledger-action .ledger-action { min-height: 36px; padding: 8px 11px; border: 0; border-radius: 8px; font-size: 11px; font-weight: 700; white-space: nowrap; cursor: pointer; }
-.ledger-action.receivable { background: #edf4ff; color: #285cb5; }
-.ledger-action.payable { background: #edf7f0; color: #26764a; }
-.person-ledger-empty { padding: 24px 10px; color: #8791a1; font-size: 12px; text-align: center; }
-
-.person-ledger-total {
-  min-height: 58px; padding: 12px; border-top: 1px solid #e2e8f0;
-  background: #f1f5f9; color: #1e293b; font-size: 12px; font-variant-numeric: tabular-nums;
-}
-.person-ledger-total > strong { font-weight: 750; }
-.person-ledger-total-label { color: #475569; }
-
-#balanceDetailDlg .actions {
-  display: flex; flex: 0 0 auto; justify-content: flex-end; margin-top: 8px;
-  padding-top: 12px; background: #fff;
-}
-#closeBalanceDetail { min-width: 76px; min-height: 40px; border-radius: 9px; }
-
-@media (max-width: 650px) {
-  /* Keep long transaction names and their action button on separate rows. */
-  .balance-detail-header {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
-    gap: 10px;
-  }
-  .balance-detail-header h2 {
-    width: 100%;
-    max-width: 100%;
-    overflow-wrap: anywhere;
-  }
-  #balanceDetailHeaderActions {
-    width: 100%;
-    flex: 0 0 auto;
-  }
-  #balanceDetailHeaderActions button {
-    display: block;
-    width: 100%;
-    max-width: 100%;
-    white-space: normal;
-  }
-
-  #balanceDetailDlg {
-    width: calc(100vw - 20px); max-width: none; max-height: 88dvh;
-    margin: auto; padding: 16px; border-radius: 17px;
-  }
-  #balanceDetailDlg > div { max-height: calc(88dvh - 32px); }
-  #balanceDetailTitle { margin-bottom: 12px; font-size: 19px; }
-  .person-ledger-summary { align-items: flex-start; flex-direction: column; gap: 14px; margin-bottom: 14px; padding: 15px; }
-  .person-ledger-summary > div:first-child > strong { font-size: 25px; }
-  .person-ledger-breakdown {
-    display: grid; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0;
-  }
-  .person-ledger-breakdown strong { font-size: 14px; }
-  .person-ledger-table { display: flex; min-width: 0; flex-direction: column; gap: 9px; }
-  .person-ledger-table-head { display: none; }
-  .person-ledger-table-row {
-    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
-    padding: 13px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff;
-  }
-  .person-ledger-transaction { grid-column: 1 / -1; padding-bottom: 9px; border-bottom: 1px solid #edf1f5; }
-  .person-ledger-transaction strong { font-size: 13px; }
-  .person-ledger-amount { display: flex; min-width: 0; flex-direction: column; gap: 5px; white-space: normal; font-size: 13px; }
-  .person-ledger-amount::before, .person-ledger-action::before {
-    content: attr(data-label); color: #64748b; font-size: 10px; font-weight: 650;
-  }
-  .person-ledger-action { grid-column: 1 / -1; flex-direction: column; align-items: stretch; gap: 7px; padding-top: 9px; border-top: 1px solid #edf1f5; }
-  .person-ledger-action .ledger-action { width: 100%; min-height: 40px; font-size: 12px; }
-  .person-ledger-total {
-    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px;
-    padding: 13px; border-radius: 11px;
-  }
-  .person-ledger-total > strong:first-child { grid-column: 1 / -1; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0; }
-  .person-ledger-total > strong:not(:first-child)::before { display: block; margin-bottom: 5px; color: #64748b; font-size: 10px; font-weight: 600; }
-  .person-ledger-total > strong:nth-child(2)::before { content: "Amount"; }
-  .person-ledger-total > strong:nth-child(3)::before { content: "Settled"; }
-  .person-ledger-total > strong:nth-child(4)::before { content: "Outstanding"; }
-  .people-simple-row { min-height: 60px; }
-  .people-simple-open strong, .people-simple-net { font-size: 13px; }
-}
-
-
 
 /* ==========================================================
    FINANCE TRACKER — COMPLETE PRODUCT UI
@@ -1665,3 +1501,65 @@ main{max-width:1160px;padding:28px 24px 100px}
 /* iOS Safari: prevent automatic focus zoom on form controls while preserving user pinch zoom. */
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 @media(max-width:760px){input,select,textarea,button{font-size:16px!important}.filters select{font-size:16px!important}}
+
+/* Person ledger: scoped styles for the shared balance-detail dialog. */
+#balanceDetailDlg.person-ledger-open{box-sizing:border-box;display:block;width:min(1050px,calc(100vw - 32px));max-width:1050px;max-height:90dvh;padding:22px;overflow:hidden;border:1px solid #e2e8f0;border-radius:18px;background:#fff;color:#1e293b;box-shadow:0 20px 60px rgba(15,23,42,.2)}
+#balanceDetailDlg.person-ledger-open::backdrop{background:rgba(15,23,42,.55);backdrop-filter:blur(3px)}
+#balanceDetailDlg.person-ledger-open>div{display:flex;min-width:0;min-height:0;max-height:calc(90dvh - 44px);flex-direction:column}
+#balanceDetailDlg.person-ledger-open #balanceDetailTitle{flex:0 0 auto;margin:0 0 16px;color:#172033;font-size:21px;font-weight:750;overflow-wrap:anywhere}
+#balanceDetailDlg.person-ledger-open #balanceDetailSummary{flex:0 0 auto;margin:0}
+#balanceDetailDlg.person-ledger-open .person-ledger-summary{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;gap:20px;margin:0 0 18px;padding:18px 20px;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc}
+#balanceDetailDlg.person-ledger-open .person-ledger-summary>div:first-child{display:flex;min-width:0;flex-direction:column;gap:5px}
+#balanceDetailDlg.person-ledger-open .person-ledger-summary small{color:#64748b;font-size:11px;font-weight:650;letter-spacing:.45px}
+#balanceDetailDlg.person-ledger-open .person-ledger-summary>div:first-child>strong{font-size:27px;font-weight:800;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#balanceDetailDlg.person-ledger-open .person-ledger-summary>div:first-child>span{color:#64748b;font-size:12px}
+#balanceDetailDlg.person-ledger-open .person-ledger-breakdown{display:flex;flex:0 0 auto;gap:28px}
+#balanceDetailDlg.person-ledger-open .person-ledger-breakdown div{display:flex;flex-direction:column;gap:6px}
+#balanceDetailDlg.person-ledger-open .person-ledger-breakdown strong{color:#1e293b;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+#balanceDetailDlg.person-ledger-open #balanceDetailTransactions{min-width:0;min-height:0;flex:1 1 auto;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+#balanceDetailDlg.person-ledger-open h3{margin:0 0 10px;color:#263449;font-size:15px}
+#balanceDetailDlg.person-ledger-open .person-ledger-table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+#balanceDetailDlg.person-ledger-open .person-ledger-table{width:100%;min-width:720px}
+#balanceDetailDlg.person-ledger-open .person-ledger-table-head,#balanceDetailDlg.person-ledger-open .person-ledger-table-row,#balanceDetailDlg.person-ledger-open .person-ledger-total{display:grid;grid-template-columns:minmax(190px,2fr) minmax(105px,1fr) minmax(105px,1fr) minmax(115px,1fr) minmax(130px,1.2fr);align-items:center;gap:12px}
+#balanceDetailDlg.person-ledger-open .person-ledger-table-head{min-height:42px;padding:10px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:11px;font-weight:700}
+#balanceDetailDlg.person-ledger-open .person-ledger-table-row{min-height:64px;padding:11px 12px;border-bottom:1px solid #edf1f5}
+#balanceDetailDlg.person-ledger-open .person-ledger-transaction{display:flex;min-width:0;flex-direction:column;align-items:flex-start;gap:5px}
+#balanceDetailDlg.person-ledger-open .person-ledger-transaction strong{color:#263449;font-size:12px;font-weight:650;overflow-wrap:anywhere}
+#balanceDetailDlg.person-ledger-open .ledger-reference{padding:0;border:0;background:transparent;color:#3766b5;font-size:10px;font-weight:600;cursor:pointer}
+#balanceDetailDlg.person-ledger-open .person-ledger-amount{color:#334155;font-size:12px;font-weight:650;white-space:nowrap;font-variant-numeric:tabular-nums}
+#balanceDetailDlg.person-ledger-open .person-ledger-amount.pending{color:#b45309}
+#balanceDetailDlg.person-ledger-open .person-ledger-action{display:flex;justify-content:flex-start}
+#balanceDetailDlg.person-ledger-open .person-ledger-action .ledger-action{min-height:36px;padding:8px 11px;border:0;border-radius:8px;font-size:11px;font-weight:700;white-space:nowrap;cursor:pointer}
+#balanceDetailDlg.person-ledger-open .ledger-action.receivable{background:#edf2f4;color:#334155}
+#balanceDetailDlg.person-ledger-open .ledger-action.payable{background:#e9efec;color:#334b40}
+#balanceDetailDlg.person-ledger-open .person-ledger-empty{padding:24px 10px;color:#64748b;font-size:12px;text-align:center}
+#balanceDetailDlg.person-ledger-open .person-ledger-total{display:grid;min-height:58px;grid-template-columns:minmax(190px,2fr) repeat(3,minmax(105px,1fr)) minmax(130px,1.2fr);align-items:center;gap:12px;padding:12px;border-top:1px solid #e2e8f0;background:#f8fafc;color:#1e293b;font-size:12px;font-variant-numeric:tabular-nums}
+#balanceDetailDlg.person-ledger-open .person-ledger-total-title{font-weight:750}
+#balanceDetailDlg.person-ledger-open .person-ledger-total-cell{display:flex;min-width:0;flex-direction:column;gap:3px}
+#balanceDetailDlg.person-ledger-open .person-ledger-total-label{color:#64748b;font-size:10px;font-weight:650}
+#balanceDetailDlg.person-ledger-open .person-ledger-total-cell strong{color:#1e293b;font-size:12px;font-weight:750;white-space:nowrap}
+#balanceDetailDlg.person-ledger-open .person-ledger-total-spacer{min-width:0}
+#balanceDetailDlg.person-ledger-open .actions{display:flex;flex:0 0 auto;justify-content:flex-end;margin-top:8px;padding-top:12px;background:#fff}
+#balanceDetailDlg.person-ledger-open #closeBalanceDetail{min-width:76px;min-height:40px;border-radius:9px}
+@media(max-width:650px){
+#balanceDetailDlg.person-ledger-open{width:calc(100vw - 20px);max-width:none;max-height:88dvh;margin:auto;padding:16px;border-radius:17px}
+#balanceDetailDlg.person-ledger-open>div{max-height:calc(88dvh - 32px)}
+#balanceDetailDlg.person-ledger-open #balanceDetailTitle{margin-bottom:12px;font-size:19px}
+#balanceDetailDlg.person-ledger-open .person-ledger-summary{align-items:flex-start;flex-direction:column;gap:14px;margin-bottom:14px;padding:15px}
+#balanceDetailDlg.person-ledger-open .person-ledger-summary>div:first-child>strong{font-size:25px}
+#balanceDetailDlg.person-ledger-open .person-ledger-breakdown{display:grid;width:100%;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding-top:12px;border-top:1px solid #e2e8f0}
+#balanceDetailDlg.person-ledger-open .person-ledger-breakdown strong{font-size:14px}
+#balanceDetailDlg.person-ledger-open .person-ledger-table{display:flex;min-width:0;flex-direction:column;gap:9px}
+#balanceDetailDlg.person-ledger-open .person-ledger-table-head{display:none}
+#balanceDetailDlg.person-ledger-open .person-ledger-table-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:13px;border:1px solid #e2e8f0;border-radius:12px;background:#fff}
+#balanceDetailDlg.person-ledger-open .person-ledger-transaction{grid-column:1/-1;padding-bottom:9px;border-bottom:1px solid #edf1f5}
+#balanceDetailDlg.person-ledger-open .person-ledger-transaction strong{font-size:13px}
+#balanceDetailDlg.person-ledger-open .person-ledger-amount{display:flex;min-width:0;flex-direction:column;gap:5px;white-space:normal;font-size:13px}
+#balanceDetailDlg.person-ledger-open .person-ledger-amount:before,#balanceDetailDlg.person-ledger-open .person-ledger-action:before{content:attr(data-label);color:#64748b;font-size:10px;font-weight:650}
+#balanceDetailDlg.person-ledger-open .person-ledger-action{grid-column:1/-1;flex-direction:column;align-items:stretch;gap:7px;padding-top:9px;border-top:1px solid #edf1f5}
+#balanceDetailDlg.person-ledger-open .person-ledger-action .ledger-action{width:100%;min-height:40px;font-size:12px}
+#balanceDetailDlg.person-ledger-open .person-ledger-total{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px;padding:13px;border-radius:11px}
+#balanceDetailDlg.person-ledger-open .person-ledger-total-title{grid-column:1/-1;padding-bottom:8px;border-bottom:1px solid #e2e8f0}
+#balanceDetailDlg.person-ledger-open .person-ledger-total-spacer{display:none}
+#balanceDetailDlg.person-ledger-open .person-ledger-total-cell{gap:5px}
+}
