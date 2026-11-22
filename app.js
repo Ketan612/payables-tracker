@@ -1017,6 +1017,7 @@ $("#totalBankBalance").textContent = fmt(totalExpensesThisMonth);
 }
 
 function showBalanceDetails(title, items, summary) {
+  $("#balanceDetailDlg").classList.remove("person-ledger-open");
   balanceDetailView = { title, items, summary };
 
   $("#balanceDetailTitle").textContent = title;
@@ -1188,6 +1189,7 @@ function openPersonLedger(personId) {
   }
 
   activePersonLedgerId = personId;
+  $("#balanceDetailDlg").classList.add("person-ledger-open");
 
   const ledger = getPersonLedger(personId);
   const summary = getPersonOutstandingSummary(personId);
@@ -1258,7 +1260,7 @@ function openPersonLedger(personId) {
           <span>Transaction</span>
           <span>Amount</span>
           <span>Settled</span>
-          <span>Net</span>
+          <span>Outstanding</span>
           <span>Action</span>
         </div>
 
@@ -1313,12 +1315,12 @@ function openPersonLedger(personId) {
         }
 
         ${items.length ? `
-          <div class="person-ledger-total">
-            <strong>Total</strong>
-            <strong>${fmt(items.reduce((sum, item) => sum + item.original, 0))}</strong>
-            <strong>${fmt(items.reduce((sum, item) => sum + item.settled, 0))}</strong>
-            <strong>${fmt(items.reduce((sum, item) => sum + item.outstanding, 0))}</strong>
-          <span></span>
+          <div class="person-ledger-total" role="group" aria-label="Ledger totals">
+            <strong class="person-ledger-total-title">Total</strong>
+            <div class="person-ledger-total-cell"><span class="person-ledger-total-label">Amount</span><strong>${fmt(items.reduce((sum, item) => sum + item.original, 0))}</strong></div>
+            <div class="person-ledger-total-cell"><span class="person-ledger-total-label">Settled</span><strong>${fmt(items.reduce((sum, item) => sum + item.settled, 0))}</strong></div>
+            <div class="person-ledger-total-cell"><span class="person-ledger-total-label">Outstanding</span><strong>${fmt(items.reduce((sum, item) => sum + item.outstanding, 0))}</strong></div>
+            <span class="person-ledger-total-spacer" aria-hidden="true"></span>
           </div>
         ` : ""}
 
@@ -2041,6 +2043,7 @@ $("#balanceDetailTransactions").innerHTML = `
     ${historyHtml}
 `;
 
+  $("#balanceDetailDlg").classList.remove("person-ledger-open");
   if (!$("#balanceDetailDlg").open) {
     $("#balanceDetailDlg").showModal();
   }
@@ -2286,6 +2289,7 @@ $("#balanceDetailSummary").addEventListener("click", event => {
 
 // Close dashboard detail dialog.
 $("#closeBalanceDetail").onclick = () => {
+  $("#balanceDetailDlg").classList.remove("person-ledger-open");
   $("#balanceDetailDlg").close();
 };
 // Close transaction information dialog.
@@ -3578,6 +3582,7 @@ function showCardTransactions(cardId, tab = activeCardPassbookTab) {
 
   // Populate the passbook first, then explicitly open its dialog.
   const passbookDialog = $("#balanceDetailDlg");
+  passbookDialog.classList.remove("person-ledger-open");
   if (!passbookDialog.open) passbookDialog.showModal();
 }
 
