@@ -27,15 +27,6 @@ jobs:
       - name: Run isolated parser and event traceability tests
         run: node --test tests/sms-parser.test.mjs tests/sms-event-traceability.test.mjs
 
-  browser-e2e:
-    # Browser tests currently write to Supabase. Keep them blocked until app
-    # runtime configuration targets a dedicated, isolated test project.
-    if: ${{ vars.E2E_ISOLATED_BACKEND_READY == 'true' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - name: Fail closed until isolated backend wiring is implemented
-        run: |
-          echo "::error::Browser E2E is blocked. Configure an isolated Supabase test backend and runtime URL/key injection before enabling this job."
-          exit 1
+# Browser tests are intentionally not run in CI until the frontend can target a
+# dedicated isolated Supabase project. Current app bundles point at production
+# and the browser suite creates, edits, settles and captures records.
