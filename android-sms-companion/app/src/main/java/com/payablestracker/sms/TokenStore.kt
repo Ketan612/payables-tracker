@@ -23,7 +23,6 @@ object TokenStore {
             .setRandomizedEncryptionRequired(true).build())
         return generator.generateKey()
     }
-    fun setConsent(context: Context, accepted: Boolean) {\n        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("forwarding_consent", accepted).apply()\n    }\n    fun hasConsent(context: Context): Boolean = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("forwarding_consent", false)\n\n    fun save(context: Context, token: String) {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, key())
         val packed = cipher.iv + cipher.doFinal(token.toByteArray(Charsets.UTF_8))
@@ -38,3 +37,8 @@ object TokenStore {
         String(cipher.doFinal(packed.copyOfRange(12, packed.size)), Charsets.UTF_8)
     }.getOrNull()
 }
+    fun setConsent(context: Context, accepted: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("forwarding_consent", accepted).apply()
+    }
+    fun hasConsent(context: Context): Boolean = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("forwarding_consent", false)
+
