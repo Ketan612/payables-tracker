@@ -1503,7 +1503,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 @media(max-width:760px){input,select,textarea,button{font-size:16px!important}.filters select{font-size:16px!important}}
 
 /* Person ledger: scoped styles for the shared balance-detail dialog. */
-#balanceDetailDlg.person-ledger-open{box-sizing:border-box;display:block;width:min(1050px,calc(100vw - 32px));max-width:1050px;max-height:90dvh;padding:22px;overflow:hidden;border:1px solid #e2e8f0;border-radius:18px;background:#fff;color:#1e293b;box-shadow:0 20px 60px rgba(15,23,42,.2)}
+#balanceDetailDlg.person-ledger-open{box-sizing:border-box;width:min(1050px,calc(100vw - 32px));max-width:1050px;max-height:90dvh;padding:22px;overflow:hidden;border:1px solid #e2e8f0;border-radius:18px;background:#fff;color:#1e293b;box-shadow:0 20px 60px rgba(15,23,42,.2)}
 #balanceDetailDlg.person-ledger-open::backdrop{background:rgba(15,23,42,.55);backdrop-filter:blur(3px)}
 #balanceDetailDlg.person-ledger-open>div{display:flex;min-width:0;min-height:0;max-height:calc(90dvh - 44px);flex-direction:column}
 #balanceDetailDlg.person-ledger-open #balanceDetailTitle{flex:0 0 auto;margin:0 0 16px;color:#172033;font-size:21px;font-weight:750;overflow-wrap:anywhere}
