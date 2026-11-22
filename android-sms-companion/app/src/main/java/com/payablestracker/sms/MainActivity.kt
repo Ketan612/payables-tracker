@@ -12,6 +12,7 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.ScrollView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
@@ -101,7 +102,7 @@ class MainActivity : Activity() {
             setPadding(0, 22, 0, 0)
         }
         root.addView(status)
-        setContentView(root)
+        setContentView(ScrollView(this).apply { addView(root) })
         refreshStatus()
     }
 
