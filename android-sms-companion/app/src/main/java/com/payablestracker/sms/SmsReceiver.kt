@@ -14,17 +14,21 @@ import java.security.MessageDigest
 class SmsReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
-        val token = TokenStore.get(context) ?: return
-        Telephony.Sms.Intents.getMessagesFromIntent(intent).forEach { sms ->
-            val body = sms.messageBody.orEmpty().trim()
-            val sender = sms.originatingAddress.orEmpty()
+        if (TokenStore.get(context).isNullOrBlank()) return
+
+        // A long SMS can arrive as multiple PDUs. Reassemble segments before forwarding.
+        val grouped = Telephony.Sms.Intents.getMessagesFromIntent(intent)
+            .groupBy { it.originatingAddress.orEmpty() to it.timestampMillis }
+        grouped.forEach { (identity, segments) ->
+            val sender = identity.first
+            val body = segments.sortedBy { it.indexOnIcc }.joinToString("") { it.messageBody.orEmpty() }.trim()
             if (body.length !in 5..4000 || !isTransactionAlert(body)) return@forEach
+
             val digest = MessageDigest.getInstance("SHA-256")
-                .digest((sender + "|" + body + "|" + sms.timestampMillis).toByteArray())
+                .digest((sender + "|" + body + "|" + identity.second).toByteArray())
                 .joinToString("") { "%02x".format(it) }
             val input = Data.Builder().putString(SmsForwardWorker.KEY_MESSAGE, body)
-                .putString(SmsForwardWorker.KEY_SENDER, sender)
-                .putString(SmsForwardWorker.KEY_TOKEN, token).build()
+                .putString(SmsForwardWorker.KEY_SENDER, sender).build()
             val request = OneTimeWorkRequestBuilder<SmsForwardWorker>()
                 .setInputData(input)
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
@@ -33,12 +37,13 @@ class SmsReceiver : BroadcastReceiver() {
                 "sms-forward-$digest", ExistingWorkPolicy.KEEP, request)
         }
     }
+
     private fun isTransactionAlert(message: String): Boolean {
         val text = message.lowercase()
-        if (listOf("otp", "one time password", "verification code", "login code", "do not share")
-            .any(text::contains)) return false
-        val debit = listOf("debited", "debit", "spent", "purchase", "withdrawn", "payment of")
-        val credit = listOf("credited", "credit", "received", "deposited")
-        return debit.any(text::contains) || credit.any(text::contains)
+        if (listOf("otp", "one time password", "verification code", "login code").any(text::contains)) return false
+        val hasAmount = Regex("""(?:₹|\binr\b|\brs\.?\s*)\s?[\d,]+(?:\.\d{1,2})?""", RegexOption.IGNORE_CASE).containsMatchIn(text)
+        val transactionVerb = Regex("""\b(credited|debited|spent|withdrawn|deposited|received|transferred|purchase)\b""")
+            .containsMatchIn(text)
+        return hasAmount && transactionVerb
     }
 }
