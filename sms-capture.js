@@ -247,3 +247,32 @@ $("mappingForm").onsubmit=async e=>{e.preventDefault();const identifier=($("iden
  if(tasks[3].status==="rejected")$("emailReminderStatus").textContent="Reminder preference failed to load: "+(tasks[3].reason?.message||String(tasks[3].reason));
  if(tasks[2].status==="rejected")$("inbox").innerHTML='<p class="warn">Review inbox failed to load: '+esc(tasks[2].reason?.message||String(tasks[2].reason))+'</p>';
 })().catch(e=>{console.error("SMS Capture initialization",e);const status=$("signedInEmail");if(status)status.textContent="Page initialization failed: "+(e?.message||String(e));});
+
+
+// Android companion uses its own revocable capture token; it never receives a Supabase user session.
+$("generateAndroidToken").onclick=async()=>{
+ const btn=$("generateAndroidToken"),status=$("androidTokenStatus");
+ btn.disabled=true;btn.textContent="Generating…";status.textContent="Checking signed-in session…";status.className="status";
+ try{
+  const {data,error}=await sb.auth.getSession();
+  if(error)throw new Error("Session lookup failed: "+error.message);
+  const session=data.session;
+  if(!session?.access_token)throw new Error("Please sign in again before generating a device token.");
+  const token="pt_sms_"+Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b=>b.toString(16).padStart(2,"0")).join("");
+  const response=await fetch(SUPABASE_URL+"/functions/v1/sms-capture/register",{
+   method:"POST",
+   headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+session.access_token,"Content-Type":"application/json"},
+   body:JSON.stringify({token,label:"Android Companion"})
+  });
+  const raw=await response.text();let result;
+  try{result=JSON.parse(raw)}catch{result={error:raw||"Empty server response"}}
+  if(!response.ok||!result.ok)throw new Error("HTTP "+response.status+": "+(result.error||raw||"Registration rejected"));
+  $("tokenValue").value=token;$("tokenBox").hidden=false;
+  status.textContent="Android token created. Copy it now and paste it into the Android companion. It cannot be recovered later.";
+  status.className="status success";
+  await loadTokens();
+ }catch(error){
+  status.textContent="Android token generation failed: "+(error?.message||String(error));
+  status.className="status error";
+ }finally{btn.disabled=false;btn.textContent="Generate Android token"}
+};
