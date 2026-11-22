@@ -86,3 +86,20 @@ test("duplicate reconciliation only considers messages still awaiting review", a
     "rejected records must never be changed by automatic duplicate reconciliation",
   );
 });
+
+
+test("SMS review frontend invalidates stale service-worker and script caches", async () => {
+  const html = await readFile(new URL("../sms-capture.html", import.meta.url), "utf8");
+  const serviceWorker = await readFile(new URL("../sw.js", import.meta.url), "utf8");
+
+  assert.match(
+    html,
+    /sms-capture\\.js\\?v=sms-review-reject-fix-20261122/,
+    "SMS Capture page must request the versioned review script",
+  );
+  assert.match(
+    serviceWorker,
+    /const CACHE_NAME = "payables-shell-v9-sms-review-fix";/,
+    "service worker cache version must change so old shell caches are retired",
+  );
+});
