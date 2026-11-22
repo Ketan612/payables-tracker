@@ -34,7 +34,7 @@ class MainActivity : Activity() {
         })
         tokenInput = EditText(this).apply {
             hint = "Paste Android capture token"
-            singleLine = true
+            setSingleLine(true)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
             setText(TokenStore.get(this@MainActivity).orEmpty())
         }
