@@ -146,7 +146,7 @@ async function loadInbox(){
  document.querySelectorAll("[data-restore]").forEach(b=>b.onclick=async()=>{b.disabled=true;try{const result=await sb.from("sms_capture_inbox").update({status:"needs_review",review_decision:null,reviewed_at:null,parse_reason:"Returned to review by user"}).eq("id",b.dataset.restore).eq("user_id",user.id).eq("status","ignored").eq("review_decision","rejected").select("id").maybeSingle();if(result.error)throw result.error;if(!result.data)throw new Error("Record was not updated; refresh and retry.");await loadInbox()}catch(error){alert("Could not return message to review: "+(error?.message||String(error)))}finally{b.disabled=false}});
 }
 async function reconcileInboxCashBookDuplicates(rows){
- const candidates=(rows||[]).filter(r=>(r.status==="needs_review"||(r.status==="ignored"&&r.review_decision==="rejected"))&&r.parsed_amount&&r.parsed_direction&&r.parsed_date);
+ const candidates=(rows||[]).filter(r=>r.status==="needs_review"&&r.parsed_amount&&r.parsed_direction&&r.parsed_date);
  if(!candidates.length)return;
  const dates=[...new Set(candidates.map(r=>r.parsed_date))],directions=[...new Set(candidates.map(r=>r.parsed_direction))],amounts=[...new Set(candidates.map(r=>Number(r.parsed_amount)))];
  const {data:movements,error}=await sb.from("cash_movements").select("id,account_id,movement_date,direction,amount,sms_reference_number,reference_note").eq("user_id",user.id).in("movement_date",dates).in("direction",directions).in("amount",amounts).limit(1000);
