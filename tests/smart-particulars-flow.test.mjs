@@ -65,9 +65,9 @@ test("daily pending endpoint returns only unlabeled review and posted records", 
 
 test("batch endpoint validates bounded batches and reports per-item outcomes", () => {
   assert.match(edge, /if\(path==="particulars-batch"\)/);
-  assert.match(edge, /items\\.length>100/);
+  assert.ok(edge.includes("items.length>100"));
   assert.match(edge, /await saveParticulars\\(inboxId/);
-  assert.match(edge, /succeeded,failed:results\\.length-succeeded,results/);
+  assert.ok(edge.includes("succeeded,failed:results.length-succeeded,results"));
 });
 
 test("daily iPhone Shortcut fetches a queue and submits one batch after selection", () => {
@@ -75,7 +75,7 @@ test("daily iPhone Shortcut fetches a queue and submits one batch after selectio
   assert.match(captureHtml, /pending-particulars/);
   assert.match(captureHtml, /BatchItems/);
   assert.match(captureHtml, /particulars-batch/);
-  assert.match(captureHtml, /After <b>End Repeat<\\/b>/);
+  assert.ok(captureHtml.includes("After <b>End Repeat</b>"));
 });
 
 test("batch result retains inbox IDs for retry and Cash Book updates precede inbox completion", () => {
