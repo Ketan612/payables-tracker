@@ -11,7 +11,7 @@ This setup uses two separate Shortcuts. Run **Save File** once to capture and sa
 
 ## 2. Run Save File once
 
-1. Import/open the supplied **Save File** Shortcut in Apple Shortcuts.
+1. Open the **Save File** Shortcut in Apple Shortcuts.
 2. Run it once.
 3. When prompted, paste the private token generated in Payables Tracker.
 4. Let the Shortcut create its **Payables Tracker** folder and save the provided input.
@@ -21,7 +21,7 @@ You do not need to create the folder manually. Do not add the word `Bearer` to t
 
 ## 3. Set up Capture Financial Messages
 
-1. Import/open the supplied **Capture Financial Messages** Shortcut.
+1. Open the **Capture Financial Messages** Shortcut.
 2. Keep its existing capture endpoint, POST method, JSON message/sender fields, and Authorization header structure.
 3. The Authorization header must use the format `Bearer <your private token>`. Keep the token private and never publish a personal token in a shared Shortcut or public repository.
 4. Run a manual test with a suitable transaction alert and confirm the endpoint returns a successful capture response.
