@@ -85,11 +85,26 @@ Deno.serve(async req=>{
    const merchant=isMerchantCandidate(row.parsed_description)?String(row.parsed_description).replace(/\s+/g," ").trim().slice(0,100):"";
    const key=normalizeMerchantKey(merchant);
    let saved=[];
+   let autoAssigned=null,confidence=null;
    if(key){
-    const {data:memory}=await db.from("cashbook_merchant_particulars").select("particulars").eq("user_id",userId).eq("merchant_key",key).order("usage_count",{ascending:false}).order("last_used_at",{ascending:false}).limit(8);
+    const {data:memory}=await db.from("cashbook_merchant_particulars").select("particulars,usage_count,confirmed_count,is_active").eq("user_id",userId).eq("merchant_key",key).eq("is_active",true).order("confirmed_count",{ascending:false}).order("last_used_at",{ascending:false}).limit(8);
+    const confirmed=(memory||[]).filter((x:any)=>Number(x.confirmed_count||0)>0);
     saved=(memory||[]).map((x:any)=>x.particulars);
+    const total=confirmed.reduce((n:number,x:any)=>n+Number(x.confirmed_count||0),0);
+    const best=confirmed[0];
+    confidence=best&&total?Number(best.confirmed_count)/total:null;
+    // Only use a repeatable, user-confirmed majority. A single correction is never enough.
+    if(best&&Number(best.confirmed_count)>=2&&confidence>=0.8&&!row.user_particulars){
+     const label=String(best.particulars||"").trim();
+     const {data:currentMove,error:moveReadError}=row.movement_id?await db.from("cash_movements").select("id,particulars,particulars_source").eq("id",row.movement_id).eq("user_id",userId).maybeSingle():{data:null,error:null};
+     if(!moveReadError&&(!currentMove||!String(currentMove.particulars||"").trim())){
+      let movementSaved=true;
+      if(row.movement_id){const {data:updatedMove,error:moveWriteError}=await db.from("cash_movements").update({particulars:label,particulars_source:"automatic",particulars_confidence:confidence}).eq("id",row.movement_id).eq("user_id",userId).is("particulars",null).select("id").maybeSingle();movementSaved=!moveWriteError&&!!updatedMove;}
+      if(movementSaved){const {data:updatedInbox,error:inboxWriteError}=await db.from("sms_capture_inbox").update({user_particulars:label}).eq("id",row.id).eq("user_id",userId).is("user_particulars",null).select("id").maybeSingle();if(!inboxWriteError&&updatedInbox){autoAssigned=label;await logEvent({user_id:userId,event_type:"capture",outcome:"particulars_auto_assigned",source_record_id:row.id,detail:"High-confidence historical merchant default applied; confidence "+confidence.toFixed(3)});}}
+     }
+    }
    }
-   items.push({inbox_id:row.id,status:row.status,movement_id:row.movement_id,merchant:merchant||row.parsed_description||"Unknown merchant",amount:row.parsed_amount,direction:row.parsed_direction,date:row.parsed_date,account_identifier:row.account_identifier,internal_reference:row.internal_reference,suggested_particulars:buildParticularSuggestions(saved)});
+   items.push({inbox_id:row.id,status:row.status,movement_id:row.movement_id,merchant:merchant||row.parsed_description||"Unknown merchant",amount:row.parsed_amount,direction:row.parsed_direction,date:row.parsed_date,account_identifier:row.account_identifier,internal_reference:row.internal_reference,auto_assigned:autoAssigned,confidence,suggested_particulars:buildParticularSuggestions(saved)});
   }
   return json({ok:true,count:items.length,items});
  }
