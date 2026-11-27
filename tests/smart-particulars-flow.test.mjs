@@ -53,3 +53,27 @@ test("merchant memory has RLS and authenticated Data API grants", () => {
   assert.match(migration, /grant select, insert, update, delete on public\.cashbook_merchant_particulars to authenticated/i);
   assert.match(migration, /grant all on public\.cashbook_merchant_particulars to service_role/i);
 });
+
+
+test("daily pending endpoint returns only unlabeled review and posted records", () => {
+  assert.match(edge, /if\(path==="pending-particulars"\)/);
+  assert.match(edge, /\.in\("status",\["needs_review","posted"\]\)/);
+  assert.match(edge, /\.is\("user_particulars",null\)/);
+  assert.match(edge, /alreadySet/);
+  assert.match(edge, /suggested_particulars:buildParticularSuggestions/);
+});
+
+test("batch endpoint validates bounded batches and reports per-item outcomes", () => {
+  assert.match(edge, /if\(path==="particulars-batch"\)/);
+  assert.match(edge, /items\\.length>100/);
+  assert.match(edge, /await saveParticulars\\(inboxId/);
+  assert.match(edge, /succeeded,failed:results\\.length-succeeded,results/);
+});
+
+test("daily iPhone Shortcut fetches a queue and submits one batch after selection", () => {
+  assert.match(captureHtml, /Time of Day/);
+  assert.match(captureHtml, /pending-particulars/);
+  assert.match(captureHtml, /BatchItems/);
+  assert.match(captureHtml, /particulars-batch/);
+  assert.match(captureHtml, /After <b>End Repeat<\\/b>/);
+});
