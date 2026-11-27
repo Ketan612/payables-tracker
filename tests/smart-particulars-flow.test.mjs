@@ -32,6 +32,7 @@ test("manual review approval carries selected particulars into the ledger", () =
 
 test("Cash Book displays and edits particulars separately from the raw description", () => {
   assert.match(cashbook, /x\.particulars\|\|cleanParticular\(x\.description/);
+  assert.match(cashbook, /particulars-merchant/);
   assert.match(cashbook, /editTxnParticulars/);
   assert.match(cashbook, /particulars:\$\("editTxnParticulars"\)\.value\.trim\(\)\|\|null/);
   assert.match(cashbookHtml, /id="editTxnParticulars"/);
