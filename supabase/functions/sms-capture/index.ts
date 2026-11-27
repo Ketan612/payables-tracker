@@ -48,18 +48,18 @@ Deno.serve(async req=>{
   let learned=false,learningWarning=null;
   if(merchantKey){
    const now=new Date().toISOString();
-   const {data:existingRule,error:lookupError}=await db.from("cashbook_merchant_particulars").select("id,usage_count").eq("user_id",userId).eq("merchant_key",merchantKey).eq("particulars",particulars).maybeSingle();
+   const {data:existingRule,error:lookupError}=await db.from("cashbook_merchant_particulars").select("id,usage_count,confirmed_count").eq("user_id",userId).eq("merchant_key",merchantKey).eq("particulars",particulars).maybeSingle();
    if(lookupError)learningWarning=lookupError.message;
    else if(existingRule){
-    const {error:updateRuleError}=await db.from("cashbook_merchant_particulars").update({merchant_name:merchantName,usage_count:Number(existingRule.usage_count||1)+(row.user_particulars===particulars?0:1),last_used_at:now,updated_at:now}).eq("id",existingRule.id).eq("user_id",userId);
+    const {error:updateRuleError}=await db.from("cashbook_merchant_particulars").update({merchant_name:merchantName,usage_count:Number(existingRule.usage_count||1)+(row.user_particulars===particulars?0:1),confirmed_count:Number(existingRule.confirmed_count||0)+(row.user_particulars===particulars?0:1),source:"manual",is_active:true,last_used_at:now,updated_at:now}).eq("id",existingRule.id).eq("user_id",userId);
     if(updateRuleError)learningWarning=updateRuleError.message;else learned=true;
    }else{
-    const {error:insertRuleError}=await db.from("cashbook_merchant_particulars").insert({user_id:userId,merchant_key:merchantKey,merchant_name:merchantName,particulars,usage_count:1,last_used_at:now,updated_at:now});
+    const {error:insertRuleError}=await db.from("cashbook_merchant_particulars").insert({user_id:userId,merchant_key:merchantKey,merchant_name:merchantName,particulars,usage_count:1,confirmed_count:1,source:"manual",is_active:true,last_used_at:now,updated_at:now});
     if(insertRuleError?.code==="23505"){
-     const {data:concurrentRule,error:retryLookupError}=await db.from("cashbook_merchant_particulars").select("id,usage_count").eq("user_id",userId).eq("merchant_key",merchantKey).eq("particulars",particulars).maybeSingle();
+     const {data:concurrentRule,error:retryLookupError}=await db.from("cashbook_merchant_particulars").select("id,usage_count,confirmed_count").eq("user_id",userId).eq("merchant_key",merchantKey).eq("particulars",particulars).maybeSingle();
      if(retryLookupError||!concurrentRule)learningWarning=retryLookupError?.message||insertRuleError.message;
      else{
-      const {error:retryUpdateError}=await db.from("cashbook_merchant_particulars").update({merchant_name:merchantName,usage_count:Number(concurrentRule.usage_count||1)+(row.user_particulars===particulars?0:1),last_used_at:now,updated_at:now}).eq("id",concurrentRule.id).eq("user_id",userId);
+      const {error:retryUpdateError}=await db.from("cashbook_merchant_particulars").update({merchant_name:merchantName,usage_count:Number(concurrentRule.usage_count||1)+(row.user_particulars===particulars?0:1),confirmed_count:Number(concurrentRule.confirmed_count||0)+(row.user_particulars===particulars?0:1),source:"manual",is_active:true,last_used_at:now,updated_at:now}).eq("id",concurrentRule.id).eq("user_id",userId);
       if(retryUpdateError)learningWarning=retryUpdateError.message;else learned=true;
      }
     }else if(insertRuleError)learningWarning=insertRuleError.message;else learned=true;
