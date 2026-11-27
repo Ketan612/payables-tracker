@@ -11,7 +11,7 @@ This setup uses two separate Shortcuts. Run **Save File** once to capture and sa
 
 ## 2. Run Save File once
 
-1. Open the **Save File** Shortcut in Apple Shortcuts.
+1. [Add the Save File Shortcut from iCloud](https://www.icloud.com/shortcuts/e38a8a1dcbbc48938cf37159fe0c95ef), then open it in Apple Shortcuts.
 2. Run it once.
 3. When prompted, paste the private token generated in Payables Tracker.
 4. Let the Shortcut create its **Payables Tracker** folder and save the provided input.
