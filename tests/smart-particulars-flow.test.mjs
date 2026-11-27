@@ -99,6 +99,8 @@ test("SMS Review owns the pending-message workflow and keeps posting safeguards"
   assert.match(reviewHtml, /id="clearReviewInbox"/);
   assert.match(reviewJs, /async function approve/);
   assert.match(reviewJs, /async function reject/);
+  assert.match(reviewJs, /^async function loadInbox\(/m);
+  assert.doesNotMatch(reviewJs, /if\s*\([^)]*clearReviewInbox[^)]*\)\s*async function/);
   assert.match(reviewJs, /Posting outcome is uncertain/);
   assert.match(reviewJs, /Do not retry/);
 });
