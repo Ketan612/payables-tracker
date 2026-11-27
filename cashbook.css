@@ -173,3 +173,15 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
  .cashbook-header-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
  .cashbook-header-actions .top-action{min-height:64px;padding:8px 6px;font-size:12px}
 }
+
+
+/* Final mobile header navigation: compact buttons, no oversized tiles or odd wrapping. */
+.cashbook-header .cashbook-topbar{display:grid!important;grid-template-columns:84px minmax(0,1fr)!important;align-items:center!important;gap:8px!important}
+.cashbook-header .cashbook-topbar>.home-action{width:84px!important;min-width:84px!important;min-height:42px!important;height:auto!important;padding:8px 6px!important;font-size:12px!important;white-space:nowrap!important}
+.cashbook-header .cashbook-header-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;min-width:0!important}
+.cashbook-header .cashbook-header-actions .top-action{display:flex!important;width:100%!important;min-width:0!important;min-height:42px!important;height:auto!important;padding:8px 6px!important;font-size:12px!important;line-height:1.2!important;white-space:normal!important;text-align:center!important;border-radius:10px!important}
+.cashbook-header .cashbook-header-actions .sms-settings-link{background:#e8f4ed!important;color:#245d43!important;border-color:#e8f4ed!important}
+.cashbook-header .cashbook-header-actions .sms-review-link{background:#e8edf6!important;color:#263c5b!important;border-color:#e8edf6!important}
+.cashbook-header .cashbook-header-actions .admin-monitor-link{background:#f8eedb!important;color:#785729!important;border-color:#f8eedb!important}
+.cashbook-header #cashbookAdminLink[hidden]{display:none!important}
+@media(max-width:380px){.cashbook-header .cashbook-topbar{grid-template-columns:74px minmax(0,1fr)!important}.cashbook-header .cashbook-topbar>.home-action{width:74px!important;min-width:74px!important}.cashbook-header .cashbook-header-actions .top-action{font-size:11px!important;padding:7px 4px!important}}
