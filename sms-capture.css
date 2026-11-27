@@ -7,3 +7,5 @@
 /* iOS Safari automatically zooms focused controls below 16px. Keep the page at device scale. */
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 @media(max-width:760px){input,select,textarea{font-size:16px!important}}
+
+.setup-wizard{border:1px solid #cbd8e8;background:#f8fbff}.setup-steps{padding-left:22px;display:grid;gap:12px}.setup-steps li{padding-left:4px}.setup-steps li span{display:block;color:#607086;font-size:13px;margin-top:3px;line-height:1.45}.setup-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}.setup-link{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 13px;border-radius:10px;background:#17283f;color:#fff;text-decoration:none;font-weight:650;font-size:14px}.setup-link.secondary-link{background:#e8eef5;color:#20334c}@media(max-width:540px){.setup-actions{display:grid}.setup-link{width:100%}}
