@@ -39,14 +39,14 @@ test("Cash Book displays and edits particulars separately from the raw descripti
   assert.match(cashbookHtml, /id="particulars"/);
 });
 
-test("iPhone Shortcut instructions explain suggestions, Other, Skip, and the save endpoint", () => {
+test("iPhone instructions use a daily review instead of per-SMS prompts", () => {
+  assert.match(captureHtml, /Time of Day/);
+  assert.match(captureHtml, /pending-particulars/);
   assert.match(captureHtml, /Choose from List/);
-  assert.match(captureHtml, /suggested_particulars/);
   assert.match(captureHtml, /Skip for now/);
-  assert.match(captureHtml, /sms-capture\/particulars/);
-  assert.match(captureHtml, /duplicate: true/);
+  assert.match(captureHtml, /particulars-batch/);
+  assert.match(captureHtml, /BatchItems/);
 });
-
 test("merchant memory has RLS and authenticated Data API grants", () => {
   assert.match(migration, /enable row level security/i);
   assert.match(migration, /using \(\(select auth\.uid\(\)\) = user_id\)/i);
