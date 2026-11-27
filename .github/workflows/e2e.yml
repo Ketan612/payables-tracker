@@ -24,8 +24,8 @@ jobs:
         with:
           node-version: 22
       - run: npm install
-      - name: Run isolated parser and event traceability tests
-        run: node --test tests/sms-parser.test.mjs tests/sms-event-traceability.test.mjs tests/sms-review-reconciliation.test.mjs
+      - name: Run isolated parser, capture, and Cash Book regression tests
+        run: node --test tests/sms-parser.test.mjs tests/sms-event-traceability.test.mjs tests/sms-review-reconciliation.test.mjs tests/smart-particulars-flow.test.mjs
 
 # Browser tests are intentionally not run in CI until the frontend can target a
 # dedicated isolated Supabase project. Current app bundles point at production

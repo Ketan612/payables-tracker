@@ -72,3 +72,31 @@ export function parseSms(raw) {
           : null
   };
 }
+
+
+// Merchant labels are kept separate from the bank-provided transaction description.
+export const DEFAULT_PARTICULARS = Object.freeze(["Groceries","Dairy Products","Vegetables","Medical Supplies","Household Items","Food & Dining","Fuel","Personal Transfer"]);
+
+export function normalizeMerchantKey(value) {
+  return String(value || "").normalize("NFKC").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
+}
+
+export function isMerchantCandidate(value) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (text.length < 2 || text.length > 50) return false;
+  return !/\b(?:debited|credited|account|a\/c|acct|upi|utr|reference|refno|transaction|inr|rupees?)\b/i.test(text);
+}
+
+export function buildParticularSuggestions(saved = [], limit = 8) {
+  const labels = [];
+  const seen = new Set();
+  for (const item of [...(Array.isArray(saved) ? saved : []), ...DEFAULT_PARTICULARS]) {
+    const label = String(typeof item === "string" ? item : item?.particulars || "").replace(/\s+/g, " ").trim().slice(0, 80);
+    const key = label.toLowerCase();
+    if (!label || key === "other" || key === "skip for now" || seen.has(key)) continue;
+    seen.add(key);
+    labels.push(label);
+    if (labels.length >= limit) break;
+  }
+  return [...labels, "Other", "Skip for now"];
+}

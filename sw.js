@@ -1,4 +1,4 @@
-const CACHE_NAME = "payables-shell-v9-sms-review-fix";
+const CACHE_NAME = "payables-shell-v10-smart-particulars";
 const SHELL_ASSETS = [
   "./offline.html",
   "./manifest.json",
@@ -7,10 +7,10 @@ const SHELL_ASSETS = [
   "./icons/icon-512.png",
   "./styles.css",
   "./app.js",
-  "./cashbook.css",
-  "./cashbook.js",
+  "./cashbook.css?v=smart-particulars-20261127",
+  "./cashbook.js?v=smart-particulars-20261127",
   "./sms-capture.css",
-  "./sms-capture.js",
+  "./sms-capture.js?v=smart-particulars-20261127",
   "./sms-admin.js",
   "./pwa.js",
   "./session-policy.js?v=mobile-session-20261121"
