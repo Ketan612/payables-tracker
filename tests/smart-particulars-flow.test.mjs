@@ -77,3 +77,8 @@ test("daily iPhone Shortcut fetches a queue and submits one batch after selectio
   assert.match(captureHtml, /particulars-batch/);
   assert.match(captureHtml, /After <b>End Repeat<\\/b>/);
 });
+
+test("batch result retains inbox IDs for retry and Cash Book updates precede inbox completion", () => {
+  assert.match(edge, /results\.push\(\{inbox_id:inboxId,\.\.\.saved\}\)/);
+  assert.ok(edge.indexOf('from("cash_movements").update({particulars})') < edge.indexOf('from("sms_capture_inbox").update({user_particulars:particulars})'));
+});
