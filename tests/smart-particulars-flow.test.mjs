@@ -66,7 +66,7 @@ test("daily pending endpoint returns only unlabeled review and posted records", 
 test("batch endpoint validates bounded batches and reports per-item outcomes", () => {
   assert.match(edge, /if\(path==="particulars-batch"\)/);
   assert.ok(edge.includes("items.length>100"));
-  assert.match(edge, /await saveParticulars\\(inboxId/);
+  assert.ok(edge.includes("await saveParticulars(inboxId"));
   assert.ok(edge.includes("succeeded,failed:results.length-succeeded,results"));
 });
 
