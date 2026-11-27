@@ -36,13 +36,13 @@ Deno.serve(async req=>{
   if(rowError)return {ok:false,error:"Could not find the captured transaction: "+rowError.message};
   if(!row)return {ok:false,error:"Captured transaction was not found"};
   if(!["needs_review","posted"].includes(row.status))return {ok:false,error:"This capture is no longer eligible for particulars updates"};
-  const inboxUpdate=await db.from("sms_capture_inbox").update({user_particulars:particulars}).eq("id",row.id).eq("user_id",userId).eq("status",row.status).select("id").maybeSingle();
-  if(inboxUpdate.error)return {ok:false,error:"Could not save purchase description: "+inboxUpdate.error.message};
-  if(!inboxUpdate.data)return {ok:false,error:"Capture status changed; refresh and retry"};
   if(row.movement_id){
    const movementUpdate=await db.from("cash_movements").update({particulars}).eq("id",row.movement_id).eq("user_id",userId).select("id").maybeSingle();
-   if(movementUpdate.error||!movementUpdate.data)return {ok:false,error:"Saved to capture inbox but could not sync to Cash Book. Retry this item.",inbox_saved:true};
+   if(movementUpdate.error||!movementUpdate.data)return {ok:false,error:"Could not sync to Cash Book. This item remains pending for retry.",cashbook_saved:false};
   }
+  const inboxUpdate=await db.from("sms_capture_inbox").update({user_particulars:particulars}).eq("id",row.id).eq("user_id",userId).eq("status",row.status).select("id").maybeSingle();
+  if(inboxUpdate.error)return {ok:false,error:"Cash Book was updated but the capture record could not be updated: "+inboxUpdate.error.message};
+  if(!inboxUpdate.data)return {ok:false,error:"Cash Book was updated but capture status changed; refresh before retrying",cashbook_saved:true};
   const merchantName=isMerchantCandidate(row.parsed_description)?String(row.parsed_description).replace(/\s+/g," ").trim().slice(0,100):"";
   const merchantKey=normalizeMerchantKey(merchantName);
   let learned=false,learningWarning=null;
@@ -103,7 +103,8 @@ Deno.serve(async req=>{
    const inboxId=String(item?.inbox_id||"").trim();
    if(!inboxId||seen.has(inboxId)){results.push({inbox_id:inboxId||null,ok:false,error:"Missing or duplicate inbox_id in batch"});continue;}
    seen.add(inboxId);
-   results.push(await saveParticulars(inboxId,String(item?.particulars||"")));
+   const saved=await saveParticulars(inboxId,String(item?.particulars||""));
+   results.push({inbox_id:inboxId,...saved});
   }
   const succeeded=results.filter((x:any)=>x.ok).length;
   return json({ok:succeeded===results.length,succeeded,failed:results.length-succeeded,results});
