@@ -118,7 +118,7 @@ test("particulars manager supports editing, disabling and deleting merchant defa
   assert.match(particularsManager, /Merchant defaults/);
   assert.match(particularsManagerJs, /async function toggle/);
   assert.match(particularsManagerJs, /async function remove/);
-  assert.match(particularsManagerJs, /async function edit/);
+  assert.match(particularsManagerJs, /function edit/);
 });
 
 test("reviewed transactions remain editable and explicit edits can be learned", () => {
