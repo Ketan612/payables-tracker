@@ -93,7 +93,7 @@ test("SMS review frontend invalidates stale service-worker and script caches", a
   const serviceWorker = await readFile(new URL("../sw.js", import.meta.url), "utf8");
 
   assert.ok(
-    html.includes("sms-capture.js?v=smart-particulars-20261127"),
+    html.includes("sms-capture.js?v=sms-admin-session-20261127b"),
     "SMS Capture page must request the versioned review script",
   );
   assert.match(
