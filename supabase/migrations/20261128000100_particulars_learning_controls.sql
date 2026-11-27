@@ -23,6 +23,11 @@ alter table public.cashbook_merchant_particulars
   add column if not exists confirmed_count integer not null default 0,
   add column if not exists source text not null default 'manual';
 
+-- Existing merchant-memory rows were created only by the explicit particulars-save flow.
+update public.cashbook_merchant_particulars
+set confirmed_count = greatest(confirmed_count, usage_count)
+where confirmed_count = 0;
+
 alter table public.cashbook_merchant_particulars
   add constraint cashbook_merchant_particulars_source_check
   check (source in ('manual','imported')) not valid;
