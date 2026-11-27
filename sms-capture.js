@@ -22,21 +22,10 @@ async function auth(){
   if(error)throw error;
   let session=data?.session||null;
   if(!session?.access_token){setStatus("No active session. Returning to login…","error");loginRedirectForCurrentPage();return false;}
-  setStatus("Verifying signed-in user…");
-  let verified;
-  try{
-   const result=await timeout(sb.auth.getUser(session.access_token),"User verification");
-   if(result.error)throw result.error;
-   verified=result.data?.user;
-  }catch(firstError){
-   // Refresh once when a stored access token is expired or stale.
-   const refreshed=await timeout(sb.auth.refreshSession(),"Session refresh");
-   if(refreshed.error||!refreshed.data?.session)throw firstError;
-   session=refreshed.data.session;
-   const retry=await timeout(sb.auth.getUser(session.access_token),"User verification retry");
-   if(retry.error)throw retry.error;
-   verified=retry.data?.user;
-  }
+  // Use the authenticated identity already restored with the persisted session.
+  // Avoid an extra auth.getUser() network request: embedded iOS Safari has
+  // intermittently returned 403 for that endpoint while valid RLS requests work.
+  verified=session.user||null;
   if(!verified)throw new Error("Supabase did not return an authenticated user.");
   user=verified;
   window.payablesSessionPolicy.start(sb,user.id);
@@ -115,8 +104,9 @@ async function loadMappings(){
 
 function cleanParticular(description,direction,accountIdentifier){const raw=String(description||"").replace(/\s+/g," ").trim();if(!raw)return direction==="in"?"Bank Credit":"Bank Debit";const merchantMatch=raw.match(/(?:at|to|towards|for)\s+([A-Za-z0-9 &.'*-]{2,50}?)(?=\s+(?:on|dated|ref(?:erence)?|upi|txn|transaction|\*|\d{2}[/-])|[.,;]|$)/i);if(merchantMatch){const merchant=merchantMatch[1].trim().replace(/\s+/g," ");if(merchant&&!/^(your account|account|a\/c|the account)$/i.test(merchant))return merchant;}const looksLikeFullBankAlert=/^(dear customer[, ]*)?(your )?(account|a\/c)\s*[*x\d-]+/i.test(raw)&&/\b(credited|debited|credit|debit)\b/i.test(raw);if(looksLikeFullBankAlert||raw.length>65)return direction==="in"?"Bank Credit":"Bank Debit";return raw;}
 function reportActionError(action,error){alert(action+" could not be fully confirmed: "+(error?.message||String(error))+". Refresh the inbox and check Cash Book before retrying.")}
-$("clearReviewInbox").onclick=clearReviewInbox;
+if($("clearReviewInbox"))$("clearReviewInbox").onclick=clearReviewInbox;
 async function loadInbox(){
+ if(!$("inbox"))return;
  const [pending,locked,duplicates,rejected]=await Promise.all([
   sb.from("sms_capture_inbox").select("*").eq("user_id",user.id).eq("status","needs_review").order("received_at",{ascending:false}).limit(100),
   sb.from("sms_capture_inbox").select("*").eq("user_id",user.id).eq("status","posted").is("movement_id",null).order("received_at",{ascending:false}).limit(100),
@@ -241,9 +231,8 @@ $("mappingForm").onsubmit=async e=>{e.preventDefault();const identifier=($("iden
  if(!await auth())return;
  const acct=await Promise.allSettled([loadAccounts()]);
  if(acct[0].status==="rejected")console.error("SMS Capture accounts load",acct[0].reason);
- const tasks=await Promise.allSettled([loadTokens(),loadMappings(),loadInbox(),loadReminderPreference()]);
+ const tasks=await Promise.allSettled([loadTokens(),loadMappings(),loadReminderPreference()]);
  if(tasks[0].status==="rejected")$("tokenStatus").textContent="Token list failed to load: "+(tasks[0].reason?.message||String(tasks[0].reason));
  if(tasks[1].status==="rejected")$("mappings").innerHTML='<p class="warn">Mapping list failed to load: '+esc(tasks[1].reason?.message||String(tasks[1].reason))+'</p>';
- if(tasks[3].status==="rejected")$("emailReminderStatus").textContent="Reminder preference failed to load: "+(tasks[3].reason?.message||String(tasks[3].reason));
- if(tasks[2].status==="rejected")$("inbox").innerHTML='<p class="warn">Review inbox failed to load: '+esc(tasks[2].reason?.message||String(tasks[2].reason))+'</p>';
+ if(tasks[2].status==="rejected")$("emailReminderStatus").textContent="Reminder preference failed to load: "+(tasks[2].reason?.message||String(tasks[2].reason));
 })().catch(e=>{console.error("SMS Capture initialization",e);const status=$("signedInEmail");if(status)status.textContent="Page initialization failed: "+(e?.message||String(e));});

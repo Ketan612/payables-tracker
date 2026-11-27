@@ -17,9 +17,9 @@ async function logout(){
 
 async function guard(){
  const {data:{session},error}=await sb.auth.getSession();
- if(error||!session?.access_token){location.replace("index.html");return false}
- const {data:{user},error:userError}=await sb.auth.getUser(session.access_token);
- if(userError||!user){location.replace("index.html");return false}
+ if(error||!session?.access_token||!session.user?.id){location.replace("index.html");return false}
+ // Use the identity restored with the persisted session; avoid an unnecessary auth.getUser() request.
+ const user=session.user;
  if((user.email||"").toLowerCase()!==ADMIN_EMAIL){
   document.body.innerHTML="<main><section class='panel'><h2>Access denied</h2><p>This page is restricted to the configured administrator.</p><a href='index.html'>Return to dashboard</a></section></main>";
   return false;
