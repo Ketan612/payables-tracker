@@ -22,21 +22,10 @@ async function auth(){
   if(error)throw error;
   let session=data?.session||null;
   if(!session?.access_token){setStatus("No active session. Returning to login…","error");loginRedirectForCurrentPage();return false;}
-  setStatus("Verifying signed-in user…");
-  let verified;
-  try{
-   const result=await timeout(sb.auth.getUser(session.access_token),"User verification");
-   if(result.error)throw result.error;
-   verified=result.data?.user;
-  }catch(firstError){
-   // Refresh once when a stored access token is expired or stale.
-   const refreshed=await timeout(sb.auth.refreshSession(),"Session refresh");
-   if(refreshed.error||!refreshed.data?.session)throw firstError;
-   session=refreshed.data.session;
-   const retry=await timeout(sb.auth.getUser(session.access_token),"User verification retry");
-   if(retry.error)throw retry.error;
-   verified=retry.data?.user;
-  }
+  // Use the authenticated identity already restored with the persisted session.
+  // Avoid an extra auth.getUser() network request: embedded iOS Safari has
+  // intermittently returned 403 for that endpoint while valid RLS requests work.
+  verified=session.user||null;
   if(!verified)throw new Error("Supabase did not return an authenticated user.");
   user=verified;
   window.payablesSessionPolicy.start(sb,user.id);
