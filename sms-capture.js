@@ -220,7 +220,7 @@ async function approve(id){
    if(referenceWasExtracted)return alert("This bank reference number is already recorded in Cash Book. Duplicate posting was blocked.");
    referenceNumber=null;referenceAttempts++;continue;
   }
-  ins=await sb.from("cash_movements").insert({user_id:user.id,account_id:accountId,movement_date:r.parsed_date||new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()),direction:r.parsed_direction,amount:r.parsed_amount,movement_type:"sms_auto",sms_reference_number:referenceNumber,description:cleanParticular(r.parsed_description,r.parsed_direction,r.account_identifier),reference_note:"SMS manual approval · Ref "+referenceNumber+" · "+(r.account_identifier||"")}).select("id").single();
+  ins=await sb.from("cash_movements").insert({user_id:user.id,account_id:accountId,movement_date:r.parsed_date||new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()),direction:r.parsed_direction,amount:r.parsed_amount,movement_type:"sms_auto",sms_reference_number:referenceNumber,description:cleanParticular(r.parsed_description,r.parsed_direction,r.account_identifier),particulars:String(r.user_particulars||"").trim()||null,reference_note:"SMS manual approval · Ref "+referenceNumber+" · "+(r.account_identifier||"")}).select("id").single();
   if(!ins.error)break;
   if(ins.error.code==="23505"&&!referenceWasExtracted){referenceNumber=null;referenceAttempts++;continue;}
   break;

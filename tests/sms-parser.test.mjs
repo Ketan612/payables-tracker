@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseSms } from "../supabase/functions/sms-capture/sms-parser.js";
+import { parseSms, normalizeMerchantKey, isMerchantCandidate, buildParticularSuggestions } from "../supabase/functions/sms-capture/sms-parser.js";
 
 test("ICICI account debit stays a debit when the beneficiary is described as credited", () => {
   const parsed = parseSms("ICICI Bank Acct XX157 debited for Rs 9140.00 on 21-Nov-26; CHETAN RAVINDRA credited. UPI:750372998883. Call 18002662 for dispute. SMS BLOCK 157 to 9215676766");
@@ -55,4 +55,33 @@ test("valid leap-day dates are retained", () => {
   const parsed = parseSms("A/c XX3142 debited Rs 50 on 29-Feb-2024");
   assert.equal(parsed.date, "2024-02-29");
   assert.equal(parsed.reason, null);
+});
+
+
+test("merchant keys normalize case and punctuation for repeat visits", () => {
+  assert.equal(normalizeMerchantKey("Raj Market"), "raj market");
+  assert.equal(normalizeMerchantKey(" RAJ-MARKET "), "raj market");
+  assert.equal(normalizeMerchantKey("Lalit Medical"), "lalit medical");
+});
+
+test("merchant candidate detection rejects full bank alerts but accepts names", () => {
+  assert.equal(isMerchantCandidate("Raj Market"), true);
+  assert.equal(isMerchantCandidate("CHETAN RAVINDRA"), true);
+  assert.equal(isMerchantCandidate("A/c XX157 debited for Rs 450 UPI 123456789"), false);
+});
+
+test("merchant suggestions retain multiple purchase types and include a safe fallback", () => {
+  const suggestions = buildParticularSuggestions(["Groceries", "Dairy Products"]);
+  assert.ok(suggestions.indexOf("Groceries") < suggestions.indexOf("Dairy Products"));
+  assert.ok(suggestions.includes("Vegetables"));
+  assert.equal(suggestions.filter(x => x === "Groceries").length, 1);
+  assert.equal(suggestions.at(-2), "Other");
+  assert.equal(suggestions.at(-1), "Skip for now");
+});
+
+test("new merchants receive common purchase descriptions", () => {
+  const suggestions = buildParticularSuggestions([]);
+  assert.ok(suggestions.includes("Groceries"));
+  assert.ok(suggestions.includes("Dairy Products"));
+  assert.ok(suggestions.includes("Medical Supplies"));
 });
