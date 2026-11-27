@@ -3,12 +3,15 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const [edge, cashbook, cashbookHtml, captureHtml, captureJs, migration] = await Promise.all([
+const [edge, cashbook, cashbookHtml, captureHtml, captureJs, reviewHtml, reviewJs, dailyGuide, migration] = await Promise.all([
   read("../supabase/functions/sms-capture/index.ts"),
   read("../cashbook.js"),
   read("../cashbook.html"),
   read("../sms-capture.html"),
   read("../sms-capture.js"),
+  read("../sms-review.html"),
+  read("../sms-review.js"),
+  read("../docs/iphone-daily-particulars-setup.md"),
   read("../supabase/migrations/20261127075144_cashbook_smart_particulars.sql"),
 ]);
 
@@ -40,12 +43,12 @@ test("Cash Book displays and edits particulars separately from the raw descripti
 });
 
 test("iPhone instructions use a daily review instead of per-SMS prompts", () => {
-  assert.match(captureHtml, /Time of Day/);
-  assert.match(captureHtml, /pending-particulars/);
-  assert.match(captureHtml, /Choose from List/);
-  assert.match(captureHtml, /Skip for now/);
-  assert.match(captureHtml, /particulars-batch/);
-  assert.match(captureHtml, /BatchItems/);
+  assert.match(dailyGuide, /Time of Day/);
+  assert.match(dailyGuide, /pending-particulars/);
+  assert.match(dailyGuide, /suggested_particulars/);
+  assert.match(dailyGuide, /Skip for now/);
+  assert.match(dailyGuide, /particulars-batch/);
+  assert.match(dailyGuide, /BatchItems/);
 });
 test("merchant memory has RLS and authenticated Data API grants", () => {
   assert.match(migration, /enable row level security/i);
@@ -71,14 +74,31 @@ test("batch endpoint validates bounded batches and reports per-item outcomes", (
 });
 
 test("daily iPhone Shortcut fetches a queue and submits one batch after selection", () => {
-  assert.match(captureHtml, /Time of Day/);
-  assert.match(captureHtml, /pending-particulars/);
-  assert.match(captureHtml, /BatchItems/);
-  assert.match(captureHtml, /particulars-batch/);
-  assert.ok(captureHtml.includes("After <b>End Repeat</b>"));
+  assert.match(dailyGuide, /Time of Day/);
+  assert.match(dailyGuide, /pending-particulars/);
+  assert.match(dailyGuide, /BatchItems/);
+  assert.match(dailyGuide, /particulars-batch/);
+  assert.match(dailyGuide, /After the repeat/);
 });
 
 test("batch result retains inbox IDs for retry and Cash Book updates precede inbox completion", () => {
   assert.match(edge, /results\.push\(\{inbox_id:inboxId,\.\.\.saved\}\)/);
   assert.ok(edge.indexOf('from("cash_movements").update({particulars})') < edge.indexOf('from("sms_capture_inbox").update({user_particulars:particulars})'));
+});
+
+test("SMS Admin is setup-only and Cash Book links to both SMS destinations", () => {
+  assert.doesNotMatch(captureHtml, /iphone-sms-capture-setup|iphone-daily-particulars-setup/);
+  assert.doesNotMatch(captureHtml, /id="inbox"|id="clearReviewInbox"/);
+  assert.match(captureHtml, /id="generateToken"/);
+  assert.match(captureHtml, /id="mappingForm"/);
+  assert.match(cashbookHtml, /href="sms-capture\.html"/);
+  assert.match(cashbookHtml, /href="sms-review\.html"/);
+});
+test("SMS Review owns the pending-message workflow and keeps posting safeguards", () => {
+  assert.match(reviewHtml, /id="inbox"/);
+  assert.match(reviewHtml, /id="clearReviewInbox"/);
+  assert.match(reviewJs, /async function approve/);
+  assert.match(reviewJs, /async function reject/);
+  assert.match(reviewJs, /Posting outcome is uncertain/);
+  assert.match(reviewJs, /Do not retry/);
 });
