@@ -115,8 +115,9 @@ async function loadMappings(){
 
 function cleanParticular(description,direction,accountIdentifier){const raw=String(description||"").replace(/\s+/g," ").trim();if(!raw)return direction==="in"?"Bank Credit":"Bank Debit";const merchantMatch=raw.match(/(?:at|to|towards|for)\s+([A-Za-z0-9 &.'*-]{2,50}?)(?=\s+(?:on|dated|ref(?:erence)?|upi|txn|transaction|\*|\d{2}[/-])|[.,;]|$)/i);if(merchantMatch){const merchant=merchantMatch[1].trim().replace(/\s+/g," ");if(merchant&&!/^(your account|account|a\/c|the account)$/i.test(merchant))return merchant;}const looksLikeFullBankAlert=/^(dear customer[, ]*)?(your )?(account|a\/c)\s*[*x\d-]+/i.test(raw)&&/\b(credited|debited|credit|debit)\b/i.test(raw);if(looksLikeFullBankAlert||raw.length>65)return direction==="in"?"Bank Credit":"Bank Debit";return raw;}
 function reportActionError(action,error){alert(action+" could not be fully confirmed: "+(error?.message||String(error))+". Refresh the inbox and check Cash Book before retrying.")}
-$("clearReviewInbox").onclick=clearReviewInbox;
+if($("clearReviewInbox"))$("clearReviewInbox").onclick=clearReviewInbox;
 async function loadInbox(){
+ if(!$("inbox"))return;
  const [pending,locked,duplicates,rejected]=await Promise.all([
   sb.from("sms_capture_inbox").select("*").eq("user_id",user.id).eq("status","needs_review").order("received_at",{ascending:false}).limit(100),
   sb.from("sms_capture_inbox").select("*").eq("user_id",user.id).eq("status","posted").is("movement_id",null).order("received_at",{ascending:false}).limit(100),
@@ -241,9 +242,8 @@ $("mappingForm").onsubmit=async e=>{e.preventDefault();const identifier=($("iden
  if(!await auth())return;
  const acct=await Promise.allSettled([loadAccounts()]);
  if(acct[0].status==="rejected")console.error("SMS Capture accounts load",acct[0].reason);
- const tasks=await Promise.allSettled([loadTokens(),loadMappings(),loadInbox(),loadReminderPreference()]);
+ const tasks=await Promise.allSettled([loadTokens(),loadMappings(),loadReminderPreference()]);
  if(tasks[0].status==="rejected")$("tokenStatus").textContent="Token list failed to load: "+(tasks[0].reason?.message||String(tasks[0].reason));
  if(tasks[1].status==="rejected")$("mappings").innerHTML='<p class="warn">Mapping list failed to load: '+esc(tasks[1].reason?.message||String(tasks[1].reason))+'</p>';
- if(tasks[3].status==="rejected")$("emailReminderStatus").textContent="Reminder preference failed to load: "+(tasks[3].reason?.message||String(tasks[3].reason));
- if(tasks[2].status==="rejected")$("inbox").innerHTML='<p class="warn">Review inbox failed to load: '+esc(tasks[2].reason?.message||String(tasks[2].reason))+'</p>';
+ if(tasks[2].status==="rejected")$("emailReminderStatus").textContent="Reminder preference failed to load: "+(tasks[2].reason?.message||String(tasks[2].reason));
 })().catch(e=>{console.error("SMS Capture initialization",e);const status=$("signedInEmail");if(status)status.textContent="Page initialization failed: "+(e?.message||String(e));});
