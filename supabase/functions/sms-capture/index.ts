@@ -23,25 +23,25 @@ Deno.serve(async req=>{
   const {data:acct}=await db.from("bank_accounts").select("id").eq("id",account_id).eq("user_id",user.id).single();if(!acct)return json({error:"Account not owned by user"},403);
   const ruleSender=identifier?"__account__:"+identifier:sender;const {error:up}=await db.from("sms_capture_account_rules").upsert({user_id:user.id,sender:ruleSender,account_identifier:identifier||null,account_id},{onConflict:"user_id,sender"});if(up)return json({error:up.message},400);return json({ok:true});
  }
- if(path!=="capture"&&path!=="particulars")return json({error:"Use /register, /rule, /capture, or /particulars"},404);
+ if(!["capture","particulars","pending-particulars","particulars-batch"].includes(path))return json({error:"Use /register, /rule, /capture, /particulars, /pending-particulars, or /particulars-batch"},404);
  const bearer=(req.headers.get("Authorization")||"").replace(/^Bearer\s+/i,"");if(!bearer){await logEvent({event_type:"capture",outcome:"missing_token",http_status:401,detail:"Authorization token missing"});return json({error:"Missing capture token"},401);}
  const {data:token}=await db.from("sms_capture_tokens").select("user_id").eq("token_hash",await sha(bearer)).eq("is_active",true).single();if(!token){await logEvent({event_type:"capture",outcome:"invalid_token",http_status:401,detail:"Token not found or revoked"});return json({error:"Invalid token"},401);}
  const userId=token.user_id;
- if(path==="particulars"){
-  const inboxId=String(body.inbox_id||"").trim();
-  const particulars=String(body.particulars||"").replace(/\s+/g," ").trim();
-  if(!inboxId)return json({error:"inbox_id is required"},400);
-  if(particulars.length<2||particulars.length>80||/^(other|skip for now)$/i.test(particulars))return json({error:"Choose or enter a purchase description between 2 and 80 characters"},400);
+
+ const saveParticulars=async(inboxId:string,value:string)=>{
+  const particulars=String(value||"").replace(/\s+/g," ").trim();
+  if(!inboxId)return {ok:false,error:"inbox_id is required"};
+  if(particulars.length<2||particulars.length>80||/^(other|skip for now)$/i.test(particulars))return {ok:false,error:"Choose or enter a purchase description between 2 and 80 characters"};
   const {data:row,error:rowError}=await db.from("sms_capture_inbox").select("id,status,parsed_description,movement_id,user_particulars").eq("id",inboxId).eq("user_id",userId).maybeSingle();
-  if(rowError)return json({error:"Could not find the captured transaction: "+rowError.message},500);
-  if(!row)return json({error:"Captured transaction was not found"},404);
-  if(!["needs_review","posted"].includes(row.status))return json({error:"This capture is no longer eligible for particulars updates"},409);
+  if(rowError)return {ok:false,error:"Could not find the captured transaction: "+rowError.message};
+  if(!row)return {ok:false,error:"Captured transaction was not found"};
+  if(!["needs_review","posted"].includes(row.status))return {ok:false,error:"This capture is no longer eligible for particulars updates"};
   const inboxUpdate=await db.from("sms_capture_inbox").update({user_particulars:particulars}).eq("id",row.id).eq("user_id",userId).eq("status",row.status).select("id").maybeSingle();
-  if(inboxUpdate.error)return json({error:"Could not save purchase description: "+inboxUpdate.error.message},500);
-  if(!inboxUpdate.data)return json({error:"Capture status changed; refresh and retry"},409);
+  if(inboxUpdate.error)return {ok:false,error:"Could not save purchase description: "+inboxUpdate.error.message};
+  if(!inboxUpdate.data)return {ok:false,error:"Capture status changed; refresh and retry"};
   if(row.movement_id){
    const movementUpdate=await db.from("cash_movements").update({particulars}).eq("id",row.movement_id).eq("user_id",userId).select("id").maybeSingle();
-   if(movementUpdate.error||!movementUpdate.data)return json({error:"Purchase description was saved to the capture record but could not be synced to Cash Book. Retry this step.",inbox_saved:true},500);
+   if(movementUpdate.error||!movementUpdate.data)return {ok:false,error:"Saved to capture inbox but could not sync to Cash Book. Retry this item.",inbox_saved:true};
   }
   const merchantName=isMerchantCandidate(row.parsed_description)?String(row.parsed_description).replace(/\s+/g," ").trim().slice(0,100):"";
   const merchantKey=normalizeMerchantKey(merchantName);
@@ -66,8 +66,53 @@ Deno.serve(async req=>{
    }
   }
   await logEvent({user_id:userId,event_type:"capture",outcome:"particulars_saved",source_record_id:row.id,detail:"Purchase particulars saved"+(merchantKey?"; merchant memory "+(learned?"updated":"not updated"):"; merchant could not be confidently identified")});
-  return json({ok:true,particulars,merchant:merchantName||null,learned,warning:learningWarning});
+  return {ok:true,inbox_id:row.id,particulars,merchant:merchantName||null,learned,warning:learningWarning};
+ };
+ if(path==="pending-particulars"){
+  const {data:rows,error:rowsError}=await db.from("sms_capture_inbox").select("id,movement_id,status,parsed_description,parsed_amount,parsed_direction,parsed_date,account_identifier,internal_reference,user_particulars").eq("user_id",userId).in("status",["needs_review","posted"]).is("user_particulars",null).order("parsed_date",{ascending:false}).order("received_at",{ascending:false}).limit(100);
+  if(rowsError)return json({error:"Could not load pending particulars: "+rowsError.message},500);
+  const movementIds=(rows||[]).filter((x:any)=>x.status==="posted"&&x.movement_id).map((x:any)=>x.movement_id);
+  let movementRows:any[]=[];
+  if(movementIds.length){
+   const {data,error}=await db.from("cash_movements").select("id,particulars").eq("user_id",userId).in("id",movementIds);
+   if(error)return json({error:"Could not load Cash Book particulars: "+error.message},500);
+   movementRows=data||[];
+  }
+  const alreadySet=new Set(movementRows.filter((x:any)=>String(x.particulars||"").trim()).map((x:any)=>x.id));
+  const pending=(rows||[]).filter((x:any)=>!x.movement_id||!alreadySet.has(x.movement_id));
+  const items=[];
+  for(const row of pending){
+   const merchant=isMerchantCandidate(row.parsed_description)?String(row.parsed_description).replace(/\s+/g," ").trim().slice(0,100):"";
+   const key=normalizeMerchantKey(merchant);
+   let saved=[];
+   if(key){
+    const {data:memory}=await db.from("cashbook_merchant_particulars").select("particulars").eq("user_id",userId).eq("merchant_key",key).order("usage_count",{ascending:false}).order("last_used_at",{ascending:false}).limit(8);
+    saved=(memory||[]).map((x:any)=>x.particulars);
+   }
+   items.push({inbox_id:row.id,status:row.status,movement_id:row.movement_id,merchant:merchant||row.parsed_description||"Unknown merchant",amount:row.parsed_amount,direction:row.parsed_direction,date:row.parsed_date,account_identifier:row.account_identifier,internal_reference:row.internal_reference,suggested_particulars:buildParticularSuggestions(saved)});
+  }
+  return json({ok:true,count:items.length,items});
  }
+ if(path==="particulars-batch"){
+  const items=Array.isArray(body.items)?body.items:[];
+  if(!items.length)return json({error:"items must contain at least one transaction"},400);
+  if(items.length>100)return json({error:"A batch can contain at most 100 transactions"},400);
+  const seen=new Set();
+  const results=[];
+  for(const item of items){
+   const inboxId=String(item?.inbox_id||"").trim();
+   if(!inboxId||seen.has(inboxId)){results.push({inbox_id:inboxId||null,ok:false,error:"Missing or duplicate inbox_id in batch"});continue;}
+   seen.add(inboxId);
+   results.push(await saveParticulars(inboxId,String(item?.particulars||"")));
+  }
+  const succeeded=results.filter((x:any)=>x.ok).length;
+  return json({ok:succeeded===results.length,succeeded,failed:results.length-succeeded,results});
+ }
+ if(path==="particulars"){
+  const result=await saveParticulars(String(body.inbox_id||"").trim(),String(body.particulars||""));
+  return json(result,result.ok?200:400);
+ }
+
  const raw=String(body.message||"").trim(),sender=String(body.sender||"").trim().slice(0,100);if(raw.length<5||raw.length>4000){await logEvent({user_id:userId,event_type:"capture",outcome:"invalid_message",sender,http_status:400,detail:"Message length must be 5-4000 chars"});return json({error:"Message length must be 5-4000 chars"},400);}
  const messageHash=await sha(sender+"|"+raw),parsed=parseSms(raw);const {data:existing}=await db.from("sms_capture_inbox").select("id,status,account_id").eq("user_id",userId).eq("message_hash",messageHash).maybeSingle();if(existing){const reviewHash=await sha(messageHash+"|duplicate-review|"+requestId);const {data:review,error:reviewError}=await db.from("sms_capture_inbox").insert({user_id:userId,message_hash:reviewHash,sms_sender:sender||null,raw_message:raw,parsed_amount:parsed.amount,parsed_direction:parsed.direction,parsed_date:parsed.date,parsed_description:parsed.description,status:"duplicate",account_id:existing.account_id||null,account_identifier:parsed.account_identifier,reference_number:parsed.reference_number,parse_reason:"Repeated SMS. Original inbox record "+existing.id+" has status "+existing.status+". Review this duplicate; accepting will not create another Cash Book entry."}).select("id").single();if(reviewError){await logEvent({user_id:userId,event_type:"capture",outcome:"duplicate",sender,account_identifier:parsed.account_identifier,reference_number:parsed.reference_number,amount:parsed.amount,direction:parsed.direction,http_status:200,source_record_id:existing.id,detail:"Exact duplicate detected but duplicate review row could not be created: "+reviewError.message});return json({ok:true,duplicate:true,status:"duplicate",review_error:reviewError.message,original_inbox_id:existing.id})}await logEvent({user_id:userId,event_type:"capture",outcome:"duplicate",sender,account_identifier:parsed.account_identifier,reference_number:parsed.reference_number,amount:parsed.amount,direction:parsed.direction,http_status:200,source_record_id:review.id,detail:"Exact duplicate added to SMS review inbox; original inbox status: "+existing.status});return json({ok:true,duplicate:true,status:"duplicate",inbox_id:review.id,original_inbox_id:existing.id})}
  const merchantName=isMerchantCandidate(parsed.description)?String(parsed.description).replace(/\s+/g," ").trim().slice(0,100):"";
