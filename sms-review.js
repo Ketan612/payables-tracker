@@ -57,7 +57,7 @@ async function auth(){
 async function loadAccounts(){const {data,error}=await sb.from("bank_accounts").select("id,account_name").eq("user_id",user.id).eq("is_active",true);if(error)throw error;accounts=data||[];}
 function cleanParticular(description,direction,accountIdentifier){const raw=String(description||"").replace(/\s+/g," ").trim();if(!raw)return direction==="in"?"Bank Credit":"Bank Debit";const merchantMatch=raw.match(/(?:at|to|towards|for)\s+([A-Za-z0-9 &.'*-]{2,50}?)(?=\s+(?:on|dated|ref(?:erence)?|upi|txn|transaction|\*|\d{2}[/-])|[.,;]|$)/i);if(merchantMatch){const merchant=merchantMatch[1].trim().replace(/\s+/g," ");if(merchant&&!/^(your account|account|a\/c|the account)$/i.test(merchant))return merchant;}const looksLikeFullBankAlert=/^(dear customer[, ]*)?(your )?(account|a\/c)\s*[*x\d-]+/i.test(raw)&&/\b(credited|debited|credit|debit)\b/i.test(raw);if(looksLikeFullBankAlert||raw.length>65)return direction==="in"?"Bank Credit":"Bank Debit";return raw;}
 function reportActionError(action,error){alert(action+" could not be fully confirmed: "+(error?.message||String(error))+". Refresh the inbox and check Cash Book before retrying.")}
-if($("clearReviewInbox"))async function loadInbox(){
+async function loadInbox(){
  if(!$("inbox"))return;
  const [pending,locked,duplicates,rejected]=await Promise.all([
   sb.from("sms_capture_inbox").select("*").eq("user_id",user.id).eq("status","needs_review").order("received_at",{ascending:false}).limit(100),
