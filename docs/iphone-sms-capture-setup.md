@@ -21,9 +21,9 @@ You do not need to create the folder manually. Do not add the word `Bearer` to t
 
 ## 3. Set up Capture Financial Messages
 
-1. Open the **Capture Financial Messages** Shortcut.
-2. Keep its existing capture endpoint, POST method, JSON message/sender fields, and Authorization header structure.
-3. The Authorization header must use the format `Bearer <your private token>`. Keep the token private and never publish a personal token in a shared Shortcut or public repository.
+1. [Add Capture Financial Messages from iCloud](https://www.icloud.com/shortcuts/1dcc80201b58408aa0810556410ebaea), then open it in Apple Shortcuts.
+2. Keep its existing capture endpoint, POST method, JSON message/sender fields, and Authorization header structure unchanged.
+3. Replace only the placeholder in the existing Authorization value with your own private token, keeping the format `Bearer <your private token>`. Never share your personal token or publish a Shortcut containing it.
 4. Run a manual test with a suitable transaction alert and confirm the endpoint returns a successful capture response.
 
 The capture endpoint is `https://magxbczgrxeypryjborr.supabase.co/functions/v1/sms-capture/capture`. It parses the SMS and records it in the review inbox or Cash Book according to existing validation and account-mapping rules.
