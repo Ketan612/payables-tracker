@@ -21,7 +21,7 @@ You do not need to create the folder manually. Do not add the word `Bearer` to t
 
 ## 3. Set up Capture Financial Messages
 
-1. [Add Capture Financial Messages from iCloud](https://www.icloud.com/shortcuts/1dcc80201b58408aa0810556410ebaea), then open it in Apple Shortcuts.
+1. [Add Capture Financial Messages from iCloud](https://www.icloud.com/shortcuts/5dc9dbb7e60b4add899a823d70f15c04), then open it in Apple Shortcuts.
 2. Keep its existing capture endpoint, POST method, JSON message/sender fields, and Authorization header structure unchanged.
 3. Replace only the placeholder in the existing Authorization value with your own private token, keeping the format `Bearer <your private token>`. Never share your personal token or publish a Shortcut containing it.
 4. Run a manual test with a suitable transaction alert and confirm the endpoint returns a successful capture response.
