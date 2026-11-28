@@ -126,7 +126,7 @@ Deno.serve(async req=>{
    const inboxId=String(item?.inbox_id||"").trim();
    if(!inboxId||seen.has(inboxId)){results.push({inbox_id:inboxId||null,ok:false,error:"Missing or duplicate inbox_id in batch"});continue;}
    seen.add(inboxId);
-   const saved=await saveParticulars(inboxId,String(item?.particulars||""));
+   const saved=await saveParticulars(String(item?.movement_id||"").trim(),String(item?.particulars||""));
    results.push({inbox_id:inboxId,...saved});
   }
   const succeeded=results.filter((x:any)=>x.ok).length;
