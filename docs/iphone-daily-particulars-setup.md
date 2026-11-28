@@ -6,14 +6,17 @@ This is a separate daily Shortcut. It does not replace the Message automation us
 
 In Apple Shortcuts, create a shortcut named **Payables Tracker — Daily Particulars**.
 
-1. Add **Get Contents of URL** with URL `https://magxbczgrxeypryjborr.supabase.co/functions/v1/sms-capture/pending-particulars`, Method **POST**, headers `Authorization: Bearer YOUR_PRIVATE_TOKEN` and `Content-Type: application/json`, and JSON body `{}`.
-2. Get the response dictionary's `items` value. If `count` is zero, show “No transactions need particulars today” and stop.
-3. Repeat with each item. Show its merchant, amount, date, and debit/credit direction.
-4. Present `suggested_particulars` as choices. Include an **Other** choice (ask for text) and **Skip for now**. A skipped item is not submitted and remains pending for the next run.
-5. For each selected description, add a dictionary with `inbox_id` (the current item's `inbox_id`) and `particulars` (the selected or typed description) to a list variable named `BatchItems`.
-6. After the repeat, if BatchItems is empty, stop.
-7. Add one **Get Contents of URL** with URL `https://magxbczgrxeypryjborr.supabase.co/functions/v1/sms-capture/particulars-batch`, Method **POST**, the same headers, and JSON body with `items` = `BatchItems`.
-8. Show the returned `succeeded` and `failed` counts. Failed items are reported individually and remain eligible for retry.
+1. Add **Get Contents of URL** with URL `https://magxbczgrxeyprjyborr.supabase.co/functions/v1/sms-capture/pending-particulars`, Method **POST**, headers `Authorization: Bearer YOUR_PRIVATE_TOKEN` and `Content-Type: application/json`, and JSON body `{}`.
+2. Read the response dictionary's `items` value. If `count` is zero, show exactly **No records to review** and stop.
+3. Repeat with each item. Show its merchant, amount, date, debit/credit direction, and any suggested particulars.
+4. Present the suggestions as choices, with **Other** and **Skip for now**. For **Other**, ask for text. A skipped item is left pending for the next run.
+5. For each selected description, immediately add a **Get Contents of URL** action inside the repeat:
+   - URL: `https://magxbczgrxeyprjyborr.supabase.co/functions/v1/sms-capture/particulars`
+   - Method: **POST**
+   - Headers: the same Authorization and Content-Type headers
+   - JSON body: `inbox_id` = the current item's `inbox_id`; `particulars` = the selected or typed description.
+6. Check the response's `ok` value. If true, show a short **Saved** confirmation and continue. If false or the request fails, show the returned error and leave that item pending for retry. Do not add failed items to a batch or mark them complete.
+7. Do not use the `particulars-batch` endpoint. Each successful item is saved before the Shortcut moves to the next item, so an interruption does not discard earlier saves.
 
 ## 2. Schedule it daily
 
@@ -23,3 +26,10 @@ In Apple Shortcuts, create a shortcut named **Payables Tracker — Daily Particu
 4. Choose **Run Shortcut** → **Payables Tracker — Daily Particulars**.
 
 Use the same private capture token generated in Payables Tracker. Keep it private and replace it in both shortcuts if you revoke it.
+
+## 3. Important behaviour
+
+- The existing incoming Message automation remains separate and unchanged.
+- Existing particulars must never be overwritten by a later Shortcut run.
+- Cash Book rows that already have particulars are not part of the pending queue.
+- The Shortcut can only be installed on your iPhone by creating it in Apple Shortcuts; this guide does not contain or expose your private token.
