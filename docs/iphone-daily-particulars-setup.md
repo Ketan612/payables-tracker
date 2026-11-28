@@ -7,14 +7,14 @@ This is a separate daily Shortcut. It does not replace the Message automation us
 In Apple Shortcuts, create a shortcut named **Payables Tracker — Daily Particulars**.
 
 1. Add **Get Contents of URL** with URL `https://magxbczgrxeypryjborr.supabase.co/functions/v1/sms-capture/pending-particulars`, Method **POST**, headers `Authorization: Bearer YOUR_PRIVATE_TOKEN` and `Content-Type: application/json`, and JSON body `{}`.
-2. Read the response dictionary's `items` value. If `count` is zero, show exactly **No records to review** and stop.
-3. Repeat with each item. Show its merchant, amount, date, debit/credit direction, and any suggested particulars.
+2. Read the response dictionary's `items` value. It includes every Cash Book movement missing particulars (SMS, manual, and settlement entries). If `count` is zero, show exactly **No records to review** and stop.
+3. Repeat with each item. Show its merchant/description, amount, date, debit/credit direction, movement type, and any suggested particulars.
 4. Present the suggestions as choices, with **Other** and **Skip for now**. For **Other**, ask for text. A skipped item is left pending for the next run.
 5. For each selected description, immediately add a **Get Contents of URL** action inside the repeat:
    - URL: `https://magxbczgrxeypryjborr.supabase.co/functions/v1/sms-capture/particulars`
    - Method: **POST**
    - Headers: the same Authorization and Content-Type headers
-   - JSON body: `inbox_id` = the current item's `inbox_id`; `particulars` = the selected or typed description.
+   - JSON body: `movement_id` = the current item's `movement_id`; `particulars` = the selected or typed description.
 6. Check the response's `ok` value. If true, show a short **Saved** confirmation and continue. If false or the request fails, show the returned error and leave that item pending for retry. Do not add failed items to a batch or mark them complete.
 7. Do not use the `particulars-batch` endpoint. Each successful item is saved before the Shortcut moves to the next item, so an interruption does not discard earlier saves.
 
@@ -31,5 +31,7 @@ Use the same private capture token generated in Payables Tracker. Keep it privat
 
 - The existing incoming Message automation remains separate and unchanged.
 - Existing particulars must never be overwritten by a later Shortcut run.
+- All Cash Book movement types are included when particulars are blank, including SMS, manual, and settlement entries.
 - Cash Book rows that already have particulars are not part of the pending queue.
+- Each save uses a database transaction: Cash Book particulars and any linked posted SMS inbox particulars are updated atomically; existing values are preserved.
 - The Shortcut can only be installed on your iPhone by creating it in Apple Shortcuts; this guide does not contain or expose your private token.
