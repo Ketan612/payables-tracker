@@ -36,11 +36,16 @@ Deno.serve(async req=>{
   if(rowError)return {ok:false,error:"Could not find the captured transaction: "+rowError.message};
   if(!row)return {ok:false,error:"Captured transaction was not found"};
   if(!["needs_review","posted"].includes(row.status))return {ok:false,error:"This capture is no longer eligible for particulars updates"};
+  // Never replace a value entered by the user or already present in Cash Book.
+  if(String(row.user_particulars||"").trim())return {ok:false,error:"Particulars are already saved for this item. Existing value was preserved.",already_saved:true};
   if(row.movement_id){
-   const movementUpdate=await db.from("cash_movements").update({particulars}).eq("id",row.movement_id).eq("user_id",userId).select("id").maybeSingle();
-   if(movementUpdate.error||!movementUpdate.data)return {ok:false,error:"Could not sync to Cash Book. This item remains pending for retry.",cashbook_saved:false};
+   const {data:movement,error:movementReadError}=await db.from("cash_movements").select("id,particulars").eq("id",row.movement_id).eq("user_id",userId).maybeSingle();
+   if(movementReadError||!movement)return {ok:false,error:"Could not verify the Cash Book transaction. This item remains pending for retry."};
+   if(String(movement.particulars||"").trim())return {ok:false,error:"Cash Book particulars are already filled. Existing value was preserved.",already_saved:true};
+   const movementUpdate=await db.from("cash_movements").update({particulars}).eq("id",row.movement_id).eq("user_id",userId).or("particulars.is.null,particulars.eq.").select("id").maybeSingle();
+   if(movementUpdate.error||!movementUpdate.data)return {ok:false,error:"Could not save to Cash Book without overwriting an existing value. This item remains pending for retry.",cashbook_saved:false};
   }
-  const inboxUpdate=await db.from("sms_capture_inbox").update({user_particulars:particulars}).eq("id",row.id).eq("user_id",userId).eq("status",row.status).select("id").maybeSingle();
+  const inboxUpdate=await db.from("sms_capture_inbox").update({user_particulars:particulars}).eq("id",row.id).eq("user_id",userId).eq("status",row.status).is("user_particulars",null).select("id").maybeSingle();
   if(inboxUpdate.error)return {ok:false,error:"Cash Book was updated but the capture record could not be updated: "+inboxUpdate.error.message};
   if(!inboxUpdate.data)return {ok:false,error:"Cash Book was updated but capture status changed; refresh before retrying",cashbook_saved:true};
   const merchantName=isMerchantCandidate(row.parsed_description)?String(row.parsed_description).replace(/\s+/g," ").trim().slice(0,100):"";
