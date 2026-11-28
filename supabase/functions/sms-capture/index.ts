@@ -29,7 +29,7 @@ Deno.serve(async req=>{
  const userId=token.user_id;
 
  const saveParticulars=async(movementId:string,value:string)=>{
-  const particulars=String(value||"").replace(/\\s+/g," ").trim();
+  const particulars=String(value||"").replace(/\s+/g," ").trim();
   if(!movementId)return {ok:false,error:"movement_id is required"};
   if(particulars.length<2||particulars.length>80||/^(other|skip for now)$/i.test(particulars))return {ok:false,error:"Enter a description between 2 and 80 characters"};
   const {data:movement,error:movementReadError}=await db.from("cash_movements")
@@ -41,7 +41,7 @@ Deno.serve(async req=>{
   });
   if(saveError)return {ok:false,error:"Could not save particulars. This item remains pending for retry."};
   if(!saveResult?.ok)return saveResult||{ok:false,error:"Save failed; refresh and retry"};
-  const merchantName=isMerchantCandidate(movement.description)?String(movement.description).replace(/\\s+/g," ").trim().slice(0,100):"";
+  const merchantName=isMerchantCandidate(movement.description)?String(movement.description).replace(/\s+/g," ").trim().slice(0,100):"";
   const merchantKey=normalizeMerchantKey(merchantName);
   let learned=false,learningWarning=null;
   if(merchantKey){
@@ -85,7 +85,7 @@ Deno.serve(async req=>{
   const items=[];
   for(const movement of movements||[]){
    const linked:any=inboxByMovement.get(movement.id);
-   const merchant=String(linked?.parsed_description||movement.description||"Unknown transaction").replace(/\\s+/g," ").trim().slice(0,100);
+   const merchant=String(linked?.parsed_description||movement.description||"Unknown transaction").replace(/\s+/g," ").trim().slice(0,100);
    const key=normalizeMerchantKey(isMerchantCandidate(merchant)?merchant:"");
    let saved:string[]=[];
    let autoAssigned=null,confidence=null;
