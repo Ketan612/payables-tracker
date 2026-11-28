@@ -48,18 +48,18 @@ Deno.serve(async req=>{
   let learned=false,learningWarning=null;
   if(merchantKey){
    const now=new Date().toISOString();
-   const {data:existingRule,error:lookupError}=await db.from("cashbook_merchant_particulars").select("id,usage_count").eq("user_id",userId).eq("merchant_key",merchantKey).eq("particulars",particulars).maybeSingle();
+   const {data:existingRule,error:lookupError}=await db.from("cashbook_merchant_particulars").select("id,usage_count,confirmed_count").eq("user_id",userId).eq("merchant_key",merchantKey).eq("particulars",particulars).maybeSingle();
    if(lookupError)learningWarning=lookupError.message;
    else if(existingRule){
-    const {error:updateRuleError}=await db.from("cashbook_merchant_particulars").update({merchant_name:merchantName,usage_count:Number(existingRule.usage_count||1)+(row.user_particulars===particulars?0:1),last_used_at:now,updated_at:now}).eq("id",existingRule.id).eq("user_id",userId);
+    const {error:updateRuleError}=await db.from("cashbook_merchant_particulars").update({merchant_name:merchantName,usage_count:Number(existingRule.usage_count||1)+(row.user_particulars===particulars?0:1),confirmed_count:Number(existingRule.confirmed_count||0)+(row.user_particulars===particulars?0:1),source:"manual",is_active:true,last_used_at:now,updated_at:now}).eq("id",existingRule.id).eq("user_id",userId);
     if(updateRuleError)learningWarning=updateRuleError.message;else learned=true;
    }else{
-    const {error:insertRuleError}=await db.from("cashbook_merchant_particulars").insert({user_id:userId,merchant_key:merchantKey,merchant_name:merchantName,particulars,usage_count:1,last_used_at:now,updated_at:now});
+    const {error:insertRuleError}=await db.from("cashbook_merchant_particulars").insert({user_id:userId,merchant_key:merchantKey,merchant_name:merchantName,particulars,usage_count:1,confirmed_count:1,source:"manual",is_active:true,last_used_at:now,updated_at:now});
     if(insertRuleError?.code==="23505"){
-     const {data:concurrentRule,error:retryLookupError}=await db.from("cashbook_merchant_particulars").select("id,usage_count").eq("user_id",userId).eq("merchant_key",merchantKey).eq("particulars",particulars).maybeSingle();
+     const {data:concurrentRule,error:retryLookupError}=await db.from("cashbook_merchant_particulars").select("id,usage_count,confirmed_count").eq("user_id",userId).eq("merchant_key",merchantKey).eq("particulars",particulars).maybeSingle();
      if(retryLookupError||!concurrentRule)learningWarning=retryLookupError?.message||insertRuleError.message;
      else{
-      const {error:retryUpdateError}=await db.from("cashbook_merchant_particulars").update({merchant_name:merchantName,usage_count:Number(concurrentRule.usage_count||1)+(row.user_particulars===particulars?0:1),last_used_at:now,updated_at:now}).eq("id",concurrentRule.id).eq("user_id",userId);
+      const {error:retryUpdateError}=await db.from("cashbook_merchant_particulars").update({merchant_name:merchantName,usage_count:Number(concurrentRule.usage_count||1)+(row.user_particulars===particulars?0:1),confirmed_count:Number(concurrentRule.confirmed_count||0)+(row.user_particulars===particulars?0:1),source:"manual",is_active:true,last_used_at:now,updated_at:now}).eq("id",concurrentRule.id).eq("user_id",userId);
       if(retryUpdateError)learningWarning=retryUpdateError.message;else learned=true;
      }
     }else if(insertRuleError)learningWarning=insertRuleError.message;else learned=true;
@@ -85,11 +85,26 @@ Deno.serve(async req=>{
    const merchant=isMerchantCandidate(row.parsed_description)?String(row.parsed_description).replace(/\s+/g," ").trim().slice(0,100):"";
    const key=normalizeMerchantKey(merchant);
    let saved=[];
+   let autoAssigned=null,confidence=null;
    if(key){
-    const {data:memory}=await db.from("cashbook_merchant_particulars").select("particulars").eq("user_id",userId).eq("merchant_key",key).order("usage_count",{ascending:false}).order("last_used_at",{ascending:false}).limit(8);
+    const {data:memory}=await db.from("cashbook_merchant_particulars").select("particulars,usage_count,confirmed_count,is_active").eq("user_id",userId).eq("merchant_key",key).eq("is_active",true).order("confirmed_count",{ascending:false}).order("last_used_at",{ascending:false}).limit(8);
+    const confirmed=(memory||[]).filter((x:any)=>Number(x.confirmed_count||0)>0);
     saved=(memory||[]).map((x:any)=>x.particulars);
+    const total=confirmed.reduce((n:number,x:any)=>n+Number(x.confirmed_count||0),0);
+    const best=confirmed[0];
+    confidence=best&&total?Number(best.confirmed_count)/total:null;
+    // Only use a repeatable, user-confirmed majority. A single correction is never enough.
+    if(best&&Number(best.confirmed_count)>=2&&confidence>=0.8&&!row.user_particulars){
+     const label=String(best.particulars||"").trim();
+     const {data:currentMove,error:moveReadError}=row.movement_id?await db.from("cash_movements").select("id,particulars,particulars_source").eq("id",row.movement_id).eq("user_id",userId).maybeSingle():{data:null,error:null};
+     if(!moveReadError&&(!currentMove||!String(currentMove.particulars||"").trim())){
+      let movementSaved=true;
+      if(row.movement_id){const {data:updatedMove,error:moveWriteError}=await db.from("cash_movements").update({particulars:label,particulars_source:"automatic",particulars_confidence:confidence}).eq("id",row.movement_id).eq("user_id",userId).is("particulars",null).select("id").maybeSingle();movementSaved=!moveWriteError&&!!updatedMove;}
+      if(movementSaved){const {data:updatedInbox,error:inboxWriteError}=await db.from("sms_capture_inbox").update({user_particulars:label}).eq("id",row.id).eq("user_id",userId).is("user_particulars",null).select("id").maybeSingle();if(!inboxWriteError&&updatedInbox){autoAssigned=label;await logEvent({user_id:userId,event_type:"capture",outcome:"particulars_auto_assigned",source_record_id:row.id,detail:"High-confidence historical merchant default applied; confidence "+confidence.toFixed(3)});}}
+     }
+    }
    }
-   items.push({inbox_id:row.id,status:row.status,movement_id:row.movement_id,merchant:merchant||row.parsed_description||"Unknown merchant",amount:row.parsed_amount,direction:row.parsed_direction,date:row.parsed_date,account_identifier:row.account_identifier,internal_reference:row.internal_reference,suggested_particulars:buildParticularSuggestions(saved)});
+   items.push({inbox_id:row.id,status:row.status,movement_id:row.movement_id,merchant:merchant||row.parsed_description||"Unknown merchant",amount:row.parsed_amount,direction:row.parsed_direction,date:row.parsed_date,account_identifier:row.account_identifier,internal_reference:row.internal_reference,auto_assigned:autoAssigned,confidence,suggested_particulars:buildParticularSuggestions(saved)});
   }
   return json({ok:true,count:items.length,items});
  }

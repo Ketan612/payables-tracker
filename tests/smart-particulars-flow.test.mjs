@@ -104,3 +104,42 @@ test("SMS Review owns the pending-message workflow and keeps posting safeguards"
   assert.match(reviewJs, /Posting outcome is uncertain/);
   assert.match(reviewJs, /Do not retry/);
 });
+
+
+const [particularsManager, particularsManagerJs, cashbookManagerHtml, particularsMigration] = await Promise.all([
+  read("../particulars-manager.html"),
+  read("../particulars-manager.js"),
+  read("../cashbook.html"),
+  read("../supabase/migrations/20261128000100_particulars_learning_controls.sql"),
+]);
+
+test("particulars manager supports editing, disabling and deleting merchant defaults", () => {
+  assert.match(cashbookManagerHtml, /href="particulars-manager\.html"/);
+  assert.match(particularsManager, /Merchant defaults/);
+  assert.match(particularsManagerJs, /async function toggle/);
+  assert.match(particularsManagerJs, /async function remove/);
+  assert.match(particularsManagerJs, /function edit/);
+});
+
+test("reviewed transactions remain editable and explicit edits can be learned", () => {
+  assert.match(cashbookManagerHtml, /id="editTxnParticulars"/);
+  assert.match(cashbookManagerHtml, /id="learnTxnParticulars"/);
+  assert.match(cashbook, /particulars_source:"manual"/);
+  assert.match(cashbook, /particulars_reviewed_at:new Date\(\)\.toISOString\(\)/);
+});
+
+test("daily assignment uses confirmed history only and requires repeated high confidence", () => {
+  assert.match(edge, /confirmed_count/);
+  assert.match(edge, /Number\(best\.confirmed_count\)>=2/);
+  assert.match(edge, /confidence>=0\.8/);
+  assert.match(edge, /particulars_source:"automatic"/);
+  assert.match(edge, /\.is\("particulars",null\)/);
+  assert.match(edge, /\.is\("user_particulars",null\)/);
+});
+
+test("particulars provenance and merchant-manager controls are protected by constraints", () => {
+  assert.match(particularsMigration, /particulars_source/);
+  assert.match(particularsMigration, /particulars_confidence/);
+  assert.match(particularsMigration, /is_active/);
+  assert.match(particularsMigration, /confirmed_count/);
+});
